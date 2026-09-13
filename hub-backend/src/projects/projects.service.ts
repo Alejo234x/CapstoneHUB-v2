@@ -63,6 +63,7 @@ export type ProjectListResponse = {
   name: string;
   status: ProjectStatus;
   startDate: Date;
+  location: string | null;
   proposer: ProjectProposerResponse | null;
   actors: ProjectActorResponse[];
 };
@@ -198,6 +199,7 @@ function mapProjectListResponse(
     name: project.name,
     status: project.status,
     startDate: project.startDate,
+    location: project.location,
     proposer: mapProjectProposer(project),
     actors: project.actorAssignments.map((assignment) => ({
       id: assignment.id,

@@ -97,6 +97,7 @@ describe('ProjectsService', () => {
       actors: [],
       description: 'Description',
       context: 'Context',
+      location: null,
       startDate: new Date(),
       endDate: null,
       estimatedCost: null,

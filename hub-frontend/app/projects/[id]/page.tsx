@@ -5,6 +5,7 @@ import ProjectObservationsPanel from "./project-observations-panel";
 import ProjectActorAssignmentPanel from "./project-actor-assignment-panel";
 import ProjectCategoriesPanel from "./project-categories-panel";
 import ProjectMilestonesPanel from "./project-milestones-panel";
+import ProjectAssignmentBadge from "./project-assignment-badge";
 import { formatStatus } from "@/app/services/utils";
 import {
   Tabs,
@@ -12,6 +13,19 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
 
@@ -73,10 +87,11 @@ export default async function ProjectDetailsPage({
 
         <div className="border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex w-fit bg-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-800">
-              {formatStatus(project.status)}
-            </span>
-            <span className="text-sm text-slate-500">
+            <Badge variant="secondary">{formatStatus(project.status)}</Badge>
+            <ProjectAssignmentBadge
+              assignments={project.actorAssignments ?? []}
+            />
+            <span className="text-sm text-muted-foreground">
               Creado el {formatDate(project.createdAt)}
             </span>
           </div>
@@ -91,135 +106,182 @@ export default async function ProjectDetailsPage({
               <TabsTrigger value="hitos">Hitos</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="general" className="mt-6 space-y-6">
-              <section>
-                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Descripción
-                </h2>
-                <p className="mt-3 whitespace-pre-line text-slate-700">
-                  {project.description}
-                </p>
-              </section>
+            <TabsContent value="general" className="mt-6 flex flex-col gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Proponente</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {project.proposer ? (
+                    <Table>
+                      <TableBody>
+                        {project.proposer.type === "natural_person" ? (
+                          <>
+                            <TableRow>
+                              <TableCell className="text-muted-foreground">
+                                Nombre completo
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {project.proposer.fullName}
+                              </TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="text-muted-foreground">
+                                Cédula
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {project.proposer.idNumber}
+                              </TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="text-muted-foreground">
+                                Correo
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {project.proposer.email}
+                              </TableCell>
+                            </TableRow>
+                          </>
+                        ) : (
+                          <>
+                            <TableRow>
+                              <TableCell className="text-muted-foreground">
+                                Razón social
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {project.proposer.legalName}
+                              </TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="text-muted-foreground">
+                                NIT
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {project.proposer.nit}
+                              </TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="text-muted-foreground">
+                                Correo
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {project.proposer.email}
+                              </TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="text-muted-foreground">
+                                Teléfono
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {project.proposer.phone}
+                              </TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="text-muted-foreground">
+                                Contacto
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {project.proposer.contactUrl ?? "Sin enlace"}
+                              </TableCell>
+                            </TableRow>
+                          </>
+                        )}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-muted-foreground">
+                      Sin información del proponente.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
 
-              <section>
-                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Contexto
-                </h2>
-                <p className="mt-3 whitespace-pre-line text-slate-700">
-                  {project.context}
-                </p>
-              </section>
-
-              <section>
-                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Proponente
-                </h2>
-                {project.proposer ? (
-                  <dl className="mt-3 space-y-3 text-sm text-slate-700">
-                    {project.proposer.type === "natural_person" ? (
-                      <>
-                        <div className="flex items-start justify-between gap-4">
-                          <dt className="text-slate-500">Nombre completo</dt>
-                          <dd className="text-right">
-                            {project.proposer.fullName}
-                          </dd>
-                        </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <dt className="text-slate-500">Cédula</dt>
-                          <dd className="text-right">
-                            {project.proposer.idNumber}
-                          </dd>
-                        </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <dt className="text-slate-500">Correo</dt>
-                          <dd className="text-right">
-                            {project.proposer.email}
-                          </dd>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-start justify-between gap-4">
-                          <dt className="text-slate-500">Razón social</dt>
-                          <dd className="text-right">
-                            {project.proposer.legalName}
-                          </dd>
-                        </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <dt className="text-slate-500">NIT</dt>
-                          <dd className="text-right">{project.proposer.nit}</dd>
-                        </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <dt className="text-slate-500">Correo</dt>
-                          <dd className="text-right">
-                            {project.proposer.email}
-                          </dd>
-                        </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <dt className="text-slate-500">Teléfono</dt>
-                          <dd className="text-right">
-                            {project.proposer.phone}
-                          </dd>
-                        </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <dt className="text-slate-500">Contacto</dt>
-                          <dd className="text-right">
-                            {project.proposer.contactUrl ?? "Sin enlace"}
-                          </dd>
-                        </div>
-                      </>
-                    )}
-                  </dl>
-                ) : (
-                  <p className="mt-3 text-sm text-slate-600">
-                    Sin información del proponente.
+              <Card>
+                <CardHeader>
+                  <CardTitle>Descripción</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="whitespace-pre-line text-muted-foreground">
+                    {project.description}
                   </p>
-                )}
-              </section>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Contexto</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="whitespace-pre-line text-muted-foreground">
+                    {project.context}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Lugar</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    {project.location || "Sin información"}
+                  </p>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="categorias" className="mt-6">
               <ProjectCategoriesPanel categories={project.categories} />
             </TabsContent>
 
-            <TabsContent value="fechas" className="mt-6 space-y-6">
-              <section>
-                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Fechas
-                </h2>
-                <dl className="mt-4 space-y-3 text-sm text-slate-700">
-                  <div className="flex items-start justify-between gap-4">
-                    <dt className="text-slate-500">Inicio</dt>
-                    <dd className="text-right">
-                      {formatDate(project.startDate)}
-                    </dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <dt className="text-slate-500">Fin</dt>
-                    <dd className="text-right">{formatDate(project.endDate)}</dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <dt className="text-slate-500">Costo estimado</dt>
-                    <dd className="text-right">
-                      {formatCurrency(project.estimatedCost)}
-                    </dd>
-                  </div>
-                </dl>
-              </section>
+            <TabsContent value="fechas" className="mt-6 flex flex-col gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Fechas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-muted-foreground">
+                          Inicio
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatDate(project.startDate)}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-muted-foreground">
+                          Costo estimado
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(project.estimatedCost)}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
 
-              <section>
-                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Trazabilidad
-                </h2>
-                <dl className="mt-4 space-y-3 text-sm text-slate-700">
-                  <div className="flex items-start justify-between gap-4">
-                    <dt className="text-slate-500">Actualizado</dt>
-                    <dd className="text-right">
-                      {formatDate(project.updatedAt)}
-                    </dd>
-                  </div>
-                </dl>
-              </section>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Trazabilidad</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-muted-foreground">
+                          Actualizado
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatDate(project.updatedAt)}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="equipo" className="mt-6">

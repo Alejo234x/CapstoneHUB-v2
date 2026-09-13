@@ -53,15 +53,28 @@ export class ProjectsController {
       namep: string;
       ncedua: string;
       correo: string;
+      estimatedCost?: number;
+      location?: string;
     },
   ): Promise<ProjectDetailResponse> {
-    const { name, description, context, namep, ncedua, correo } = projectData;
+    const {
+      name,
+      description,
+      context,
+      namep,
+      ncedua,
+      correo,
+      estimatedCost,
+      location,
+    } = projectData;
     const startDate = new Date();
     return this.projectService.createProject(user, {
       name,
       description,
       context,
       startDate,
+      estimatedCost,
+      location,
       naturalProposer: {
         create: {
           fullName: namep,
