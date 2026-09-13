@@ -231,6 +231,7 @@ export default async function ProjectDetailsPage({
               <ProjectObservationsPanel
                 projectId={project.id}
                 observations={project.observations ?? []}
+                assignments={project.actorAssignments ?? []}
               />
             </TabsContent>
           </Tabs>
@@ -240,6 +241,7 @@ export default async function ProjectDetailsPage({
           <ProjectStatusEditForm
             projectId={project.id}
             currentStatus={project.status}
+            assignments={project.actorAssignments ?? []}
           />
         </div>
       </section>

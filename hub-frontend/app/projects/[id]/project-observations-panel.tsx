@@ -1,16 +1,40 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+
 import { createProjectObservation } from "../../services/projects";
 import { ProjectObservationItem } from "../../services/schemas";
-import Link from "next/link";
 import { useAuth } from "../../components/auth-provider";
+
+import { Button } from "@/components/ui/button";
+
+type ProjectActorAssignment = {
+  id: number;
+  projectId: number;
+  userId: number;
+  role: string;
+  assignedAt: string;
+  user: {
+    id: number;
+    fullName: string;
+    email: string;
+  };
+};
 
 type ProjectObservationsPanelProps = {
   projectId: number;
   observations: ProjectObservationItem[];
+  assignments: ProjectActorAssignment[];
 };
+
+function canCreateObservation(
+  userId: number,
+  assignments: ProjectActorAssignment[],
+): boolean {
+  return assignments.some((assignment) => assignment.userId === userId);
+}
 
 function formatDate(dateValue: string): string {
   return new Intl.DateTimeFormat("es-CO", {
@@ -22,71 +46,146 @@ function formatDate(dateValue: string): string {
 export default function ProjectObservationsPanel({
   projectId,
   observations,
+  assignments,
 }: ProjectObservationsPanelProps) {
   const router = useRouter();
-  const { isAuthenticated, ready } = useAuth();
+  const { session, isAuthenticated, ready } = useAuth();
+
   const [content, setContent] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const sortedObservations = useMemo(
-    () => [...observations].sort((left, right) => right.id - left.id),
-    [observations],
-  );
+  const currentUser = session?.user;
 
-  function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
+  const canCreate =
+    currentUser !== undefined &&
+    canCreateObservation(currentUser.id, assignments);
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
 
     const trimmedContent = content.trim();
 
     if (!trimmedContent) {
-      setErrorMessage("Escribe una observación antes de guardar.");
+      setErrorMessage("Escribe una observación antes de enviarla.");
       return;
     }
 
     startTransition(async () => {
       try {
-        await createProjectObservation(String(projectId), trimmedContent);
+        await createProjectObservation(projectId, trimmedContent);
+
         setContent("");
         router.refresh();
       } catch (error) {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "No se pudo guardar la observación",
+            : "No se pudo crear la observación",
         );
       }
     });
   }
 
-  return (
-    <section className="mt-6 border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Observaciones
-          </h2>
-          <p className="mt-2 text-slate-600">
-            Agrega notas cortas sobre decisiones, avances o bloqueos.
-          </p>
-        </div>
+  if (!ready) {
+    return (
+      <div className="mt-6 border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+        Cargando acceso...
       </div>
+    );
+  }
 
+  if (!isAuthenticated) {
+    return (
       <div className="mt-6 space-y-4">
-        {sortedObservations.length === 0 ? (
-          <div className="border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
-            No hay observaciones todavía.
+        <div className="border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+          Inicia sesión para agregar observaciones al proyecto.
+          <div className="mt-3">
+            <Link href="/login">
+              <Button>Iniciar sesión</Button>
+            </Link>
           </div>
+        </div>
+
+        <ObservationsList observations={observations} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-6 space-y-6">
+      {canCreate ? (
+        <form
+          onSubmit={handleSubmit}
+          className="border border-slate-200 bg-slate-50 p-4"
+        >
+          <label
+            htmlFor="project-observation"
+            className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
+          >
+            Nueva observación
+          </label>
+
+          <textarea
+            id="project-observation"
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            placeholder="Escribe una observación sobre el proyecto..."
+            rows={4}
+            disabled={isPending}
+            className="mt-2 flex w-full rounded-md border border-slate-300 bg-background px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+          />
+
+          <div className="mt-3 flex justify-end">
+            <Button type="submit" disabled={isPending || !content.trim()}>
+              {isPending ? "Guardando..." : "Agregar observación"}
+            </Button>
+          </div>
+
+          {errorMessage ? (
+            <p className="mt-4 border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {errorMessage}
+            </p>
+          ) : null}
+        </form>
+      ) : (
+        <div className="border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+          No tienes permisos para agregar observaciones a este proyecto.
+        </div>
+      )}
+
+      <ObservationsList observations={observations} />
+    </div>
+  );
+}
+
+function ObservationsList({
+  observations,
+}: {
+  observations: ProjectObservationItem[];
+}) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+        Observaciones
+      </h3>
+
+      <div className="mt-4 space-y-3">
+        {observations.length === 0 ? (
+          <p className="text-sm text-slate-600">
+            No hay observaciones registradas.
+          </p>
         ) : (
-          sortedObservations.map((observation) => (
+          observations.map((observation) => (
             <article
               key={observation.id}
-              className="border border-slate-200 bg-slate-50 p-4"
+              className="border border-slate-200 bg-white p-4"
             >
-              <p className="whitespace-pre-line text-sm text-slate-700">
+              <p className="whitespace-pre-wrap text-sm text-slate-800">
                 {observation.content}
               </p>
+
               <p className="mt-3 text-xs text-slate-500">
                 {formatDate(observation.createdAt)}
               </p>
@@ -94,60 +193,6 @@ export default function ProjectObservationsPanel({
           ))
         )}
       </div>
-
-      {!ready ? (
-        <div className="mt-6 border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-          Cargando acceso...
-        </div>
-      ) : !isAuthenticated ? (
-        <div className="mt-6 border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-          Inicia sesión para agregar observaciones.
-          <div className="mt-3">
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-            >
-              Iniciar sesión
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <label
-              htmlFor="observation"
-              className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500"
-            >
-              Nueva observación
-            </label>
-            <textarea
-              id="observation"
-              name="observation"
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-              rows={4}
-              className="mt-3 w-full border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
-              placeholder="Escribe una observación sobre este proyecto"
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="submit"
-              disabled={isPending}
-              className="inline-flex items-center justify-center bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isPending ? "Guardando..." : "Agregar observación"}
-            </button>
-          </div>
-
-          {errorMessage ? (
-            <p className="border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {errorMessage}
-            </p>
-          ) : null}
-        </form>
-      )}
-    </section>
+    </div>
   );
 }

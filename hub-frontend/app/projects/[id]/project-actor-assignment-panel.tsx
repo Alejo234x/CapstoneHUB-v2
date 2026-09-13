@@ -1,36 +1,83 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+
 import { addProjectActorAssignment, getUsers } from "../../services/projects";
 import { UserSummary } from "../../services/schemas";
 import { useAuth } from "../../components/auth-provider";
-import Link from "next/link";
 
-const roles = [
-  { value: "advisor", label: "Asesor" },
-  { value: "coordinator", label: "Coordinator" },
-  { value: "student", label: "Student" },
-  { value: "evaluator", label: "Evaluator" },
-] as const;
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-type ProjectActorRole = (typeof roles)[number]["value"];
+const roleLabels: Record<string, string> = {
+  advisor: "Asesor",
+  coordinator: "Coordinador",
+  student: "Estudiante",
+  evaluator: "Evaluador",
+};
+
+const assignableRoles = [
+  "advisor",
+  "coordinator",
+  "student",
+  "evaluator",
+];
+
+type ProjectActorAssignment = {
+  id: number;
+  projectId: number;
+  userId: number;
+  role: string;
+  assignedAt: string;
+  user: {
+    id: number;
+    fullName: string;
+    email: string;
+  };
+};
 
 type ProjectActorAssignmentPanelProps = {
   projectId: number;
-  assignments: {
-    id: number;
-    projectId: number;
-    userId: number;
-    role: string;
-    assignedAt: string;
-    user: {
-      id: number;
-      fullName: string;
-      email: string;
-    };
-  }[];
+  assignments: ProjectActorAssignment[];
 };
+
+function canAssignActors(
+  userId: number,
+  roles: string[],
+  assignments: ProjectActorAssignment[],
+): boolean {
+  if (roles.includes("admin")) {
+    return true;
+  }
+
+  if (!roles.includes("coordinator")) {
+    return false;
+  }
+
+  return assignments.some(
+    (assignment) =>
+      assignment.userId === userId &&
+      assignment.role === "coordinator",
+  );
+}
+
+function getUserProjectRole(user: UserSummary): string | null {
+  const compatibleRole = user.roles.find((role) =>
+    assignableRoles.includes(role),
+  );
+
+  return compatibleRole ?? null;
+}
+
+function getRoleLabel(role: string | null): string {
+  if (!role) {
+    return "Sin rol asignable";
+  }
+
+  return roleLabels[role] ?? role;
+}
 
 function formatDate(dateValue: string): string {
   return new Intl.DateTimeFormat("es-CO", {
@@ -44,17 +91,23 @@ export default function ProjectActorAssignmentPanel({
   assignments,
 }: ProjectActorAssignmentPanelProps) {
   const router = useRouter();
-  const { isAuthenticated, ready } = useAuth();
+  const { session, isAuthenticated, ready } = useAuth();
+
   const [users, setUsers] = useState<UserSummary[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [selectedRole, setSelectedRole] = useState<ProjectActorRole>(
-    roles[0].value,
-  );
+  const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null);
+  const [search, setSearch] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const currentUser = session?.user;
+  const userRoles = currentUser?.roles ?? [];
+
+  const canAssign = currentUser
+    ? canAssignActors(currentUser.id, userRoles, assignments)
+    : false;
+
   useEffect(() => {
-    if (!ready || !isAuthenticated || users.length > 0) {
+    if (!ready || !isAuthenticated || !canAssign || users.length > 0) {
       return;
     }
 
@@ -65,29 +118,63 @@ export default function ProjectActorAssignmentPanel({
       }
 
       setUsers(nextUsers);
-      if (nextUsers.length > 0) {
-        setSelectedUserId(String(nextUsers[0].id));
-      }
     });
-  }, [isAuthenticated, ready, users.length]);
+  }, [canAssign, isAuthenticated, ready, users.length]);
 
-  const assignedUsers = assignments;
+  const filteredUsers = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return users;
+    }
+
+    return users.filter((user) => {
+      const fullName = user.fullName.toLowerCase();
+      const email = user.email.toLowerCase();
+
+      return (
+        fullName.includes(normalizedSearch) ||
+        email.includes(normalizedSearch)
+      );
+    });
+  }, [search, users]);
+
+  const selectedRole = selectedUser
+    ? getUserProjectRole(selectedUser)
+    : null;
+
+  function handleSelectUser(user: UserSummary) {
+    setSelectedUser(user);
+    setSearch("");
+    setErrorMessage(null);
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
 
-    if (!selectedUserId) {
+    if (!selectedUser) {
       setErrorMessage("Selecciona un usuario.");
+      return;
+    }
+
+    if (!selectedRole) {
+      setErrorMessage(
+        "El usuario seleccionado no tiene un rol válido para este proyecto.",
+      );
       return;
     }
 
     startTransition(async () => {
       try {
         await addProjectActorAssignment(projectId, {
-          userId: Number(selectedUserId),
+          userId: selectedUser.id,
           role: selectedRole,
         });
+
+        setSelectedUser(null);
+        setSearch("");
+
         router.refresh();
       } catch (error) {
         setErrorMessage(
@@ -110,13 +197,11 @@ export default function ProjectActorAssignmentPanel({
   if (!isAuthenticated) {
     return (
       <div className="mt-6 border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-        Inicia sesión para asignar usuarios al proyecto.
+        Inicia sesión para gestionar el equipo del proyecto.
+
         <div className="mt-3">
-          <Link
-            href="/login"
-            className="inline-flex items-center justify-center border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-          >
-            Iniciar sesión
+          <Link href="/login">
+            <Button>Iniciar sesión</Button>
           </Link>
         </div>
       </div>
@@ -125,87 +210,130 @@ export default function ProjectActorAssignmentPanel({
 
   return (
     <div className="mt-6 space-y-4">
-      <form
-        onSubmit={handleSubmit}
-        className="border border-slate-200 bg-slate-50 p-4"
-      >
-        <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
-          <div>
-            <label
-              htmlFor="userId"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
-            >
-              Usuario
-            </label>
-            <select
-              id="userId"
-              value={selectedUserId}
-              onChange={(event) => setSelectedUserId(event.target.value)}
-              className="mt-2 w-full border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
-            >
-              {users.length === 0 ? (
-                <option value="">No hay usuarios disponibles</option>
-              ) : (
-                users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.fullName} ({user.email})
-                  </option>
-                ))
+      {canAssign ? (
+        <form
+          onSubmit={handleSubmit}
+          className="border border-slate-200 bg-slate-50 p-4"
+        >
+          <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+            {/* USUARIO */}
+            <div className="relative">
+              <label
+                htmlFor="project-user-search"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
+              >
+                Usuario
+              </label>
+
+              <Input
+                id="project-user-search"
+                value={
+                  selectedUser
+                    ? `${selectedUser.fullName} — ${selectedUser.email}`
+                    : search
+                }
+                onChange={(event) => {
+                  setSelectedUser(null);
+                  setSearch(event.target.value);
+                }}
+                placeholder="Buscar por nombre o correo..."
+                autoComplete="off"
+                disabled={isPending}
+                className="mt-2"
+              />
+
+              {!selectedUser && search.trim() && (
+                <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-md">
+                  {filteredUsers.length === 0 ? (
+                    <div className="px-3 py-3 text-sm text-slate-500">
+                      No se encontraron usuarios.
+                    </div>
+                  ) : (
+                    filteredUsers.map((user) => {
+                      const role = getUserProjectRole(user);
+
+                      return (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => handleSelectUser(user)}
+                          className="block w-full border-b border-slate-100 px-3 py-3 text-left last:border-b-0 hover:bg-slate-50"
+                        >
+                          <p className="text-sm font-medium text-slate-900">
+                            {user.fullName}
+                          </p>
+
+                          <p className="text-xs text-slate-500">
+                            {user.email}
+                          </p>
+
+                          <p className="mt-1 text-xs font-medium text-slate-600">
+                            Rol: {getRoleLabel(role)}
+                          </p>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
               )}
-            </select>
+            </div>
+
+            {/* ROL AUTOMÁTICO */}
+            <div>
+              <label
+                htmlFor="project-role"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
+              >
+                Rol
+              </label>
+
+              <div
+                id="project-role"
+                className="mt-2 flex h-9 w-full items-center rounded-md border border-slate-200 bg-slate-100 px-3 text-sm text-slate-700"
+              >
+                {selectedUser
+                  ? getRoleLabel(selectedRole)
+                  : "Selecciona un usuario"}
+              </div>
+            </div>
+
+            {/* BOTÓN */}
+            <Button
+              type="submit"
+              disabled={isPending || !selectedUser || !selectedRole}
+            >
+              {isPending ? "Asignando..." : "Asignar"}
+            </Button>
           </div>
 
-          <div>
-            <label
-              htmlFor="role"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
-            >
-              Rol
-            </label>
-            <select
-              id="role"
-              value={selectedRole}
-              onChange={(event) =>
-                setSelectedRole(event.target.value as ProjectActorRole)
-              }
-              className="mt-2 w-full border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
-            >
-              {roles.map((role) => (
-                <option key={role.value} value={role.value}>
-                  {role.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {selectedUser && (
+            <div className="mt-3 text-xs text-slate-500">
+              Se asignará <strong>{selectedUser.fullName}</strong> como{" "}
+              <strong>{getRoleLabel(selectedRole)}</strong>.
+            </div>
+          )}
 
-          <button
-            type="submit"
-            disabled={isPending || users.length === 0}
-            className="inline-flex items-center justify-center bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isPending ? "Asignando..." : "Asignar"}
-          </button>
-        </div>
+          {errorMessage ? (
+            <p className="mt-4 border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {errorMessage}
+            </p>
+          ) : null}
+        </form>
+      ) : null}
 
-        {errorMessage ? (
-          <p className="mt-4 border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {errorMessage}
-          </p>
-        ) : null}
-      </form>
-
+      {/* USUARIOS ASIGNADOS */}
       <div className="bg-white">
         <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
           Usuarios asignados
         </h3>
 
         <div className="mt-4 space-y-3">
-          {assignedUsers.length === 0 ? (
+          {assignments.length === 0 ? (
             <p className="text-sm text-slate-600">
               No hay usuarios asignados todavía.
             </p>
           ) : (
-            assignedUsers.map((assignment) => (
+            assignments.map((assignment) => (
               <div
                 key={assignment.id}
                 className="border border-slate-200 bg-slate-50 p-2 text-sm text-slate-700"
@@ -214,11 +342,16 @@ export default function ProjectActorAssignmentPanel({
                   <p className="font-medium text-slate-900">
                     {assignment.user.fullName}
                   </p>
+
                   <span className="inline-flex w-fit bg-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-800">
-                    {assignment.role}
+                    {getRoleLabel(assignment.role)}
                   </span>
                 </div>
-                <p className="mt-1 text-slate-600">{assignment.user.email}</p>
+
+                <p className="mt-1 text-slate-600">
+                  {assignment.user.email}
+                </p>
+
                 <p className="mt-2 text-xs text-slate-500">
                   Asignado el {formatDate(assignment.assignedAt)}
                 </p>
