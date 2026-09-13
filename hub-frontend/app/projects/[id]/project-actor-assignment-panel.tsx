@@ -8,8 +8,17 @@ import { addProjectActorAssignment, getUsers } from "../../services/projects";
 import { UserSummary } from "../../services/schemas";
 import { useAuth } from "../../components/auth-provider";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const roleLabels: Record<string, string> = {
   advisor: "Asesor",
@@ -64,9 +73,7 @@ function canAssignActors(
 }
 
 function getUserProjectRole(user: UserSummary): string | null {
-  return (
-    user.roles.find((role) => assignableRoles.has(role)) ?? null
-  );
+  return user.roles.find((role) => assignableRoles.has(role)) ?? null;
 }
 
 function getRoleLabel(role: string | null): string {
@@ -75,6 +82,15 @@ function getRoleLabel(role: string | null): string {
   }
 
   return roleLabels[role] ?? role;
+}
+
+function getInitials(fullName: string): string {
+  return fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
 }
 
 function formatDate(dateValue: string): string {
@@ -116,23 +132,27 @@ function useProjectUsers(
 
 function AccessMessage() {
   return (
-    <div className="mt-6 border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-      Cargando acceso...
-    </div>
+    <Card>
+      <CardContent className="pt-6 text-sm text-muted-foreground">
+        Cargando acceso...
+      </CardContent>
+    </Card>
   );
 }
 
 function LoginMessage() {
   return (
-    <div className="mt-6 border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-      Inicia sesión para gestionar el equipo del proyecto.
-
-      <div className="mt-3">
-        <Link href="/login">
-          <Button>Iniciar sesión</Button>
-        </Link>
-      </div>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Equipo del proyecto</CardTitle>
+        <CardDescription>
+          Inicia sesión para gestionar el equipo del proyecto.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button render={<Link href="/login">Iniciar sesión</Link>} />
+      </CardContent>
+    </Card>
   );
 }
 
@@ -149,7 +169,6 @@ function AssignmentForm({
   initialError,
   onErrorChange,
 }: Readonly<AssignmentFormProps>) {
-
   const router = useRouter();
 
   const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null);
@@ -228,43 +247,53 @@ function AssignmentForm({
   const errorMessage = initialError;
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="border border-slate-200 bg-slate-50 p-4"
-    >
-      <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
-        <UserSearch
-          users={filteredUsers}
-          selectedUser={selectedUser}
-          search={search}
-          isPending={isPending}
-          onSearchChange={handleSearchChange}
-          onSelectUser={handleSelectUser}
-        />
+    <Card>
+      <CardHeader>
+        <CardTitle>Asignar usuario</CardTitle>
+        <CardDescription>
+          Busca una persona y asígnala a este proyecto.
+        </CardDescription>
+      </CardHeader>
 
-        <RoleDisplay role={selectedRole} />
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+            <UserSearch
+              users={filteredUsers}
+              selectedUser={selectedUser}
+              search={search}
+              isPending={isPending}
+              onSearchChange={handleSearchChange}
+              onSelectUser={handleSelectUser}
+            />
 
-        <Button
-          type="submit"
-          disabled={isPending || !selectedUser || !selectedRole}
-        >
-          {isPending ? "Asignando..." : "Asignar"}
-        </Button>
-      </div>
+            <RoleDisplay role={selectedRole} />
 
-      {selectedUser && (
-        <div className="mt-3 text-xs text-slate-500">
-          Se asignará <strong>{selectedUser.fullName}</strong> como{" "}
-          <strong>{getRoleLabel(selectedRole)}</strong>.
-        </div>
-      )}
+            <Button
+              type="submit"
+              disabled={isPending || !selectedUser || !selectedRole}
+            >
+              {isPending ? "Asignando..." : "Asignar"}
+            </Button>
+          </div>
 
-      {errorMessage ? (
-        <p className="mt-4 border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {errorMessage}
-        </p>
-      ) : null}
-    </form>
+          {selectedUser ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>Se asignará</span>
+              <Badge variant="outline">{selectedUser.fullName}</Badge>
+              <span>como</span>
+              <Badge variant="secondary">{getRoleLabel(selectedRole)}</Badge>
+            </div>
+          ) : null}
+
+          {errorMessage ? (
+            <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {errorMessage}
+            </p>
+          ) : null}
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -285,15 +314,9 @@ function UserSearch({
   onSearchChange,
   onSelectUser,
 }: Readonly<UserSearchProps>) {
-
   return (
-    <div className="relative">
-      <label
-        htmlFor="project-user-search"
-        className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
-      >
-        Usuario
-      </label>
+    <div className="relative space-y-2">
+      <Label htmlFor="project-user-search">Usuario</Label>
 
       <Input
         id="project-user-search"
@@ -306,12 +329,11 @@ function UserSearch({
         placeholder="Buscar por nombre o correo..."
         autoComplete="off"
         disabled={isPending}
-        className="mt-2"
       />
 
-      {!selectedUser && search.trim() && (
+      {!selectedUser && search.trim() ? (
         <UserSearchResults users={users} onSelectUser={onSelectUser} />
-      )}
+      ) : null}
     </div>
   );
 }
@@ -323,57 +345,54 @@ function UserSearchResults({
   users: UserSummary[];
   onSelectUser: (user: UserSummary) => void;
 }>) {
-
   if (users.length === 0) {
     return (
-      <div className="absolute z-50 mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-3 text-sm text-slate-500 shadow-md">
+      <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover px-3 py-3 text-sm text-muted-foreground shadow-md">
         No se encontraron usuarios.
       </div>
     );
   }
 
   return (
-    <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-md">
+    <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-border bg-popover text-popover-foreground shadow-md">
       {users.map((user) => (
         <button
           key={user.id}
           type="button"
           onClick={() => onSelectUser(user)}
-          className="block w-full border-b border-slate-100 px-3 py-3 text-left last:border-b-0 hover:bg-slate-50"
+          className="flex w-full items-center gap-3 border-b border-border px-3 py-3 text-left transition-colors last:border-b-0 hover:bg-muted"
         >
-          <p className="text-sm font-medium text-slate-900">
-            {user.fullName}
-          </p>
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+            {getInitials(user.fullName)}
+          </span>
 
-          <p className="text-xs text-slate-500">{user.email}</p>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-foreground">
+              {user.fullName}
+            </span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {user.email}
+            </span>
+          </span>
 
-          <p className="mt-1 text-xs font-medium text-slate-600">
-            Rol: {getRoleLabel(getUserProjectRole(user))}
-          </p>
+          <Badge variant="outline">{getRoleLabel(getUserProjectRole(user))}</Badge>
         </button>
       ))}
     </div>
   );
 }
 
-function RoleDisplay({
-  role,
-}: Readonly<{ role: string | null }>) {
+function RoleDisplay({ role }: Readonly<{ role: string | null }>) {
   return (
-    <div>
-      <label
-        htmlFor="project-role"
-        className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
-      >
-        Rol
-      </label>
+    <div className="space-y-2">
+      <Label htmlFor="project-role">Rol</Label>
 
-      <div
+      <Input
         id="project-role"
-        className="mt-2 flex h-9 w-full items-center rounded-md border border-slate-200 bg-slate-100 px-3 text-sm text-slate-700"
-      >
-        {role ? getRoleLabel(role) : "Selecciona un usuario"}
-      </div>
+        value={role ? getRoleLabel(role) : "Selecciona un usuario"}
+        readOnly
+        disabled
+      />
     </div>
   );
 }
@@ -383,46 +402,52 @@ function AssignedUsersList({
 }: Readonly<{
   assignments: ProjectActorAssignment[];
 }>) {
-  
   return (
-    <div className="bg-white">
-      <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-        Usuarios asignados
-      </h3>
+    <Card>
+      <CardHeader>
+        <CardTitle>Usuarios asignados</CardTitle>
+        <CardDescription>
+          {assignments.length === 0
+            ? "No hay usuarios asignados todavía."
+            : `${assignments.length} usuario(s) en el equipo.`}
+        </CardDescription>
+      </CardHeader>
 
-      <div className="mt-4 space-y-3">
-        {assignments.length === 0 ? (
-          <p className="text-sm text-slate-600">
-            No hay usuarios asignados todavía.
-          </p>
-        ) : (
-          assignments.map((assignment) => (
+      {assignments.length > 0 ? (
+        <CardContent className="space-y-3">
+          {assignments.map((assignment) => (
             <div
               key={assignment.id}
-              className="border border-slate-200 bg-slate-50 p-2 text-sm text-slate-700"
+              className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-4"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-medium text-slate-900">
-                  {assignment.user.fullName}
-                </p>
-
-                <span className="inline-flex w-fit bg-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-800">
-                  {getRoleLabel(assignment.role)}
-                </span>
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                {getInitials(assignment.user.fullName)}
               </div>
 
-              <p className="mt-1 text-slate-600">
-                {assignment.user.email}
-              </p>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-foreground">
+                    {assignment.user.fullName}
+                  </p>
 
-              <p className="mt-2 text-xs text-slate-500">
-                Asignado el {formatDate(assignment.assignedAt)}
-              </p>
+                  <Badge variant="secondary">
+                    {getRoleLabel(assignment.role)}
+                  </Badge>
+                </div>
+
+                <p className="mt-1 truncate text-sm text-muted-foreground">
+                  {assignment.user.email}
+                </p>
+
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Asignado el {formatDate(assignment.assignedAt)}
+                </p>
+              </div>
             </div>
-          ))
-        )}
-      </div>
-    </div>
+          ))}
+        </CardContent>
+      ) : null}
+    </Card>
   );
 }
 
@@ -439,11 +464,11 @@ export default function ProjectActorAssignmentPanel({
     ? canAssignActors(currentUser.id, userRoles, assignments)
     : false;
 
-  const {
-    users,
-    errorMessage,
-    setErrorMessage,
-  } = useProjectUsers(ready, isAuthenticated, canAssign);
+  const { users, errorMessage, setErrorMessage } = useProjectUsers(
+    ready,
+    isAuthenticated,
+    canAssign,
+  );
 
   if (!ready) {
     return <AccessMessage />;
@@ -454,15 +479,15 @@ export default function ProjectActorAssignmentPanel({
   }
 
   return (
-    <div className="mt-6 space-y-4">
-      {canAssign && (
+    <div className="space-y-6">
+      {canAssign ? (
         <AssignmentForm
           projectId={projectId}
           users={users}
           initialError={errorMessage}
           onErrorChange={setErrorMessage}
         />
-      )}
+      ) : null}
 
       <AssignedUsersList assignments={assignments} />
     </div>

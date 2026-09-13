@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 const projectStatuses = [
   { value: "proposed", label: "Propuesto" },
@@ -67,7 +68,7 @@ function canManageStatus(
 function getAvailableStatuses(
   roles: string[],
   currentStatus: string,
-): typeof projectStatuses {
+): ReadonlyArray<(typeof projectStatuses)[number]> {
   if (roles.includes("admin")) {
     return projectStatuses;
   }
@@ -100,6 +101,7 @@ export default function ProjectStatusEditForm({
   const { session, isAuthenticated, ready } = useAuth();
 
   const [status, setStatus] = useState(currentStatus);
+  const [reason, setReason] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -144,13 +146,29 @@ export default function ProjectStatusEditForm({
     currentStatus,
   );
 
+  const isAdmin = session.user.roles.includes("admin");
+  const isReasonRequired = !isAdmin;
+  const trimmedReason = reason.trim();
+  const isSubmitDisabled =
+    isPending ||
+    status === currentStatus ||
+    (isReasonRequired && trimmedReason.length === 0);
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
 
+    if (isReasonRequired && trimmedReason.length === 0) {
+      setErrorMessage(
+        "Debes indicar el motivo del cambio de estado antes de guardar.",
+      );
+      return;
+    }
+
     startTransition(async () => {
       try {
-        await updateProjectStatus(String(projectId), status);
+        await updateProjectStatus(String(projectId), status, trimmedReason);
+        setReason("");
         router.refresh();
       } catch (error) {
         setErrorMessage(
@@ -201,11 +219,37 @@ export default function ProjectStatusEditForm({
         </Select>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Button
-          type="submit"
-          disabled={isPending || status === currentStatus}
+      <div>
+        <label
+          htmlFor="status-reason"
+          className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500"
         >
+          Motivo del cambio
+        </label>
+
+        <Textarea
+          id="status-reason"
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          placeholder={
+            isReasonRequired
+              ? "Describe el motivo del cambio de estado..."
+              : "Motivo del cambio (opcional para administradores)"
+          }
+          rows={4}
+          disabled={isPending}
+          className="mt-3"
+        />
+
+        <p className="mt-2 text-xs text-slate-500">
+          {isReasonRequired
+            ? "Obligatorio: el historial guardará este motivo junto al cambio."
+            : "Opcional para administradores; se registrará en el historial."}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" disabled={isSubmitDisabled}>
           {isPending ? "Guardando..." : "Guardar cambios"}
         </Button>
       </div>

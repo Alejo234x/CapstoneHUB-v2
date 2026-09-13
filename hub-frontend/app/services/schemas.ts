@@ -43,6 +43,11 @@ export type ProjectObservationItem = {
   projectId: number;
   content: string;
   createdAt: string;
+  author: {
+    id: number;
+    fullName: string;
+    email: string;
+  } | null;
 };
 
 export type ProjectCategory = {
@@ -59,6 +64,20 @@ export type ProjectMilestoneItem = {
   dueDate: string;
   completed: boolean;
   createdAt?: string;
+};
+
+export type ProjectStatusHistoryItem = {
+  id: number;
+  projectId: number;
+  previousStatus: string | null;
+  nextStatus: string;
+  description: string | null;
+  changedAt: string;
+  author: {
+    id: number;
+    fullName: string;
+    email: string;
+  } | null;
 };
 
 export type ProjectItem = {
@@ -92,4 +111,5 @@ export type ProjectDetails = {
   // Cuando existan, se muestran automáticamente en la pestaña "Categorías".
   categories?: ProjectCategory[];
   milestones?: ProjectMilestoneItem[];
+  statusHistory?: ProjectStatusHistoryItem[];
 };
