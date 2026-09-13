@@ -120,6 +120,14 @@ export default function ProjectMilestonesPanel({
     [milestones],
   );
 
+  const completionPercentage = useMemo(
+    () =>
+      milestones.length === 0
+        ? 0
+        : Math.round((completedCount / milestones.length) * 100),
+    [completedCount, milestones.length],
+  );
+
   function openCreateDialog() {
     setEditingMilestone(null);
     setForm(emptyForm);
@@ -236,6 +244,20 @@ export default function ProjectMilestonesPanel({
               ? "Define los hitos y entregas del proyecto."
               : `${completedCount} de ${milestones.length} completados`}
           </p>
+
+          {milestones.length > 0 ? (
+            <div className="mt-3 flex items-center gap-3">
+              <div className="h-2 w-40 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${completionPercentage}%` }}
+                />
+              </div>
+              <span className="text-sm font-medium">
+                {completionPercentage}%
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {ready && canManage ? (
