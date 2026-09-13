@@ -234,40 +234,54 @@ export default async function ProjectDetailsPage({
               <ProjectCategoriesPanel categories={project.categories} />
             </TabsContent>
 
-            <TabsContent value="fechas" className="mt-6 space-y-6">
-              <section>
-                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Fechas
-                </h2>
-                <dl className="mt-4 space-y-3 text-sm text-slate-700">
-                  <div className="flex items-start justify-between gap-4">
-                    <dt className="text-slate-500">Inicio</dt>
-                    <dd className="text-right">
-                      {formatDate(project.startDate)}
-                    </dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <dt className="text-slate-500">Costo estimado</dt>
-                    <dd className="text-right">
-                      {formatCurrency(project.estimatedCost)}
-                    </dd>
-                  </div>
-                </dl>
-              </section>
+            <TabsContent value="fechas" className="mt-6 flex flex-col gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Fechas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-muted-foreground">
+                          Inicio
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatDate(project.startDate)}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-muted-foreground">
+                          Costo estimado
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(project.estimatedCost)}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
 
-              <section>
-                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Trazabilidad
-                </h2>
-                <dl className="mt-4 space-y-3 text-sm text-slate-700">
-                  <div className="flex items-start justify-between gap-4">
-                    <dt className="text-slate-500">Actualizado</dt>
-                    <dd className="text-right">
-                      {formatDate(project.updatedAt)}
-                    </dd>
-                  </div>
-                </dl>
-              </section>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Trazabilidad</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-muted-foreground">
+                          Actualizado
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatDate(project.updatedAt)}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="equipo" className="mt-6">
