@@ -112,6 +112,15 @@ export default async function ProjectDetailsPage({
 
               <section>
                 <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  Lugar
+                </h2>
+                <p className="mt-3 text-slate-700">
+                  {project.location || "Sin información"}
+                </p>
+              </section>
+
+              <section>
+                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
                   Proponente
                 </h2>
                 {project.proposer ? (

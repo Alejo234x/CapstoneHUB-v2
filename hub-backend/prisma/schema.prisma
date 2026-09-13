@@ -74,6 +74,7 @@ model Project {
   name          String        @db.VarChar(255)
   description   String        @db.Text
   context       String        @db.Text
+  location      String?       @db.VarChar(255)
   status        ProjectStatus @default(proposed)
   startDate     DateTime      @map("start_date")
   endDate       DateTime?     @map("end_date")

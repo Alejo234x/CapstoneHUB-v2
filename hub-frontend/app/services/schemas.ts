@@ -78,6 +78,7 @@ export type ProjectDetails = {
   name: string;
   description: string;
   context: string;
+  location?: string | null;
   status: string;
   proposer?: ProjectProposer;
   startDate: string;
