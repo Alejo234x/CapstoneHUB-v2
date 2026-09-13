@@ -4,6 +4,7 @@ import ProjectStatusEditForm from "../../components/project-status-edit-form";
 import ProjectObservationsPanel from "./project-observations-panel";
 import ProjectActorAssignmentPanel from "./project-actor-assignment-panel";
 import ProjectCategoriesPanel from "./project-categories-panel";
+import ProjectMilestonesPanel from "./project-milestones-panel";
 import { formatStatus } from "@/app/services/utils";
 import {
   Tabs,
@@ -87,6 +88,7 @@ export default async function ProjectDetailsPage({
               <TabsTrigger value="fechas">Fechas y costos</TabsTrigger>
               <TabsTrigger value="equipo">Equipo</TabsTrigger>
               <TabsTrigger value="observaciones">Observaciones</TabsTrigger>
+              <TabsTrigger value="hitos">Hitos</TabsTrigger>
             </TabsList>
 
             <TabsContent value="general" className="mt-6 space-y-6">
@@ -231,6 +233,14 @@ export default async function ProjectDetailsPage({
               <ProjectObservationsPanel
                 projectId={project.id}
                 observations={project.observations ?? []}
+              />
+            </TabsContent>
+
+            <TabsContent value="hitos" className="mt-6">
+              <ProjectMilestonesPanel
+                projectId={project.id}
+                milestones={project.milestones ?? []}
+                actorAssignments={project.actorAssignments ?? []}
               />
             </TabsContent>
           </Tabs>
