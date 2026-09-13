@@ -148,7 +148,8 @@ function AssignmentForm({
   users,
   initialError,
   onErrorChange,
-}: AssignmentFormProps) {
+}: Readonly<AssignmentFormProps>) {
+
   const router = useRouter();
 
   const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null);
@@ -283,7 +284,8 @@ function UserSearch({
   isPending,
   onSearchChange,
   onSelectUser,
-}: UserSearchProps) {
+}: Readonly<UserSearchProps>) {
+
   return (
     <div className="relative">
       <label
@@ -317,10 +319,11 @@ function UserSearch({
 function UserSearchResults({
   users,
   onSelectUser,
-}: {
+}: Readonly<{
   users: UserSummary[];
   onSelectUser: (user: UserSummary) => void;
-}) {
+}>) {
+
   if (users.length === 0) {
     return (
       <div className="absolute z-50 mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-3 text-sm text-slate-500 shadow-md">
@@ -353,7 +356,9 @@ function UserSearchResults({
   );
 }
 
-function RoleDisplay({ role }: { role: string | null }) {
+function RoleDisplay({
+  role,
+}: Readonly<{ role: string | null }>) {
   return (
     <div>
       <label
@@ -375,9 +380,10 @@ function RoleDisplay({ role }: { role: string | null }) {
 
 function AssignedUsersList({
   assignments,
-}: {
+}: Readonly<{
   assignments: ProjectActorAssignment[];
-}) {
+}>) {
+  
   return (
     <div className="bg-white">
       <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
