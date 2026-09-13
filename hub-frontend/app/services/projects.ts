@@ -1,4 +1,9 @@
-import { ProjectDetails, ProjectItem, UserSummary } from "./schemas";
+import {
+  ProjectDetails,
+  ProjectItem,
+  ProjectMilestoneItem,
+  UserSummary,
+} from "./schemas";
 import { getAuthToken } from "./auth";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
@@ -135,6 +140,93 @@ export async function createProjectObservation(
     content: string;
     createdAt: string;
   };
+}
+
+export type CreateProjectMilestonePayload = {
+  title: string;
+  description?: string | null;
+  dueDate: string;
+  completed?: boolean;
+};
+
+export type UpdateProjectMilestonePayload = Partial<
+  CreateProjectMilestonePayload
+>;
+
+export async function getProjectMilestones(
+  id: string,
+): Promise<ProjectMilestoneItem[]> {
+  const response = await fetch(getApiUrl(`/api/projects/${id}/milestones`), {
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Backend responded with status ${response.status}`);
+  }
+
+  return (await response.json()) as ProjectMilestoneItem[];
+}
+
+export async function createProjectMilestone(
+  id: string,
+  payload: CreateProjectMilestonePayload,
+): Promise<ProjectMilestoneItem> {
+  const response = await fetch(getApiUrl(`/api/projects/${id}/milestones`), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Backend responded with status ${response.status}`);
+  }
+
+  return (await response.json()) as ProjectMilestoneItem;
+}
+
+export async function updateProjectMilestone(
+  id: string,
+  milestoneId: number,
+  payload: UpdateProjectMilestonePayload,
+): Promise<ProjectMilestoneItem> {
+  const response = await fetch(
+    getApiUrl(`/api/projects/${id}/milestones/${milestoneId}`),
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Backend responded with status ${response.status}`);
+  }
+
+  return (await response.json()) as ProjectMilestoneItem;
+}
+
+export async function deleteProjectMilestone(
+  id: string,
+  milestoneId: number,
+): Promise<void> {
+  const response = await fetch(
+    getApiUrl(`/api/projects/${id}/milestones/${milestoneId}`),
+    {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Backend responded with status ${response.status}`);
+  }
 }
 
 export async function createProject(payload: CreateProjectPayload) {

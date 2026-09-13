@@ -58,6 +58,7 @@ export type ProjectMilestoneItem = {
   description: string | null;
   dueDate: string;
   completed: boolean;
+  createdAt?: string;
 };
 
 export type ProjectItem = {
