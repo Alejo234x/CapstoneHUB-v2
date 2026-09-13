@@ -163,8 +163,9 @@ export default function ProjectObservationsPanel({
 function ObservationsList({
   observations,
 }: {
-  observations: ProjectObservationItem[];
+  readonly observations: ProjectObservationItem[];
 }) {
+  
   return (
     <div>
       <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
