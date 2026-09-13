@@ -5,6 +5,7 @@ import ProjectObservationsPanel from "./project-observations-panel";
 import ProjectActorAssignmentPanel from "./project-actor-assignment-panel";
 import ProjectCategoriesPanel from "./project-categories-panel";
 import ProjectMilestonesPanel from "./project-milestones-panel";
+import ProjectAssignmentBadge from "./project-assignment-badge";
 import { formatStatus } from "@/app/services/utils";
 import {
   Tabs,
@@ -87,6 +88,9 @@ export default async function ProjectDetailsPage({
         <div className="border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-wrap items-center gap-3">
             <Badge variant="secondary">{formatStatus(project.status)}</Badge>
+            <ProjectAssignmentBadge
+              assignments={project.actorAssignments ?? []}
+            />
             <span className="text-sm text-muted-foreground">
               Creado el {formatDate(project.createdAt)}
             </span>
