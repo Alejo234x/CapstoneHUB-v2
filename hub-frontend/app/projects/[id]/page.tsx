@@ -3,7 +3,14 @@ import { getProjectById } from "../../services/projects";
 import ProjectStatusEditForm from "../../components/project-status-edit-form";
 import ProjectObservationsPanel from "./project-observations-panel";
 import ProjectActorAssignmentPanel from "./project-actor-assignment-panel";
+import ProjectCategoriesPanel from "./project-categories-panel";
 import { formatStatus } from "@/app/services/utils";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -63,18 +70,26 @@ export default async function ProjectDetailsPage({
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <article className="border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex w-fit bg-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-800">
-                {formatStatus(project.status)}
-              </span>
-              <span className="text-sm text-slate-500">
-                Creado el {formatDate(project.createdAt)}
-              </span>
-            </div>
+        <div className="border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="inline-flex w-fit bg-blue-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-800">
+              {formatStatus(project.status)}
+            </span>
+            <span className="text-sm text-slate-500">
+              Creado el {formatDate(project.createdAt)}
+            </span>
+          </div>
 
-            <div className="mt-6 space-y-6">
+          <Tabs defaultValue="general" className="mt-6 w-full">
+            <TabsList className="w-full sm:w-fit">
+              <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="categorias">Categorías</TabsTrigger>
+              <TabsTrigger value="fechas">Fechas y costos</TabsTrigger>
+              <TabsTrigger value="equipo">Equipo</TabsTrigger>
+              <TabsTrigger value="observaciones">Observaciones</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="general" className="mt-6 space-y-6">
               <section>
                 <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
                   Descripción
@@ -159,59 +174,67 @@ export default async function ProjectDetailsPage({
                   </p>
                 )}
               </section>
-            </div>
-          </article>
+            </TabsContent>
 
-          <aside className="space-y-4 border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <div>
-              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Fechas
-              </h2>
-              <dl className="mt-4 space-y-3 text-sm text-slate-700">
-                <div className="flex items-start justify-between gap-4">
-                  <dt className="text-slate-500">Inicio</dt>
-                  <dd className="text-right">
-                    {formatDate(project.startDate)}
-                  </dd>
-                </div>
-                <div className="flex items-start justify-between gap-4">
-                  <dt className="text-slate-500">Fin</dt>
-                  <dd className="text-right">{formatDate(project.endDate)}</dd>
-                </div>
-                <div className="flex items-start justify-between gap-4">
-                  <dt className="text-slate-500">Costo estimado</dt>
-                  <dd className="text-right">
-                    {formatCurrency(project.estimatedCost)}
-                  </dd>
-                </div>
-              </dl>
-            </div>
+            <TabsContent value="categorias" className="mt-6">
+              <ProjectCategoriesPanel categories={project.categories} />
+            </TabsContent>
 
-            <div>
-              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Trazabilidad
-              </h2>
-              <dl className="mt-4 space-y-3 text-sm text-slate-700">
-                <div className="flex items-start justify-between gap-4">
-                  <dt className="text-slate-500">Actualizado</dt>
-                  <dd className="text-right">
-                    {formatDate(project.updatedAt)}
-                  </dd>
-                </div>
-              </dl>
-            </div>
+            <TabsContent value="fechas" className="mt-6 space-y-6">
+              <section>
+                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  Fechas
+                </h2>
+                <dl className="mt-4 space-y-3 text-sm text-slate-700">
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-slate-500">Inicio</dt>
+                    <dd className="text-right">
+                      {formatDate(project.startDate)}
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-slate-500">Fin</dt>
+                    <dd className="text-right">{formatDate(project.endDate)}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-slate-500">Costo estimado</dt>
+                    <dd className="text-right">
+                      {formatCurrency(project.estimatedCost)}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
 
-            <ProjectActorAssignmentPanel
-              projectId={project.id}
-              assignments={project.actorAssignments ?? []}
-            />
-          </aside>
+              <section>
+                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  Trazabilidad
+                </h2>
+                <dl className="mt-4 space-y-3 text-sm text-slate-700">
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-slate-500">Actualizado</dt>
+                    <dd className="text-right">
+                      {formatDate(project.updatedAt)}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
+            </TabsContent>
+
+            <TabsContent value="equipo" className="mt-6">
+              <ProjectActorAssignmentPanel
+                projectId={project.id}
+                assignments={project.actorAssignments ?? []}
+              />
+            </TabsContent>
+
+            <TabsContent value="observaciones" className="mt-6">
+              <ProjectObservationsPanel
+                projectId={project.id}
+                observations={project.observations ?? []}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
-
-        <ProjectObservationsPanel
-          projectId={project.id}
-          observations={project.observations ?? []}
-        />
 
         <div className="mt-6 flex w-full justify-end">
           <ProjectStatusEditForm
