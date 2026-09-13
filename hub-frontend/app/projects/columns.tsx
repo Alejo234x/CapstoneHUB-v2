@@ -1,45 +1,104 @@
-"use client"
+"use client";
 
 import { createColumnHelper } from "@tanstack/react-table";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { type ProjectItem } from "../services/schemas";
 import { formatStatus } from "../services/utils";
 import { type ProjectTableFeatures } from "./projects-table-features";
 
 const columnHelper = createColumnHelper<ProjectTableFeatures, ProjectItem>();
 
+function SortableHeader({
+  label,
+  column,
+}: {
+  label: string;
+  column: {
+    getIsSorted: () => false | "asc" | "desc";
+    toggleSorting: (desc?: boolean) => void;
+  };
+}) {
+  const sorted = column.getIsSorted();
+
+  return (
+    <Button
+      variant="ghost"
+      onClick={() => column.toggleSorting(sorted === "asc")}
+      className="-ml-3 h-8 px-3"
+    >
+      {label}
+      <span className="ml-2 text-xs">
+        {sorted === "asc" ? "↑" : sorted === "desc" ? "↓" : "↕"}
+      </span>
+    </Button>
+  );
+}
+
 export const columns = columnHelper.columns([
   columnHelper.accessor("name", {
-    header: "Nombre",
+    header: ({ column }) => (
+      <SortableHeader label="Nombre" column={column} />
+    ),
     filterFn: "includesString",
     cell: ({ row }) => (
-      <Link
-        href={`/projects/${row.original.id}`}
-      >
+      <Link href={`/projects/${row.original.id}`}>
         {row.original.name}
       </Link>
     ),
   }),
-  columnHelper.accessor((project) => project.location || project.context || "Sin información", {
-    id: "location",
-    header: "Lugar",
-  }),
+
   columnHelper.accessor(
-    (project) =>
-      project.proposer?.type === "natural_person"
-        ? project.proposer.fullName
-        : project.proposer?.type === "legal_person"
-          ? project.proposer.legalName
-          : "Sin información",
+    (project: ProjectItem) =>
+      project.location || project.context || "Sin información",
     {
-      id: "proposer",
-      header: "Proponente",
+      id: "location",
+      header: ({ column }) => (
+        <SortableHeader label="Lugar" column={column} />
+      ),
+      filterFn: "includesString",
     },
   ),
+
+  columnHelper.accessor(
+    (project: ProjectItem) => {
+      if (project.proposer?.type === "natural_person") {
+        return project.proposer.fullName;
+      }
+
+      if (project.proposer?.type === "legal_person") {
+        return project.proposer.legalName;
+      }
+
+      return "Sin información";
+    },
+    {
+      id: "proposer",
+      header: ({ column }) => (
+        <SortableHeader label="Proponente" column={column} />
+      ),
+      filterFn: "includesString",
+    },
+  ),
+
   columnHelper.accessor("status", {
-    header: "Estado",
+    header: ({ column }) => (
+      <SortableHeader label="Estado" column={column} />
+    ),
     cell: ({ getValue }) => (
       <span>{formatStatus(getValue())}</span>
     ),
   }),
+
+  columnHelper.accessor(
+    (project: ProjectItem) =>
+      new Date(project.startDate).getFullYear().toString(),
+    {
+      id: "year",
+      header: ({ column }) => (
+        <SortableHeader label="Año" column={column} />
+      ),
+      filterFn: "includesString",
+    },
+  ),
 ]);

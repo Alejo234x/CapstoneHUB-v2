@@ -14,7 +14,9 @@ type ProjectLegalProposer = {
   contactUrl: string | null;
 };
 
-export type ProjectProposer = ProjectNaturalProposer | ProjectLegalProposer;
+export type ProjectProposer =
+  | ProjectNaturalProposer
+  | ProjectLegalProposer;
 
 type ProjectActor = {
   id: number;
@@ -49,6 +51,7 @@ export type ProjectItem = {
   location?: string;
   context?: string;
   status: string;
+  startDate: string;
   proposer?: ProjectProposer;
   actors: ProjectActor[];
 };
