@@ -8,6 +8,80 @@ import { PrismaService } from '../prisma.service';
 import { ProjectStatus } from '../generated/prisma/client';
 import { ActorRole, UserRole } from '../generated/prisma/client';
 
+const ADMIN_USER = {
+  id: 1,
+  fullName: 'Admin',
+  email: 'admin@example.com',
+  roles: [UserRole.admin],
+};
+
+const EVALUATOR_USER = {
+  id: 4,
+  fullName: 'Evaluator',
+  email: 'evaluator@example.com',
+  roles: [UserRole.evaluator],
+};
+
+function createProjectDetail() {
+  return {
+    id: 10,
+    name: 'Project',
+    status: ProjectStatus.under_review,
+    proposer: null,
+    actors: [],
+    description: 'Description',
+    context: 'Context',
+    location: null,
+    startDate: new Date(),
+    endDate: null,
+    estimatedCost: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    observations: [],
+    actorAssignments: [],
+    milestones: [],
+    statusHistory: [],
+  };
+}
+
+function createPrismaMock() {
+  const projectUpdate = jest.fn().mockResolvedValue(undefined);
+  const historyCreate = jest.fn().mockResolvedValue(undefined);
+  const transaction = {
+    project: { update: projectUpdate },
+    projectStatusHistory: { create: historyCreate },
+  };
+
+  const findUnique = jest
+    .fn()
+    .mockResolvedValue({ id: 10, status: ProjectStatus.proposed });
+
+  const prisma = {
+    project: { findUnique },
+    $transaction: jest.fn(
+      (callback: (transaction: typeof transaction) => unknown) =>
+        callback(transaction),
+    ),
+  };
+
+  return { prisma, projectUpdate, historyCreate };
+}
+
+function createAuthorizationMock() {
+  return {
+    assertCanTransitionProject: jest.fn().mockResolvedValue(undefined),
+    assertCanAssignActors: jest.fn().mockResolvedValue(undefined),
+    assertAssignableUser: jest.fn().mockResolvedValue(undefined),
+  };
+}
+
+function createService(
+  prisma: unknown,
+  authorization: unknown,
+): ProjectsService {
+  return new ProjectsService(prisma as never, authorization as never);
+}
+
 describe('ProjectsService', () => {
   let service: ProjectsService;
 
@@ -56,72 +130,24 @@ describe('ProjectsService', () => {
   });
 
   it('updates status and history in the same transaction', async () => {
-    const transactionProjectUpdate = jest.fn().mockResolvedValue(undefined);
-    const transactionHistoryCreate = jest.fn().mockResolvedValue(undefined);
-    const prisma = {
-      project: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValueOnce({ id: 10, status: ProjectStatus.proposed }),
-      },
-      $transaction: jest.fn(
-        (
-          callback: (transaction: {
-            project: { update: typeof transactionProjectUpdate };
-            projectStatusHistory: {
-              create: typeof transactionHistoryCreate;
-            };
-          }) => unknown,
-        ) =>
-          callback({
-            project: { update: transactionProjectUpdate },
-            projectStatusHistory: { create: transactionHistoryCreate },
-          }),
-      ),
-    };
-    const authorization = {
-      assertCanTransitionProject: jest.fn().mockResolvedValue(undefined),
-    } as never;
-    const transitionUser = {
-      id: 4,
-      fullName: 'Evaluator',
-      email: 'evaluator@example.com',
-      roles: [UserRole.evaluator],
-    };
-    const service = new ProjectsService(prisma as never, authorization);
-    jest.spyOn(service, 'project').mockResolvedValue({
-      id: 10,
-      name: 'Project',
-      status: ProjectStatus.under_review,
-      proposer: null,
-      actors: [],
-      description: 'Description',
-      context: 'Context',
-      location: null,
-      startDate: new Date(),
-      endDate: null,
-      estimatedCost: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      observations: [],
-      actorAssignments: [],
-      milestones: [],
-      statusHistory: [],
-    });
+    const { prisma, projectUpdate, historyCreate } = createPrismaMock();
+    const authorization = createAuthorizationMock();
+    const service = createService(prisma, authorization);
+    jest.spyOn(service, 'project').mockResolvedValue(createProjectDetail());
 
     await service.transitionProjectStatus({
-      user: transitionUser,
+      user: EVALUATOR_USER,
       projectId: 10,
       nextStatus: ProjectStatus.under_review,
       description: 'Initial review',
     });
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(transactionProjectUpdate).toHaveBeenCalledWith({
+    expect(projectUpdate).toHaveBeenCalledWith({
       where: { id: 10 },
       data: { status: ProjectStatus.under_review },
     });
-    expect(transactionHistoryCreate).toHaveBeenCalledWith({
+    expect(historyCreate).toHaveBeenCalledWith({
       data: {
         projectId: 10,
         previousStatus: ProjectStatus.proposed,
@@ -133,29 +159,13 @@ describe('ProjectsService', () => {
   });
 
   it('requires a reason for non-admin status changes', async () => {
-    const prisma = {
-      project: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({ id: 10, status: ProjectStatus.proposed }),
-      },
-    };
-    const authorization = {
-      assertCanTransitionProject: jest.fn().mockResolvedValue(undefined),
-    };
-    const service = new ProjectsService(
-      prisma as never,
-      authorization as never,
-    );
+    const { prisma } = createPrismaMock();
+    const authorization = createAuthorizationMock();
+    const service = createService(prisma, authorization);
 
     await expect(
       service.transitionProjectStatus({
-        user: {
-          id: 4,
-          fullName: 'Evaluator',
-          email: 'evaluator@example.com',
-          roles: [UserRole.evaluator],
-        },
+        user: EVALUATOR_USER,
         projectId: 10,
         nextStatus: ProjectStatus.under_review,
       }),
@@ -163,68 +173,18 @@ describe('ProjectsService', () => {
   });
 
   it('allows admin status changes without a reason', async () => {
-    const transactionProjectUpdate = jest.fn().mockResolvedValue(undefined);
-    const transactionHistoryCreate = jest.fn().mockResolvedValue(undefined);
-    const prisma = {
-      project: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({ id: 10, status: ProjectStatus.proposed }),
-      },
-      $transaction: jest.fn(
-        (
-          callback: (transaction: {
-            project: { update: typeof transactionProjectUpdate };
-            projectStatusHistory: {
-              create: typeof transactionHistoryCreate;
-            };
-          }) => unknown,
-        ) =>
-          callback({
-            project: { update: transactionProjectUpdate },
-            projectStatusHistory: { create: transactionHistoryCreate },
-          }),
-      ),
-    };
-    const authorization = {
-      assertCanTransitionProject: jest.fn().mockResolvedValue(undefined),
-    };
-    const service = new ProjectsService(
-      prisma as never,
-      authorization as never,
-    );
-    jest.spyOn(service, 'project').mockResolvedValue({
-      id: 10,
-      name: 'Project',
-      status: ProjectStatus.under_review,
-      proposer: null,
-      actors: [],
-      description: 'Description',
-      context: 'Context',
-      location: null,
-      startDate: new Date(),
-      endDate: null,
-      estimatedCost: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      observations: [],
-      actorAssignments: [],
-      milestones: [],
-      statusHistory: [],
-    });
+    const { prisma, historyCreate } = createPrismaMock();
+    const authorization = createAuthorizationMock();
+    const service = createService(prisma, authorization);
+    jest.spyOn(service, 'project').mockResolvedValue(createProjectDetail());
 
     await service.transitionProjectStatus({
-      user: {
-        id: 1,
-        fullName: 'Admin',
-        email: 'admin@example.com',
-        roles: [UserRole.admin],
-      },
+      user: ADMIN_USER,
       projectId: 10,
       nextStatus: ProjectStatus.under_review,
     });
 
-    expect(transactionHistoryCreate).toHaveBeenCalledWith({
+    expect(historyCreate).toHaveBeenCalledWith({
       data: {
         projectId: 10,
         previousStatus: ProjectStatus.proposed,
@@ -236,29 +196,13 @@ describe('ProjectsService', () => {
   });
 
   it('rejects invalid transitions before authorization checks', async () => {
-    const prisma = {
-      project: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({ id: 10, status: ProjectStatus.proposed }),
-      },
-    };
-    const authorization = {
-      assertCanTransitionProject: jest.fn().mockResolvedValue(undefined),
-    };
-    const service = new ProjectsService(
-      prisma as never,
-      authorization as never,
-    );
+    const { prisma } = createPrismaMock();
+    const authorization = createAuthorizationMock();
+    const service = createService(prisma, authorization);
 
     await expect(
       service.transitionProjectStatus({
-        user: {
-          id: 1,
-          fullName: 'Admin',
-          email: 'admin@example.com',
-          roles: [UserRole.admin],
-        },
+        user: ADMIN_USER,
         projectId: 10,
         nextStatus: ProjectStatus.approved,
       }),
@@ -284,21 +228,13 @@ describe('ProjectsService', () => {
         findUnique: jest.fn().mockResolvedValue({ id: 1 }),
         create: createAssignment,
       },
-    } as never;
-    const authorization = {
-      assertCanAssignActors: jest.fn().mockResolvedValue(undefined),
-      assertAssignableUser: jest.fn().mockResolvedValue(undefined),
-    } as never;
-    const service = new ProjectsService(prisma, authorization);
+    };
+    const authorization = createAuthorizationMock();
+    const service = createService(prisma, authorization);
 
     await expect(
       service.addProjectActorAssignment({
-        user: {
-          id: 1,
-          fullName: 'Admin',
-          email: 'admin@example.com',
-          roles: [UserRole.admin],
-        },
+        user: ADMIN_USER,
         projectId: 10,
         userId: 4,
         role: ActorRole.student,
