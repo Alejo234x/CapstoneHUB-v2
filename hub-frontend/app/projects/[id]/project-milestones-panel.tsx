@@ -34,6 +34,7 @@ import {
   RiCheckboxBlankCircleLine,
   RiCheckboxCircleLine,
   RiDeleteBinLine,
+  RiErrorWarningLine,
   RiPencilLine,
 } from "@remixicon/react";
 
@@ -70,6 +71,14 @@ function toDateTimeLocal(dateValue: string): string {
   const date = new Date(dateValue);
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 16);
+}
+
+function isOverdue(milestone: ProjectMilestoneItem): boolean {
+  if (milestone.completed) {
+    return false;
+  }
+
+  return new Date(milestone.dueDate).getTime() < Date.now();
 }
 
 export default function ProjectMilestonesPanel({
@@ -341,8 +350,16 @@ export default function ProjectMilestonesPanel({
                     </p>
                   ) : null}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {formatDate(milestone.dueDate)}
+                <TableCell>
+                  <div className="text-muted-foreground">
+                    {formatDate(milestone.dueDate)}
+                  </div>
+                  {isOverdue(milestone) ? (
+                    <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-destructive">
+                      <RiErrorWarningLine className="size-3.5" />
+                      Vencido
+                    </span>
+                  ) : null}
                 </TableCell>
                 {canManage ? (
                   <TableCell className="text-right">
@@ -472,6 +489,13 @@ export default function ProjectMilestonesPanel({
 
           {detailMilestone ? (
             <div className="space-y-4">
+              {isOverdue(detailMilestone) ? (
+                <p className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  <RiErrorWarningLine className="size-4 shrink-0" />
+                  Este hito ya venció.
+                </p>
+              ) : null}
+
               <div className="flex items-center gap-2">
                 {detailMilestone.completed ? (
                   <RiCheckboxCircleLine className="text-green-600" />
