@@ -43,6 +43,21 @@ export type ProjectObservationItem = {
   createdAt: string;
 };
 
+export type ProjectCategory = {
+  id: number;
+  name: string;
+  color?: string | null;
+};
+
+export type ProjectMilestoneItem = {
+  id: number;
+  projectId: number;
+  title: string;
+  description: string | null;
+  dueDate: string;
+  completed: boolean;
+};
+
 export type ProjectItem = {
   id: string;
   name: string;
@@ -67,4 +82,8 @@ export type ProjectDetails = {
   updatedAt: string;
   observations: ProjectObservationItem[];
   actorAssignments: ProjectActor[];
+  // Opcionales: el backend aún no los expone en todos los ambientes.
+  // Cuando existan, se muestran automáticamente en la pestaña "Categorías".
+  categories?: ProjectCategory[];
+  milestones?: ProjectMilestoneItem[];
 };
