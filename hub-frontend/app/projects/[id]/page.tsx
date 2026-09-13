@@ -195,10 +195,6 @@ export default async function ProjectDetailsPage({
                     </dd>
                   </div>
                   <div className="flex items-start justify-between gap-4">
-                    <dt className="text-slate-500">Fin</dt>
-                    <dd className="text-right">{formatDate(project.endDate)}</dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
                     <dt className="text-slate-500">Costo estimado</dt>
                     <dd className="text-right">
                       {formatCurrency(project.estimatedCost)}

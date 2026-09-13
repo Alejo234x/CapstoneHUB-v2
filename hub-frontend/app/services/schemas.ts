@@ -70,6 +70,7 @@ export type ProjectItem = {
   startDate: string;
   proposer?: ProjectProposer;
   actors: ProjectActor[];
+  estimatedCost?: string | null;
 };
 
 export type ProjectDetails = {
