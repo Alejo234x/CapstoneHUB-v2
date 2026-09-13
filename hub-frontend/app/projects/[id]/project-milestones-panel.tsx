@@ -84,6 +84,9 @@ export default function ProjectMilestonesPanel({
     useState<ProjectMilestoneItem | null>(null);
   const [form, setForm] = useState<MilestoneFormState>(emptyForm);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [detailMilestone, setDetailMilestone] =
+    useState<ProjectMilestoneItem | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const canManage = useMemo(() => {
@@ -144,6 +147,11 @@ export default function ProjectMilestonesPanel({
     });
     setErrorMessage(null);
     setDialogOpen(true);
+  }
+
+  function openDetailDialog(milestone: ProjectMilestoneItem) {
+    setDetailMilestone(milestone);
+    setDetailOpen(true);
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -316,17 +324,19 @@ export default function ProjectMilestonesPanel({
                   </Button>
                 </TableCell>
                 <TableCell className="whitespace-normal">
-                  <p
-                    className={`font-medium ${
+                  <button
+                    type="button"
+                    onClick={() => openDetailDialog(milestone)}
+                    className={`text-left font-medium hover:underline ${
                       milestone.completed
                         ? "text-muted-foreground line-through"
                         : "text-foreground"
                     }`}
                   >
                     {milestone.title}
-                  </p>
+                  </button>
                   {milestone.description ? (
-                    <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
+                    <p className="mt-1 line-clamp-2 whitespace-pre-line text-sm text-muted-foreground">
                       {milestone.description}
                     </p>
                   ) : null}
@@ -450,6 +460,63 @@ export default function ProjectMilestonesPanel({
               onCancel={() => setDialogOpen(false)}
             />
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{detailMilestone?.title}</DialogTitle>
+            <DialogDescription>Detalles del hito</DialogDescription>
+          </DialogHeader>
+
+          {detailMilestone ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                {detailMilestone.completed ? (
+                  <RiCheckboxCircleLine className="text-green-600" />
+                ) : (
+                  <RiCheckboxBlankCircleLine />
+                )}
+                <span className="text-sm font-medium">
+                  {detailMilestone.completed ? "Completado" : "Pendiente"}
+                </span>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Vence
+                </p>
+                <p className="mt-1 text-sm">{formatDate(detailMilestone.dueDate)}</p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Descripción
+                </p>
+                {detailMilestone.description ? (
+                  <p className="mt-1 whitespace-pre-line text-sm">
+                    {detailMilestone.description}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Sin descripción.
+                  </p>
+                )}
+              </div>
+
+              {detailMilestone.createdAt ? (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Creado
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {formatDate(detailMilestone.createdAt)}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
     </section>
