@@ -15,6 +15,22 @@ import { PrismaService } from '../prisma.service';
 import { AuthorizationService } from '../auth/authorization.service';
 import { AuthenticatedUser } from '../auth/auth.types';
 
+const projectStatusHistorySelect = {
+  id: true,
+  projectId: true,
+  previousStatus: true,
+  nextStatus: true,
+  description: true,
+  changedAt: true,
+  authorUser: {
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+    },
+  },
+} as const satisfies Prisma.ProjectStatusHistorySelect;
+
 type ProjectWithRelations = Prisma.ProjectGetPayload<{
   include: {
     naturalProposer: true;
@@ -41,21 +57,7 @@ type ProjectWithRelations = Prisma.ProjectGetPayload<{
     };
     milestones: true;
     statusHistory: {
-      select: {
-        id: true;
-        projectId: true;
-        previousStatus: true;
-        nextStatus: true;
-        description: true;
-        changedAt: true;
-        authorUser: {
-          select: {
-            id: true;
-            fullName: true;
-            email: true;
-          };
-        };
-      };
+      select: typeof projectStatusHistorySelect;
     };
   };
 }>;
@@ -374,21 +376,7 @@ export class ProjectsService {
         },
         milestones: true,
         statusHistory: {
-          select: {
-            id: true,
-            projectId: true,
-            previousStatus: true,
-            nextStatus: true,
-            description: true,
-            changedAt: true,
-            authorUser: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-              },
-            },
-          },
+          select: projectStatusHistorySelect,
         },
       },
     });
@@ -435,21 +423,7 @@ export class ProjectsService {
         },
         milestones: true,
         statusHistory: {
-          select: {
-            id: true,
-            projectId: true,
-            previousStatus: true,
-            nextStatus: true,
-            description: true,
-            changedAt: true,
-            authorUser: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-              },
-            },
-          },
+          select: projectStatusHistorySelect,
         },
       },
     });
@@ -500,21 +474,7 @@ export class ProjectsService {
         },
         milestones: true,
         statusHistory: {
-          select: {
-            id: true,
-            projectId: true,
-            previousStatus: true,
-            nextStatus: true,
-            description: true,
-            changedAt: true,
-            authorUser: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-              },
-            },
-          },
+          select: projectStatusHistorySelect,
         },
       },
     });
@@ -556,21 +516,7 @@ export class ProjectsService {
         },
         milestones: true,
         statusHistory: {
-          select: {
-            id: true,
-            projectId: true,
-            previousStatus: true,
-            nextStatus: true,
-            description: true,
-            changedAt: true,
-            authorUser: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-              },
-            },
-          },
+          select: projectStatusHistorySelect,
         },
       },
     });
