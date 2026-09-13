@@ -9,6 +9,7 @@ import {
   Prisma,
   Project,
   ProjectStatus,
+  UserRole,
 } from '../generated/prisma/client';
 import { PrismaService } from '../prisma.service';
 import { AuthorizationService } from '../auth/authorization.service';
@@ -39,6 +40,23 @@ type ProjectWithRelations = Prisma.ProjectGetPayload<{
       };
     };
     milestones: true;
+    statusHistory: {
+      select: {
+        id: true;
+        projectId: true;
+        previousStatus: true;
+        nextStatus: true;
+        description: true;
+        changedAt: true;
+        authorUser: {
+          select: {
+            id: true;
+            fullName: true;
+            email: true;
+          };
+        };
+      };
+    };
   };
 }>;
 
@@ -119,6 +137,19 @@ export type ProjectDetailResponse = ProjectListResponse & {
     dueDate: Date;
     completed: boolean;
     createdAt: Date;
+  }[];
+  statusHistory: {
+    id: number;
+    projectId: number;
+    previousStatus: ProjectStatus | null;
+    nextStatus: ProjectStatus;
+    description: string | null;
+    changedAt: Date;
+    author: {
+      id: number;
+      fullName: string;
+      email: string;
+    } | null;
   }[];
 };
 
@@ -261,6 +292,28 @@ function mapProjectDetailResponse(
           left.dueDate.getTime() - right.dueDate.getTime() ||
           left.id - right.id,
       ),
+    statusHistory: project.statusHistory
+      .slice()
+      .sort(
+        (left, right) =>
+          right.changedAt.getTime() - left.changedAt.getTime() ||
+          right.id - left.id,
+      )
+      .map((entry) => ({
+        id: entry.id,
+        projectId: entry.projectId,
+        previousStatus: entry.previousStatus,
+        nextStatus: entry.nextStatus,
+        description: entry.description,
+        changedAt: entry.changedAt,
+        author: entry.authorUser
+          ? {
+              id: entry.authorUser.id,
+              fullName: entry.authorUser.fullName,
+              email: entry.authorUser.email,
+            }
+          : null,
+      })),
   };
 }
 
@@ -320,6 +373,23 @@ export class ProjectsService {
           },
         },
         milestones: true,
+        statusHistory: {
+          select: {
+            id: true,
+            projectId: true,
+            previousStatus: true,
+            nextStatus: true,
+            description: true,
+            changedAt: true,
+            authorUser: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -364,6 +434,23 @@ export class ProjectsService {
           },
         },
         milestones: true,
+        statusHistory: {
+          select: {
+            id: true,
+            projectId: true,
+            previousStatus: true,
+            nextStatus: true,
+            description: true,
+            changedAt: true,
+            authorUser: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -412,6 +499,23 @@ export class ProjectsService {
           },
         },
         milestones: true,
+        statusHistory: {
+          select: {
+            id: true,
+            projectId: true,
+            previousStatus: true,
+            nextStatus: true,
+            description: true,
+            changedAt: true,
+            authorUser: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
   }
@@ -451,6 +555,23 @@ export class ProjectsService {
           },
         },
         milestones: true,
+        statusHistory: {
+          select: {
+            id: true,
+            projectId: true,
+            previousStatus: true,
+            nextStatus: true,
+            description: true,
+            changedAt: true,
+            authorUser: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -486,6 +607,14 @@ export class ProjectsService {
       nextStatus,
     );
 
+    const trimmedDescription = description?.trim() || null;
+
+    if (!trimmedDescription && !user.roles.includes(UserRole.admin)) {
+      throw new BadRequestException(
+        'A reason is required to change the project status',
+      );
+    }
+
     await this.prisma.$transaction(async (transaction) => {
       await transaction.project.update({
         where: { id: projectId },
@@ -497,7 +626,7 @@ export class ProjectsService {
           projectId,
           previousStatus: currentProject.status,
           nextStatus,
-          description: description?.trim() || null,
+          description: trimmedDescription,
           authorUserId: user.id,
         },
       });

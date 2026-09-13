@@ -2,6 +2,7 @@ import {
   ProjectDetails,
   ProjectItem,
   ProjectMilestoneItem,
+  ProjectObservationItem,
   UserSummary,
 } from "./schemas";
 import { getAuthToken } from "./auth";
@@ -100,6 +101,7 @@ export async function getProjectById(id: string): Promise<{
 export async function updateProjectStatus(
   id: string,
   status: string,
+  description?: string,
 ): Promise<ProjectDetails> {
   const response = await fetch(getApiUrl(`/api/projects/${id}/status`), {
     method: "PATCH",
@@ -107,7 +109,7 @@ export async function updateProjectStatus(
       "Content-Type": "application/json",
       ...getAuthHeaders(),
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, description }),
   });
 
   if (!response.ok) {
@@ -120,7 +122,7 @@ export async function updateProjectStatus(
 export async function createProjectObservation(
   id: string,
   content: string,
-): Promise<{ id: number; projectId: number; content: string; createdAt: string }> {
+): Promise<ProjectObservationItem> {
   const response = await fetch(getApiUrl(`/api/projects/${id}/observations`), {
     method: "POST",
     headers: {
@@ -134,12 +136,7 @@ export async function createProjectObservation(
     throw new Error(`Backend responded with status ${response.status}`);
   }
 
-  return (await response.json()) as {
-    id: number;
-    projectId: number;
-    content: string;
-    createdAt: string;
-  };
+  return (await response.json()) as ProjectObservationItem;
 }
 
 export type CreateProjectMilestonePayload = {

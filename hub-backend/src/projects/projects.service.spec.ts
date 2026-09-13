@@ -106,6 +106,7 @@ describe('ProjectsService', () => {
       observations: [],
       actorAssignments: [],
       milestones: [],
+      statusHistory: [],
     });
 
     await service.transitionProjectStatus({
@@ -127,6 +128,109 @@ describe('ProjectsService', () => {
         nextStatus: ProjectStatus.under_review,
         description: 'Initial review',
         authorUserId: 4,
+      },
+    });
+  });
+
+  it('requires a reason for non-admin status changes', async () => {
+    const prisma = {
+      project: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ id: 10, status: ProjectStatus.proposed }),
+      },
+    };
+    const authorization = {
+      assertCanTransitionProject: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new ProjectsService(
+      prisma as never,
+      authorization as never,
+    );
+
+    await expect(
+      service.transitionProjectStatus({
+        user: {
+          id: 4,
+          fullName: 'Evaluator',
+          email: 'evaluator@example.com',
+          roles: [UserRole.evaluator],
+        },
+        projectId: 10,
+        nextStatus: ProjectStatus.under_review,
+      }),
+    ).rejects.toThrow('A reason is required');
+  });
+
+  it('allows admin status changes without a reason', async () => {
+    const transactionProjectUpdate = jest.fn().mockResolvedValue(undefined);
+    const transactionHistoryCreate = jest.fn().mockResolvedValue(undefined);
+    const prisma = {
+      project: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ id: 10, status: ProjectStatus.proposed }),
+      },
+      $transaction: jest.fn(
+        (
+          callback: (transaction: {
+            project: { update: typeof transactionProjectUpdate };
+            projectStatusHistory: {
+              create: typeof transactionHistoryCreate;
+            };
+          }) => unknown,
+        ) =>
+          callback({
+            project: { update: transactionProjectUpdate },
+            projectStatusHistory: { create: transactionHistoryCreate },
+          }),
+      ),
+    };
+    const authorization = {
+      assertCanTransitionProject: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new ProjectsService(
+      prisma as never,
+      authorization as never,
+    );
+    jest.spyOn(service, 'project').mockResolvedValue({
+      id: 10,
+      name: 'Project',
+      status: ProjectStatus.under_review,
+      proposer: null,
+      actors: [],
+      description: 'Description',
+      context: 'Context',
+      location: null,
+      startDate: new Date(),
+      endDate: null,
+      estimatedCost: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      observations: [],
+      actorAssignments: [],
+      milestones: [],
+      statusHistory: [],
+    });
+
+    await service.transitionProjectStatus({
+      user: {
+        id: 1,
+        fullName: 'Admin',
+        email: 'admin@example.com',
+        roles: [UserRole.admin],
+      },
+      projectId: 10,
+      nextStatus: ProjectStatus.under_review,
+    });
+
+    expect(transactionHistoryCreate).toHaveBeenCalledWith({
+      data: {
+        projectId: 10,
+        previousStatus: ProjectStatus.proposed,
+        nextStatus: ProjectStatus.under_review,
+        description: null,
+        authorUserId: 1,
       },
     });
   });
