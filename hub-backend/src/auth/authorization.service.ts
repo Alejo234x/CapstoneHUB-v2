@@ -87,10 +87,13 @@ export class AuthorizationService {
     if (user.roles.includes(UserRole.evaluator)) {
       roles.push(ActorRole.evaluator);
     }
+    if (user.roles.includes(UserRole.advisor)) {
+      roles.push(ActorRole.advisor);
+    }
 
     if (roles.length === 0) {
       throw new ForbiddenException(
-        'A coordinator or evaluator role is required',
+        'A coordinator, evaluator, or advisor role is required',
       );
     }
 
@@ -101,7 +104,7 @@ export class AuthorizationService {
 
     if (!assignment) {
       throw new ForbiddenException(
-        'A project coordinator or evaluator assignment is required for this action',
+        'A project coordinator, evaluator, or advisor assignment is required for this action',
       );
     }
   }

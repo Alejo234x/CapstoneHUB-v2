@@ -100,7 +100,8 @@ export default function ProjectMilestonesPanel({
       (assignment) =>
         assignment.userId === session.user.id &&
         ((roles.includes("coordinator") && assignment.role === "coordinator") ||
-          (roles.includes("evaluator") && assignment.role === "evaluator")),
+          (roles.includes("evaluator") && assignment.role === "evaluator") ||
+          (roles.includes("advisor") && assignment.role === "advisor")),
     );
   }, [session, actorAssignments]);
 
