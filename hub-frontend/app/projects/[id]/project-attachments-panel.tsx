@@ -80,6 +80,440 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function getPermissionMessage(isAuthenticated: boolean): string {
+  return isAuthenticated
+    ? "No tienes permisos para ver ni descargar los anexos de este proyecto."
+    : "Inicia sesión para ver y descargar los anexos.";
+}
+
+type AttachmentUploadCardProps = {
+  ready: boolean;
+  isAuthenticated: boolean;
+  canUpload: boolean;
+  isPending: boolean;
+  selectedFile: File | null;
+  errorMessage: string | null;
+  onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+};
+
+function AttachmentUploadCard({
+  ready,
+  isAuthenticated,
+  canUpload,
+  isPending,
+  selectedFile,
+  errorMessage,
+  onFileChange,
+  onSubmit,
+}: AttachmentUploadCardProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Anexos</CardTitle>
+        <CardDescription>
+          Documentos e imágenes vinculados al proyecto. Máximo 10 MB por archivo
+          (PDF, Word, Excel, PNG o JPEG).
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent>
+        {renderUploadContent()}
+      </CardContent>
+    </Card>
+  );
+
+  function renderUploadContent() {
+    if (!ready) {
+      return <p className="text-sm text-muted-foreground">Cargando acceso...</p>;
+    }
+
+    if (!isAuthenticated) {
+      return (
+        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          Inicia sesión para consultar y subir anexos.
+          <Button render={<Link href="/login">Iniciar sesión</Link>} />
+        </div>
+      );
+    }
+
+    if (!canUpload) {
+      return (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <RiLockLine className="size-4 shrink-0" />
+          Solo los participantes del proyecto pueden subir anexos.
+        </p>
+      );
+    }
+
+    return (
+      <form onSubmit={onSubmit} className="space-y-4">
+        <Input
+          type="file"
+          onChange={onFileChange}
+          disabled={isPending}
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+        />
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-muted-foreground">
+            {getSelectedFileLabel(selectedFile)}
+          </span>
+          <Button type="submit" disabled={isPending || !selectedFile}>
+            {isPending ? "Subiendo..." : "Subir anexo"}
+          </Button>
+        </div>
+
+        {errorMessage ? (
+          <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            {errorMessage}
+          </p>
+        ) : null}
+      </form>
+    );
+  }
+}
+
+function getSelectedFileLabel(selectedFile: File | null): string {
+  if (!selectedFile) {
+    return "Selecciona un archivo para subir.";
+  }
+
+  return `${selectedFile.name} · ${formatBytes(selectedFile.size)}`;
+}
+
+function PermissionNotice({ isAuthenticated }: { isAuthenticated: boolean }) {
+  return (
+    <div className="mb-4 flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+      <RiLockLine className="mt-0.5 size-4 shrink-0" />
+      <div className="space-y-2">
+        <p className="font-medium">{getPermissionMessage(isAuthenticated)}</p>
+        {isAuthenticated ? null : (
+          <Button
+            variant="outline"
+            size="sm"
+            render={<Link href="/login">Iniciar sesión</Link>}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ListErrorBanner({ message }: { message: string }) {
+  return (
+    <p className="mb-4 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+      <RiErrorWarningLine className="size-4 shrink-0" />
+      {message}
+    </p>
+  );
+}
+
+type AttachmentNameProps = {
+  attachment: ProjectAttachmentItem;
+  canView: boolean;
+  onDownload: (attachment: ProjectAttachmentItem) => void;
+};
+
+function AttachmentName({
+  attachment,
+  canView,
+  onDownload,
+}: AttachmentNameProps) {
+  if (!canView) {
+    return (
+      <span
+        className="flex items-center gap-1.5 truncate text-left font-medium text-muted-foreground"
+        title="No tienes permisos para descargar este anexo"
+      >
+        {attachment.originalName}
+        <RiLockLine className="size-3.5 shrink-0" />
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onDownload(attachment)}
+      className="truncate text-left font-medium hover:underline"
+    >
+      {attachment.originalName}
+    </button>
+  );
+}
+
+type AttachmentNameCellProps = AttachmentNameProps;
+
+function AttachmentNameCell({
+  attachment,
+  canView,
+  onDownload,
+}: AttachmentNameCellProps) {
+  return (
+    <TableCell className="whitespace-normal">
+      <div className="flex items-center gap-2">
+        <RiAttachmentLine className="size-4 shrink-0 text-muted-foreground" />
+        <div className="min-w-0">
+          <AttachmentName
+            attachment={attachment}
+            canView={canView}
+            onDownload={onDownload}
+          />
+          {attachment.uploadedBy ? (
+            <p className="truncate text-xs text-muted-foreground">
+              {attachment.uploadedBy.fullName}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </TableCell>
+  );
+}
+
+type DownloadButtonProps = {
+  canView: boolean;
+  isPending: boolean;
+  onDownload: () => void;
+};
+
+function DownloadButton({ canView, isPending, onDownload }: DownloadButtonProps) {
+  if (!canView) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Sin permisos para descargar"
+        title="No tienes permisos para descargar este anexo"
+        disabled
+      >
+        <RiLockLine />
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      aria-label="Descargar anexo"
+      onClick={onDownload}
+      disabled={isPending}
+    >
+      <RiDownloadLine />
+    </Button>
+  );
+}
+
+type DeleteButtonProps = {
+  canDelete: boolean;
+  isPending: boolean;
+  onDelete: () => void;
+};
+
+function DeleteButton({ canDelete, isPending, onDelete }: DeleteButtonProps) {
+  if (!canDelete) {
+    return null;
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      aria-label="Eliminar anexo"
+      className="text-destructive"
+      onClick={onDelete}
+      disabled={isPending}
+    >
+      <RiDeleteBinLine />
+    </Button>
+  );
+}
+
+type AttachmentActionsCellProps = {
+  attachment: ProjectAttachmentItem;
+  canView: boolean;
+  canDelete: boolean;
+  isPending: boolean;
+  onDownload: (attachment: ProjectAttachmentItem) => void;
+  onDelete: (attachment: ProjectAttachmentItem) => void;
+};
+
+function AttachmentActionsCell({
+  attachment,
+  canView,
+  canDelete,
+  isPending,
+  onDownload,
+  onDelete,
+}: AttachmentActionsCellProps) {
+  return (
+    <TableCell className="text-right">
+      <div className="flex justify-end gap-1">
+        <DownloadButton
+          canView={canView}
+          isPending={isPending}
+          onDownload={() => onDownload(attachment)}
+        />
+        <DeleteButton
+          canDelete={canDelete}
+          isPending={isPending}
+          onDelete={() => onDelete(attachment)}
+        />
+      </div>
+    </TableCell>
+  );
+}
+
+type AttachmentRowProps = AttachmentActionsCellProps & {
+  showActions: boolean;
+};
+
+function AttachmentRow({
+  attachment,
+  canView,
+  canDelete,
+  isPending,
+  showActions,
+  onDownload,
+  onDelete,
+}: AttachmentRowProps) {
+  return (
+    <TableRow>
+      <AttachmentNameCell
+        attachment={attachment}
+        canView={canView}
+        onDownload={onDownload}
+      />
+      <TableCell className="text-muted-foreground">
+        {formatBytes(attachment.sizeBytes)}
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {formatDate(attachment.createdAt)}
+      </TableCell>
+      {showActions ? (
+        <AttachmentActionsCell
+          attachment={attachment}
+          canView={canView}
+          canDelete={canDelete}
+          isPending={isPending}
+          onDownload={onDownload}
+          onDelete={onDelete}
+        />
+      ) : null}
+    </TableRow>
+  );
+}
+
+type AttachmentsTableProps = {
+  attachments: ProjectAttachmentItem[];
+  canView: boolean;
+  isPending: boolean;
+  canDelete: (attachment: ProjectAttachmentItem) => boolean;
+  onDownload: (attachment: ProjectAttachmentItem) => void;
+  onDelete: (attachment: ProjectAttachmentItem) => void;
+};
+
+function AttachmentsTable({
+  attachments,
+  canView,
+  isPending,
+  canDelete,
+  onDownload,
+  onDelete,
+}: AttachmentsTableProps) {
+  const showActions = canView || attachments.some(canDelete);
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Archivo</TableHead>
+          <TableHead className="w-32">Tamaño</TableHead>
+          <TableHead className="w-48">Subido</TableHead>
+          {showActions ? (
+            <TableHead className="w-24 text-right">Acciones</TableHead>
+          ) : null}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {attachments.map((attachment) => (
+          <AttachmentRow
+            key={attachment.id}
+            attachment={attachment}
+            canView={canView}
+            canDelete={canDelete(attachment)}
+            isPending={isPending}
+            showActions={showActions}
+            onDownload={onDownload}
+            onDelete={onDelete}
+          />
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+type AttachmentsListCardProps = {
+  attachments: ProjectAttachmentItem[];
+  ready: boolean;
+  isAuthenticated: boolean;
+  canView: boolean;
+  listError: string | null;
+  isPending: boolean;
+  canDelete: (attachment: ProjectAttachmentItem) => boolean;
+  onDownload: (attachment: ProjectAttachmentItem) => void;
+  onDelete: (attachment: ProjectAttachmentItem) => void;
+};
+
+function AttachmentsListCard({
+  attachments,
+  ready,
+  isAuthenticated,
+  canView,
+  listError,
+  isPending,
+  canDelete,
+  onDownload,
+  onDelete,
+}: AttachmentsListCardProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Archivos</CardTitle>
+        <CardDescription>{getAttachmentsSummary(attachments.length)}</CardDescription>
+      </CardHeader>
+
+      {attachments.length > 0 ? (
+        <CardContent>
+          {ready && !canView ? (
+            <PermissionNotice isAuthenticated={isAuthenticated} />
+          ) : null}
+
+          {listError ? <ListErrorBanner message={listError} /> : null}
+
+          <AttachmentsTable
+            attachments={attachments}
+            canView={canView}
+            isPending={isPending}
+            canDelete={canDelete}
+            onDownload={onDownload}
+            onDelete={onDelete}
+          />
+        </CardContent>
+      ) : null}
+    </Card>
+  );
+}
+
+function getAttachmentsSummary(count: number): string {
+  if (count === 0) {
+    return "No hay anexos registrados.";
+  }
+
+  return `${count} anexo(s) registrado(s).`;
+}
+
 export default function ProjectAttachmentsPanel({
   projectId,
   attachments,
@@ -236,199 +670,30 @@ export default function ProjectAttachmentsPanel({
     });
   }
 
-  const showActions = canView || attachments.some(canDelete);
-
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Anexos</CardTitle>
-          <CardDescription>
-            Documentos e imágenes vinculados al proyecto. Máximo 10 MB por
-            archivo (PDF, Word, Excel, PNG o JPEG).
-          </CardDescription>
-        </CardHeader>
+      <AttachmentUploadCard
+        ready={ready}
+        isAuthenticated={isAuthenticated}
+        canUpload={canUpload}
+        isPending={isPending}
+        selectedFile={selectedFile}
+        errorMessage={errorMessage}
+        onFileChange={handleFileChange}
+        onSubmit={handleUpload}
+      />
 
-        <CardContent>
-          {!ready ? (
-            <p className="text-sm text-muted-foreground">Cargando acceso...</p>
-          ) : !isAuthenticated ? (
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              Inicia sesión para consultar y subir anexos.
-              <Button render={<Link href="/login">Iniciar sesión</Link>} />
-            </div>
-          ) : canUpload ? (
-            <form onSubmit={handleUpload} className="space-y-4">
-              <Input
-                type="file"
-                onChange={handleFileChange}
-                disabled={isPending}
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-              />
-
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">
-                  {selectedFile
-                    ? `${selectedFile.name} · ${formatBytes(selectedFile.size)}`
-                    : "Selecciona un archivo para subir."}
-                </span>
-                <Button
-                  type="submit"
-                  disabled={isPending || !selectedFile}
-                >
-                  {isPending ? "Subiendo..." : "Subir anexo"}
-                </Button>
-              </div>
-
-              {errorMessage ? (
-                <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                  {errorMessage}
-                </p>
-              ) : null}
-            </form>
-          ) : (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <RiLockLine className="size-4 shrink-0" />
-              Solo los participantes del proyecto pueden subir anexos.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Archivos</CardTitle>
-          <CardDescription>
-            {attachments.length === 0
-              ? "No hay anexos registrados."
-              : `${attachments.length} anexo(s) registrado(s).`}
-          </CardDescription>
-        </CardHeader>
-
-        {attachments.length > 0 ? (
-          <CardContent>
-            {ready && !canView ? (
-              <div className="mb-4 flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-                <RiLockLine className="mt-0.5 size-4 shrink-0" />
-                <div className="space-y-2">
-                  <p className="font-medium">
-                    {isAuthenticated
-                      ? "No tienes permisos para ver ni descargar los anexos de este proyecto."
-                      : "Inicia sesión para ver y descargar los anexos."}
-                  </p>
-                  {!isAuthenticated ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      render={<Link href="/login">Iniciar sesión</Link>}
-                    />
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
-
-            {listError ? (
-              <p className="mb-4 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                <RiErrorWarningLine className="size-4 shrink-0" />
-                {listError}
-              </p>
-            ) : null}
-
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Archivo</TableHead>
-                  <TableHead className="w-32">Tamaño</TableHead>
-                  <TableHead className="w-48">Subido</TableHead>
-                  {showActions ? (
-                    <TableHead className="w-24 text-right">Acciones</TableHead>
-                  ) : null}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {attachments.map((attachment) => (
-                  <TableRow key={attachment.id}>
-                    <TableCell className="whitespace-normal">
-                      <div className="flex items-center gap-2">
-                        <RiAttachmentLine className="size-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0">
-                          {canView ? (
-                            <button
-                              type="button"
-                              onClick={() => handleDownload(attachment)}
-                              className="truncate text-left font-medium hover:underline"
-                            >
-                              {attachment.originalName}
-                            </button>
-                          ) : (
-                            <span
-                              className="flex items-center gap-1.5 truncate text-left font-medium text-muted-foreground"
-                              title="No tienes permisos para descargar este anexo"
-                            >
-                              {attachment.originalName}
-                              <RiLockLine className="size-3.5 shrink-0" />
-                            </span>
-                          )}
-                          {attachment.uploadedBy ? (
-                            <p className="truncate text-xs text-muted-foreground">
-                              {attachment.uploadedBy.fullName}
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatBytes(attachment.sizeBytes)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(attachment.createdAt)}
-                    </TableCell>
-                    {showActions ? (
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          {canView ? (
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label="Descargar anexo"
-                              onClick={() => handleDownload(attachment)}
-                              disabled={isPending}
-                            >
-                              <RiDownloadLine />
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label="Sin permisos para descargar"
-                              title="No tienes permisos para descargar este anexo"
-                              disabled
-                            >
-                              <RiLockLine />
-                            </Button>
-                          )}
-                          {canDelete(attachment) ? (
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label="Eliminar anexo"
-                              className="text-destructive"
-                              onClick={() => handleDelete(attachment)}
-                              disabled={isPending}
-                            >
-                              <RiDeleteBinLine />
-                            </Button>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                    ) : null}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        ) : null}
-      </Card>
+      <AttachmentsListCard
+        attachments={attachments}
+        ready={ready}
+        isAuthenticated={isAuthenticated}
+        canView={canView}
+        listError={listError}
+        isPending={isPending}
+        canDelete={canDelete}
+        onDownload={handleDownload}
+        onDelete={handleDelete}
+      />
     </div>
   );
 }
