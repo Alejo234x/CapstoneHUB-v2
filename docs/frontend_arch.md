@@ -5,6 +5,9 @@ Web application built with **Next.js 16 (App Router)**, **React 19** and
 **shadcn/ui** (Base UI + lucide-react). Tables are built with **TanStack
 Table**.
 
+See also: [Backend architecture](./backend_arch.md) and
+[Database schema](./database_arch.md).
+
 ## Layout
 
 - `app/` — App Router routes.
