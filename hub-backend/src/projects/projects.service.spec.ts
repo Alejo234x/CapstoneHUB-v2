@@ -283,4 +283,36 @@ describe('ProjectsService', () => {
       },
     ]);
   });
+
+  it('lists assignable users after authorizing the acting user', async () => {
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        id: 4,
+        fullName: 'Coordinator',
+        email: 'coordinator@example.com',
+        roleAssignments: [{ role: UserRole.coordinator }],
+      },
+    ]);
+    const prisma = { user: { findMany } };
+    const authorization = createAuthorizationMock();
+    const service = createService(prisma, authorization);
+
+    const result = await service.assignableUsers(
+      { id: 2, fullName: 'Coordinator', email: 'c@example.com', roles: [] },
+      10,
+    );
+
+    expect(authorization.assertCanAssignActors).toHaveBeenCalledWith(
+      expect.anything(),
+      10,
+    );
+    expect(result).toEqual([
+      {
+        id: 4,
+        fullName: 'Coordinator',
+        email: 'coordinator@example.com',
+        roles: [UserRole.coordinator],
+      },
+    ]);
+  });
 });

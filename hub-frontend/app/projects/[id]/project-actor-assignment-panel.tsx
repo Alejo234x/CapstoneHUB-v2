@@ -4,7 +4,10 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { addProjectActorAssignment, getUsers } from "../../services/projects";
+import {
+  addProjectActorAssignment,
+  getAssignableUsers,
+} from "../../services/projects";
 import { UserSummary } from "../../services/schemas";
 import { formatRole, getInitials } from "../../services/utils";
 import { useAuth } from "../../components/auth-provider";
@@ -25,6 +28,11 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Item,
   ItemContent,
@@ -98,6 +106,7 @@ function formatDate(dateValue: string): string {
 }
 
 function useProjectUsers(
+  projectId: number,
   ready: boolean,
   isAuthenticated: boolean,
   canAssign: boolean,
@@ -110,7 +119,7 @@ function useProjectUsers(
       return;
     }
 
-    void getUsers().then(({ users: nextUsers, error }) => {
+    void getAssignableUsers(projectId).then(({ users: nextUsers, error }) => {
       if (error) {
         setErrorMessage(error);
         return;
@@ -118,7 +127,7 @@ function useProjectUsers(
 
       setUsers(nextUsers);
     });
-  }, [canAssign, isAuthenticated, ready, users.length]);
+  }, [canAssign, isAuthenticated, projectId, ready, users.length]);
 
   return {
     users,
@@ -314,27 +323,53 @@ function UserSearch({
   onSearchChange,
   onSelectUser,
 }: Readonly<UserSearchProps>) {
+  const [dismissed, setDismissed] = useState(false);
+  const open = !dismissed && !selectedUser && search.trim().length > 0;
+
   return (
-    <Field className="relative">
-      <FieldLabel htmlFor="project-user-search">Usuario</FieldLabel>
-
-      <Input
-        id="project-user-search"
-        value={
-          selectedUser
-            ? `${selectedUser.fullName} — ${selectedUser.email}`
-            : search
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          setDismissed(true);
         }
-        onChange={(event) => onSearchChange(event.target.value)}
-        placeholder="Buscar por nombre o correo..."
-        autoComplete="off"
-        disabled={isPending}
-      />
+      }}
+    >
+      <Field className="relative">
+        <FieldLabel htmlFor="project-user-search">Usuario</FieldLabel>
 
-      {!selectedUser && search.trim() ? (
-        <UserSearchResults users={users} onSelectUser={onSelectUser} />
-      ) : null}
-    </Field>
+        <PopoverTrigger
+          nativeButton={false}
+          render={
+            <Input
+              id="project-user-search"
+              value={
+                selectedUser
+                  ? `${selectedUser.fullName} — ${selectedUser.email}`
+                  : search
+              }
+              onChange={(event) => {
+                setDismissed(false);
+                onSearchChange(event.target.value);
+              }}
+              placeholder="Buscar por nombre o correo..."
+              autoComplete="off"
+              disabled={isPending}
+            />
+          }
+        />
+
+        <PopoverContent
+          align="start"
+          side="bottom"
+          sideOffset={4}
+          initialFocus={false}
+          className="max-h-60 w-(--anchor-width) overflow-y-auto p-1"
+        >
+          <UserSearchResults users={users} onSelectUser={onSelectUser} />
+        </PopoverContent>
+      </Field>
+    </Popover>
   );
 }
 
@@ -347,14 +382,14 @@ function UserSearchResults({
 }>) {
   if (users.length === 0) {
     return (
-      <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover px-3 py-3 text-sm text-muted-foreground shadow-md">
+      <div className="px-3 py-3 text-sm text-muted-foreground">
         No se encontraron usuarios.
       </div>
     );
   }
 
   return (
-    <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-border bg-popover text-popover-foreground shadow-md">
+    <div className="flex flex-col text-popover-foreground">
       {users.map((user) => (
         <Item
           key={user.id}
@@ -470,6 +505,7 @@ export default function ProjectActorAssignmentPanel({
     : false;
 
   const { users, errorMessage, setErrorMessage } = useProjectUsers(
+    projectId,
     ready,
     isAuthenticated,
     canAssign,

@@ -19,6 +19,7 @@ import {
   ProjectStatus,
 } from '../generated/prisma/client';
 import {
+  AssignableUserResponse,
   ProjectActorAssignmentResponse,
   ProjectDetailResponse,
   ProjectListResponse,
@@ -99,6 +100,15 @@ export class ProjectsController {
         },
       },
     });
+  }
+
+  @Get(':id/assignable-users')
+  @UseGuards(AuthGuard)
+  async getAssignableUsers(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<AssignableUserResponse[]> {
+    return this.projectService.assignableUsers(user, Number(id));
   }
 
   @Post(':id/actors')

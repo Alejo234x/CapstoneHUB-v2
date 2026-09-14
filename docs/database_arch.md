@@ -1,10 +1,10 @@
-# Database Schema (Prisma)
+# Esquema de base de datos (Prisma)
 
-The data layer is **PostgreSQL** accessed through **Prisma 7**. The source of
-truth is `hub-backend/prisma/schema.prisma`; migrations live in
+La capa de datos es **PostgreSQL**, accedida mediante **Prisma 7**. La fuente
+de verdad es `hub-backend/prisma/schema.prisma`; las migraciones viven en
 `hub-backend/prisma/migrations/`.
 
-See also: [Backend architecture](./backend_arch.md).
+Ver también: [Arquitectura del backend](./backend_arch.md).
 
 ## Enums
 
@@ -13,61 +13,63 @@ See also: [Backend architecture](./backend_arch.md).
 - `UserRole`: `admin`, `evaluator`, `coordinator`, `advisor`, `student`.
 - `ActorRole`: `advisor`, `coordinator`, `student`, `evaluator`.
 
-## Entities
+## Entidades
 
 ### User
 
-Account and global roles. `email` is unique and `isActive` gates access.
-Passwords are stored as a `scrypt` hash, never in plain text.
+Cuenta y roles globales. `email` es único e `isActive` controla el acceso. Las
+contraseñas se guardan como hash `scrypt`, nunca en texto plano.
 
 ### UserRoleAssignment
 
-Join table giving a user one or more global roles. Unique per
+Tabla intermedia que da a un usuario uno o más roles globales. Única por
 `(userId, role)`.
 
 ### Project
 
-The central entity. Holds descriptive fields, status, dates and estimated
-cost, and owns every related record through cascading deletes.
+La entidad central. Contiene campos descriptivos, estado, fechas y costo
+estimado, y es dueña de todos los registros relacionados mediante borrado en
+cascada.
 
 ### ProjectSchool
 
-Schools associated with a project. Composite primary key
+Escuelas asociadas a un proyecto. Clave primaria compuesta
 `(projectId, schoolName)`.
 
 ### ProjectNaturalProposer / ProjectLegalProposer
 
-Optional proposer data: a natural person (`fullName`, `idNumber`, `email`) or
-a legal entity (`legalName`, unique `nit`, `email`, `phone`, `contactUrl`). A
-project has at most one of each (one-to-one via `projectId`).
+Datos opcionales del proponente: persona natural (`fullName`, `idNumber`,
+`email`) o persona jurídica (`legalName`, `nit` único, `email`, `phone`,
+`contactUrl`). Un proyecto tiene como máximo uno de cada uno (uno a uno vía
+`projectId`).
 
 ### ProjectActorAssignment
 
-Links a `User` to a `Project` with an `ActorRole`. Unique per
+Vincula un `User` con un `Project` mediante un `ActorRole`. Único por
 `(projectId, userId)`.
 
 ### ProjectObservation
 
-Free-text comments on a project. The author is optional (`SetNull` on user
-delete).
+Comentarios de texto libre sobre un proyecto. El autor es opcional (`SetNull`
+al eliminar el usuario).
 
 ### ProjectStatusHistory
 
-Audit log of status changes: `previousStatus`, `nextStatus`, optional
-`description` and author. Written inside the same transaction as the status
-update.
+Bitácora de cambios de estado: `previousStatus`, `nextStatus`, `description`
+opcional y autor. Se escribe dentro de la misma transacción que la
+actualización de estado.
 
 ### ProjectMilestones
 
-Scheduled deliverables with `title`, optional `description`, `dueDate` and a
-`completed` flag.
+Entregables programados con `title`, `description` opcional, `dueDate` y un
+flag `completed`.
 
 ### ProjectAttachment
 
-Metadata for an uploaded file. The binary is stored in S3/MinIO; `storageKey`
-is unique and points to the object.
+Metadatos de un archivo subido. El binario se almacena en S3/MinIO;
+`storageKey` es único y apunta al objeto.
 
-## UML class diagram
+## Diagrama de clases UML
 
 ```mermaid
 classDiagram
@@ -226,12 +228,13 @@ classDiagram
     ProjectStatusHistory ..> ProjectStatus
 ```
 
-## Notes
+## Notas
 
-- All project-owned tables cascade on project delete, so removing a project
-  cleans up its dependent rows.
-- References to `User` use `SetNull` where the record should survive the user
-  (observations, status history, attachments) and `Cascade` where it should
-  not (role and actor assignments).
-- Indexes are declared for common filters: project `status`, `startDate` and
-  `createdAt`, plus foreign keys and dates used in listings.
+- Todas las tablas propiedad de un proyecto usan cascada al borrar el
+  proyecto, de modo que eliminarlo limpia sus filas dependientes.
+- Las referencias a `User` usan `SetNull` cuando el registro debe sobrevivir al
+  usuario (observaciones, historial de estado, anexos) y `Cascade` cuando no
+  (asignaciones de rol y de actor).
+- Hay índices declarados para los filtros comunes: `status`, `startDate` y
+  `createdAt` del proyecto, además de claves foráneas y fechas usadas en los
+  listados.

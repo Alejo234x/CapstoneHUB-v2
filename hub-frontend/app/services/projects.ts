@@ -285,12 +285,17 @@ export async function createProject(payload: CreateProjectPayload) {
   };
 }
 
-export async function getUsers(): Promise<{ users: UserSummary[]; error?: string }> {
+export async function getAssignableUsers(
+  projectId: number,
+): Promise<{ users: UserSummary[]; error?: string }> {
   try {
-    const response = await fetch(getApiUrl("/api/auth/users"), {
-      headers: getAuthHeaders(),
-      cache: "no-store",
-    });
+    const response = await fetch(
+      getApiUrl(`/api/projects/${projectId}/assignable-users`),
+      {
+        headers: getAuthHeaders(),
+        cache: "no-store",
+      },
+    );
 
     if (!response.ok) {
       return {
