@@ -28,14 +28,20 @@ services:
     build: ./hub-backend
     env_file:
       - ./hub-backend/.env
+    environment:
+      DATABASE_URL: postgresql://${DB_USERNAME}:${DB_PASSWORD}@db:5432/${DB_NAME}
     depends_on:
       db:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       - prisma-network
     ports:
       - "3001:3001"
+    volumes:
+      - backend_uploads:/usr/src/app/uploads
 
   frontend:
     container_name: frontend
@@ -48,6 +54,51 @@ services:
     networks:
       - prisma-network
 
+  minio:
+    container_name: minio
+    image: quay.io/minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - prisma-network
+
+  # esta tarea se ejecuta una sola vez para crear el bucket antes de que el backend se inicie.
+  minio-init:
+    container_name: minio-init
+    image: quay.io/minio/mc:latest
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-capstonehub}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        until mc alias set local "http://minio:9000" "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do
+          echo "waiting for minio...";
+          sleep 2;
+        done
+        mc mb --ignore-existing "local/$$S3_BUCKET"
+        echo "bucket $$S3_BUCKET ready"
+    networks:
+      - prisma-network
+
 networks:
   prisma-network:
     name: prisma-network
+
+volumes:
+  backend_uploads:
+  minio_data:

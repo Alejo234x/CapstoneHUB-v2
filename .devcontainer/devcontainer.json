@@ -5,7 +5,7 @@
   "workspaceFolder": "/workspace",
   "shutdownAction": "stopCompose",
 
-  "forwardPorts": [3000, 3001, 5432],
+  "forwardPorts": [3000, 3001, 5432, 9000, 9001],
 
   "customizations": {
     "vscode": {
