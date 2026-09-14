@@ -11,6 +11,12 @@ import {
 } from "../../services/projects";
 import { ProjectAttachmentItem } from "../../services/schemas";
 import { useAuth } from "../../components/auth-provider";
+import {
+  ATTACHMENT_ACCEPT,
+  formatBytes,
+  formatDate,
+  validateAttachmentFile,
+} from "../../services/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -48,37 +54,6 @@ type ProjectAttachmentsPanelProps = {
   attachments: ProjectAttachmentItem[];
   assignments: ProjectActorAssignment[];
 };
-
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-
-const ALLOWED_MIME_TYPES = new Set([
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "image/png",
-  "image/jpeg",
-]);
-
-function formatDate(dateValue: string): string {
-  return new Intl.DateTimeFormat("es-CO", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(dateValue));
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 function getPermissionMessage(isAuthenticated: boolean): string {
   return isAuthenticated
@@ -132,7 +107,10 @@ function AttachmentUploadCard({
       return (
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           Inicia sesión para consultar y subir anexos.
-          <Button render={<Link href="/login">Iniciar sesión</Link>} />
+          <Button
+            nativeButton={false}
+            render={<Link href="/login">Iniciar sesión</Link>}
+          />
         </div>
       );
     }
@@ -152,7 +130,7 @@ function AttachmentUploadCard({
           type="file"
           onChange={onFileChange}
           disabled={isPending}
-          accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+          accept={ATTACHMENT_ACCEPT}
         />
 
         <div className="flex items-center justify-between gap-3">
@@ -192,6 +170,7 @@ function PermissionNotice({ isAuthenticated }: { isAuthenticated: boolean }) {
           <Button
             variant="outline"
             size="sm"
+            nativeButton={false}
             render={<Link href="/login">Iniciar sesión</Link>}
           />
         )}
@@ -575,15 +554,10 @@ export default function ProjectAttachmentsPanel({
       return;
     }
 
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      setErrorMessage("El archivo supera el límite de 10 MB.");
-      setSelectedFile(null);
-      event.target.value = "";
-      return;
-    }
+    const validationError = validateAttachmentFile(file);
 
-    if (file.type && !ALLOWED_MIME_TYPES.has(file.type)) {
-      setErrorMessage("Tipo de archivo no permitido.");
+    if (validationError) {
+      setErrorMessage(validationError);
       setSelectedFile(null);
       event.target.value = "";
       return;

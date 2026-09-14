@@ -150,7 +150,10 @@ function LoginMessage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button render={<Link href="/login">Iniciar sesión</Link>} />
+        <Button
+          nativeButton={false}
+          render={<Link href="/login">Iniciar sesión</Link>}
+        />
       </CardContent>
     </Card>
   );

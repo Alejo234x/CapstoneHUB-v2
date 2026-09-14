@@ -1,12 +1,9 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma.service';
 import { AuthorizationService } from '../auth/authorization.service';
 import { AuthenticatedUser } from '../auth/auth.types';
+import { assertProjectExists } from '../common/lookups';
 
 export type ProjectObservationResponse = {
   id: number;
@@ -61,7 +58,7 @@ export class ObservationsService {
     projectId: number,
     user: AuthenticatedUser,
   ): Promise<ProjectObservationResponse[]> {
-    await this.assertProjectExists(projectId);
+    await assertProjectExists(this.prisma, projectId);
     await this.authorization.assertProjectMember(user, projectId);
 
     const observations = await this.prisma.projectObservation.findMany({
@@ -78,7 +75,7 @@ export class ObservationsService {
     content?: string;
     user: AuthenticatedUser;
   }): Promise<ProjectObservationResponse> {
-    await this.assertProjectExists(params.projectId);
+    await assertProjectExists(this.prisma, params.projectId);
     await this.authorization.assertAssignedProjectMember(
       params.user,
       params.projectId,
@@ -104,16 +101,5 @@ export class ObservationsService {
     });
 
     return mapObservation(observation);
-  }
-
-  private async assertProjectExists(projectId: number): Promise<void> {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-      select: { id: true },
-    });
-
-    if (!project) {
-      throw new NotFoundException(`Project ${projectId} not found`);
-    }
   }
 }

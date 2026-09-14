@@ -14,6 +14,16 @@ import {
 import { PrismaService } from '../prisma.service';
 import { AuthorizationService } from '../auth/authorization.service';
 import { AuthenticatedUser } from '../auth/auth.types';
+import {
+  ProjectAttachmentResponse,
+  attachmentSelect,
+  mapAttachment,
+} from '../attachments/attachments.select';
+import {
+  ProjectReportResponse,
+  mapReport,
+  reportSelect,
+} from '../reports/reports.select';
 
 const projectStatusHistorySelect = {
   id: true,
@@ -31,60 +41,33 @@ const projectStatusHistorySelect = {
   },
 } as const satisfies Prisma.ProjectStatusHistorySelect;
 
-const projectAttachmentSelect = {
+const projectObservationSelect = {
   id: true,
   projectId: true,
-  uploadedByUserId: true,
-  originalName: true,
-  storageKey: true,
-  mimeType: true,
-  sizeBytes: true,
+  content: true,
   createdAt: true,
-  uploadedBy: {
+  authorUser: {
     select: {
       id: true,
       fullName: true,
       email: true,
     },
   },
-} as const satisfies Prisma.ProjectAttachmentSelect;
+} as const satisfies Prisma.ProjectObservationSelect;
 
-type ProjectAttachmentWithUploader = Prisma.ProjectAttachmentGetPayload<{
-  select: typeof projectAttachmentSelect;
-}>;
+const projectInclude = {
+  naturalProposer: true,
+  legalProposer: true,
+  observations: { select: projectObservationSelect },
+  actorAssignments: { include: { user: true } },
+  milestones: true,
+  statusHistory: { select: projectStatusHistorySelect },
+  attachments: { select: attachmentSelect },
+  reports: { select: reportSelect },
+} as const satisfies Prisma.ProjectInclude;
 
 type ProjectWithRelations = Prisma.ProjectGetPayload<{
-  include: {
-    naturalProposer: true;
-    legalProposer: true;
-    observations: {
-      select: {
-        id: true;
-        projectId: true;
-        content: true;
-        createdAt: true;
-        authorUser: {
-          select: {
-            id: true;
-            fullName: true;
-            email: true;
-          };
-        };
-      };
-    };
-    actorAssignments: {
-      include: {
-        user: true;
-      };
-    };
-    milestones: true;
-    statusHistory: {
-      select: typeof projectStatusHistorySelect;
-    };
-    attachments: {
-      select: typeof projectAttachmentSelect;
-    };
-  };
+  include: typeof projectInclude;
 }>;
 
 export type ProjectProposerResponse =
@@ -178,19 +161,8 @@ export type ProjectDetailResponse = ProjectListResponse & {
       email: string;
     } | null;
   }[];
-  attachments: {
-    id: number;
-    projectId: number;
-    originalName: string;
-    mimeType: string;
-    sizeBytes: number;
-    createdAt: Date;
-    uploadedBy: {
-      id: number;
-      fullName: string;
-      email: string;
-    } | null;
-  }[];
+  attachments: ProjectAttachmentResponse[];
+  reports: ProjectReportResponse[];
 };
 
 export type ProjectActorAssignmentResponse = {
@@ -262,6 +234,51 @@ export function isValidProjectStatusTransition(
   return transitions[previousStatus].includes(nextStatus);
 }
 
+function mapAuthor(
+  user: { id: number; fullName: string; email: string } | null,
+): { id: number; fullName: string; email: string } | null {
+  return user
+    ? { id: user.id, fullName: user.fullName, email: user.email }
+    : null;
+}
+
+function mapActorBase(
+  assignment: ProjectWithRelations['actorAssignments'][number],
+): ProjectActorResponse {
+  return {
+    id: assignment.id,
+    userId: assignment.userId,
+    role: assignment.role,
+    assignedAt: assignment.assignedAt,
+    user: {
+      id: assignment.user.id,
+      fullName: assignment.user.fullName,
+      email: assignment.user.email,
+    },
+  };
+}
+
+function mapObservation(
+  observation: ProjectWithRelations['observations'][number],
+): ProjectDetailResponse['observations'][number] {
+  return {
+    id: observation.id,
+    projectId: observation.projectId,
+    content: observation.content,
+    createdAt: observation.createdAt,
+    author: mapAuthor(observation.authorUser),
+  };
+}
+
+function byDateThenId<T extends { id: number }>(
+  getTime: (item: T) => number,
+  direction: 'asc' | 'desc' = 'asc',
+): (left: T, right: T) => number {
+  const factor = direction === 'asc' ? 1 : -1;
+  return (left, right) =>
+    (getTime(left) - getTime(right)) * factor || left.id - right.id;
+}
+
 function mapProjectListResponse(
   project: ProjectWithRelations,
 ): ProjectListResponse {
@@ -272,17 +289,7 @@ function mapProjectListResponse(
     startDate: project.startDate,
     location: project.location,
     proposer: mapProjectProposer(project),
-    actors: project.actorAssignments.map((assignment) => ({
-      id: assignment.id,
-      userId: assignment.userId,
-      role: assignment.role,
-      assignedAt: assignment.assignedAt,
-      user: {
-        id: assignment.user.id,
-        fullName: assignment.user.fullName,
-        email: assignment.user.email,
-      },
-    })),
+    actors: project.actorAssignments.map(mapActorBase),
   };
 }
 
@@ -298,47 +305,17 @@ function mapProjectDetailResponse(
     estimatedCost: project.estimatedCost,
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
-    observations: project.observations.map((observation) => ({
-      id: observation.id,
-      projectId: observation.projectId,
-      content: observation.content,
-      createdAt: observation.createdAt,
-      author: observation.authorUser
-        ? {
-            id: observation.authorUser.id,
-            fullName: observation.authorUser.fullName,
-            email: observation.authorUser.email,
-          }
-        : null,
-    })),
+    observations: project.observations.map(mapObservation),
     actorAssignments: project.actorAssignments.map((assignment) => ({
-      id: assignment.id,
+      ...mapActorBase(assignment),
       projectId: assignment.projectId,
-      userId: assignment.userId,
-      role: assignment.role,
-      assignedAt: assignment.assignedAt,
-      user: {
-        id: assignment.user.id,
-        fullName: assignment.user.fullName,
-        email: assignment.user.email,
-      },
     })),
-    milestones: (
-      project as unknown as Pick<ProjectDetailResponse, 'milestones'>
-    ).milestones
+    milestones: project.milestones
       .slice()
-      .sort(
-        (left, right) =>
-          left.dueDate.getTime() - right.dueDate.getTime() ||
-          left.id - right.id,
-      ),
+      .sort(byDateThenId((milestone) => milestone.dueDate.getTime())),
     statusHistory: project.statusHistory
       .slice()
-      .sort(
-        (left, right) =>
-          right.changedAt.getTime() - left.changedAt.getTime() ||
-          right.id - left.id,
-      )
+      .sort(byDateThenId((entry) => entry.changedAt.getTime(), 'desc'))
       .map((entry) => ({
         id: entry.id,
         projectId: entry.projectId,
@@ -346,30 +323,18 @@ function mapProjectDetailResponse(
         nextStatus: entry.nextStatus,
         description: entry.description,
         changedAt: entry.changedAt,
-        author: entry.authorUser
-          ? {
-              id: entry.authorUser.id,
-              fullName: entry.authorUser.fullName,
-              email: entry.authorUser.email,
-            }
-          : null,
+        author: mapAuthor(entry.authorUser),
       })),
     attachments: project.attachments
       .slice()
       .sort(
-        (left, right) =>
-          right.createdAt.getTime() - left.createdAt.getTime() ||
-          right.id - left.id,
+        byDateThenId((attachment) => attachment.createdAt.getTime(), 'desc'),
       )
-      .map((attachment: ProjectAttachmentWithUploader) => ({
-        id: attachment.id,
-        projectId: attachment.projectId,
-        originalName: attachment.originalName,
-        mimeType: attachment.mimeType,
-        sizeBytes: attachment.sizeBytes,
-        createdAt: attachment.createdAt,
-        uploadedBy: attachment.uploadedBy,
-      })),
+      .map(mapAttachment),
+    reports: project.reports
+      .slice()
+      .sort(byDateThenId((report) => report.dueDate.getTime()))
+      .map(mapReport),
   };
 }
 
@@ -405,37 +370,7 @@ export class ProjectsService {
   ): Promise<ProjectDetailResponse | null> {
     const project = await this.prisma.project.findUnique({
       where: projectWhereUniqueInput,
-      include: {
-        naturalProposer: true,
-        legalProposer: true,
-        observations: {
-          select: {
-            id: true,
-            projectId: true,
-            content: true,
-            createdAt: true,
-            authorUser: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-              },
-            },
-          },
-        },
-        actorAssignments: {
-          include: {
-            user: true,
-          },
-        },
-        milestones: true,
-        statusHistory: {
-          select: projectStatusHistorySelect,
-        },
-        attachments: {
-          select: projectAttachmentSelect,
-        },
-      },
+      include: projectInclude,
     });
 
     return project ? mapProjectDetailResponse(project) : null;
@@ -455,37 +390,7 @@ export class ProjectsService {
       cursor,
       where,
       orderBy,
-      include: {
-        naturalProposer: true,
-        legalProposer: true,
-        observations: {
-          select: {
-            id: true,
-            projectId: true,
-            content: true,
-            createdAt: true,
-            authorUser: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-              },
-            },
-          },
-        },
-        actorAssignments: {
-          include: {
-            user: true,
-          },
-        },
-        milestones: true,
-        statusHistory: {
-          select: projectStatusHistorySelect,
-        },
-        attachments: {
-          select: projectAttachmentSelect,
-        },
-      },
+      include: projectInclude,
     });
 
     return projects.map((project) => mapProjectListResponse(project));
@@ -509,37 +414,7 @@ export class ProjectsService {
   ): Promise<ProjectWithRelations> {
     return this.prisma.project.create({
       data,
-      include: {
-        naturalProposer: true,
-        legalProposer: true,
-        observations: {
-          select: {
-            id: true,
-            projectId: true,
-            content: true,
-            createdAt: true,
-            authorUser: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-              },
-            },
-          },
-        },
-        actorAssignments: {
-          include: {
-            user: true,
-          },
-        },
-        milestones: true,
-        statusHistory: {
-          select: projectStatusHistorySelect,
-        },
-        attachments: {
-          select: projectAttachmentSelect,
-        },
-      },
+      include: projectInclude,
     });
   }
 
@@ -554,37 +429,7 @@ export class ProjectsService {
     const project = await this.prisma.project.update({
       data,
       where,
-      include: {
-        naturalProposer: true,
-        legalProposer: true,
-        observations: {
-          select: {
-            id: true,
-            projectId: true,
-            content: true,
-            createdAt: true,
-            authorUser: {
-              select: {
-                id: true,
-                email: true,
-                fullName: true,
-              },
-            },
-          },
-        },
-        actorAssignments: {
-          include: {
-            user: true,
-          },
-        },
-        milestones: true,
-        statusHistory: {
-          select: projectStatusHistorySelect,
-        },
-        attachments: {
-          select: projectAttachmentSelect,
-        },
-      },
+      include: projectInclude,
     });
 
     return mapProjectDetailResponse(project);

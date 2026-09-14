@@ -4,6 +4,7 @@ import {
   ProjectItem,
   ProjectMilestoneItem,
   ProjectObservationItem,
+  ProjectReportItem,
   UserSummary,
 } from "./schemas";
 import { getAuthToken } from "./auth";
@@ -346,9 +347,14 @@ export async function getProjectAttachments(
 export async function uploadProjectAttachment(
   id: string,
   file: File,
+  reportId?: number,
 ): Promise<ProjectAttachmentItem> {
   const formData = new FormData();
   formData.append("file", file);
+
+  if (reportId !== undefined) {
+    formData.append("reportId", String(reportId));
+  }
 
   const response = await fetch(getApiUrl(`/api/projects/${id}/attachments`), {
     method: "POST",
@@ -410,4 +416,155 @@ export async function downloadProjectAttachment(
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
+}
+
+function reportRequestError(response: Response, action: string): Error {
+  if (response.status === 401) {
+    return new Error(`Inicia sesión para ${action} esta entrega.`);
+  }
+
+  if (response.status === 403) {
+    return new Error(`No tienes permisos para ${action} esta entrega.`);
+  }
+
+  if (response.status === 409) {
+    return new Error(
+      "La entrega no está en un estado válido para esta acción.",
+    );
+  }
+
+  return new Error(`Backend responded with status ${response.status}`);
+}
+
+export type CreateProjectReportPayload = {
+  title: string;
+  description?: string | null;
+  dueDate: string;
+};
+
+export type UpdateProjectReportPayload = Partial<CreateProjectReportPayload>;
+
+export async function getProjectReports(
+  id: string,
+): Promise<ProjectReportItem[]> {
+  const response = await fetch(getApiUrl(`/api/projects/${id}/reports`), {
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw reportRequestError(response, "consultar");
+  }
+
+  return (await response.json()) as ProjectReportItem[];
+}
+
+export async function createProjectReport(
+  id: string,
+  payload: CreateProjectReportPayload,
+): Promise<ProjectReportItem> {
+  const response = await fetch(getApiUrl(`/api/projects/${id}/reports`), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw reportRequestError(response, "crear");
+  }
+
+  return (await response.json()) as ProjectReportItem;
+}
+
+export async function updateProjectReport(
+  id: string,
+  reportId: number,
+  payload: UpdateProjectReportPayload,
+): Promise<ProjectReportItem> {
+  const response = await fetch(
+    getApiUrl(`/api/projects/${id}/reports/${reportId}`),
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    throw reportRequestError(response, "editar");
+  }
+
+  return (await response.json()) as ProjectReportItem;
+}
+
+export async function deleteProjectReport(
+  id: string,
+  reportId: number,
+): Promise<void> {
+  const response = await fetch(
+    getApiUrl(`/api/projects/${id}/reports/${reportId}`),
+    {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    throw reportRequestError(response, "eliminar");
+  }
+}
+
+export async function submitProjectReport(
+  id: string,
+  reportId: number,
+  attachmentIds: number[] = [],
+): Promise<ProjectReportItem> {
+  const response = await fetch(
+    getApiUrl(`/api/projects/${id}/reports/${reportId}/submit`),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({ attachmentIds }),
+    },
+  );
+
+  if (!response.ok) {
+    throw reportRequestError(response, "enviar");
+  }
+
+  return (await response.json()) as ProjectReportItem;
+}
+
+export async function reviewProjectReport(
+  id: string,
+  reportId: number,
+  decision: "accepted" | "rejected",
+  comment?: string,
+): Promise<ProjectReportItem> {
+  const response = await fetch(
+    getApiUrl(`/api/projects/${id}/reports/${reportId}/review`),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({ decision, comment }),
+    },
+  );
+
+  if (!response.ok) {
+    throw reportRequestError(response, "revisar");
+  }
+
+  return (await response.json()) as ProjectReportItem;
 }

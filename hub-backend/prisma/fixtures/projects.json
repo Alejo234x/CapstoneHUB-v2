@@ -1,0 +1,145 @@
+{
+  "projects": [
+    {
+      "name": "Plataforma IoT para Monitoreo de Cultivos",
+      "description": "Diseño e implementación de una plataforma de sensores inalámbricos para monitorear humedad, temperatura y pH del suelo en cultivos de ciclo corto.",
+      "context": "Productores de la provincia de Tungurahua necesitan reducir pérdidas por riego ineficiente y detectar plagas de forma temprana.",
+      "location": "Ambato, Tungurahua",
+      "estimatedCost": 18500.0,
+      "startDate": "2026-01-15",
+      "endDate": "2026-08-30",
+      "schools": ["Ingeniería en Software", "Ingeniería Electrónica"],
+      "proposer": {
+        "type": "natural",
+        "fullName": "Roberto Jiménez",
+        "idNumber": "1801234567",
+        "email": "roberto.jimenez@example.com"
+      },
+      "targetStatus": "in_progress",
+      "actors": [
+        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
+        { "email": "advisor.sofia@capstonehub.test", "role": "advisor" },
+        { "email": "student.juan@capstonehub.test", "role": "student" },
+        { "email": "student.andrea@capstonehub.test", "role": "student" }
+      ],
+      "attachments": ["anteproyecto.pdf", "logo-proyecto.png"]
+    },
+    {
+      "name": "Optimización de Cadena de Frío con Sensores",
+      "description": "Prototipo de monitoreo distribuido para mantener la cadena de frío de productos perecederos durante el transporte interprovincial.",
+      "context": "La empresa distribuidora requiere trazabilidad de temperatura por lotes y alertas en tiempo real.",
+      "location": "Quito, Pichincha",
+      "estimatedCost": 24000.0,
+      "startDate": "2025-11-01",
+      "endDate": "2026-07-15",
+      "schools": ["Ingeniería Industrial", "Ingeniería Mecánica"],
+      "proposer": {
+        "type": "legal",
+        "legalName": "Frío Andino Cía. Ltda.",
+        "nit": "1792345678001",
+        "email": "contacto@frioandino.example.com",
+        "phone": "+593987654321",
+        "contactUrl": "https://frioandino.example.com"
+      },
+      "targetStatus": "assigned",
+      "actors": [
+        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
+        { "email": "advisor.diego@capstonehub.test", "role": "advisor" },
+        { "email": "student.pedro@capstonehub.test", "role": "student" }
+      ],
+      "attachments": ["anteproyecto.pdf"]
+    },
+    {
+      "name": "App de Movilidad Inclusiva para Ambato",
+      "description": "Aplicación móvil colaborativa que reporta barreras de accesibilidad y calcula rutas inclusivas para personas con movilidad reducida.",
+      "context": "El municipio busca mejorar la planificación urbana a partir de datos ciudadanos abiertos.",
+      "location": "Ambato, Tungurahua",
+      "estimatedCost": 12000.0,
+      "startDate": "2026-02-20",
+      "endDate": null,
+      "schools": ["Ingeniería en Software", "Diseño Gráfico"],
+      "proposer": {
+        "type": "natural",
+        "fullName": "Gabriela Suárez",
+        "idNumber": "1807654321",
+        "email": "gabriela.suarez@example.com"
+      },
+      "targetStatus": "under_review",
+      "actors": [
+        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "eval.maria@capstonehub.test", "role": "evaluator" }
+      ],
+      "attachments": []
+    },
+    {
+      "name": "Sistema de Telemedicina para Zonas Rurales",
+      "description": "Plataforma de teleconsulta de baja conectividad con almacenamiento offline y sincronización diferida de historias clínicas.",
+      "context": "Centros de salud rurales carecen de especialistas y requieren interconsultas oportunas.",
+      "location": "Guaranda, Bolívar",
+      "estimatedCost": 21000.0,
+      "startDate": "2025-09-10",
+      "endDate": "2026-06-01",
+      "schools": ["Ingeniería en Software", "Medicina"],
+      "proposer": {
+        "type": "natural",
+        "fullName": "Marco Villacís",
+        "idNumber": "1802223334",
+        "email": "marco.villacis@example.com"
+      },
+      "targetStatus": "approved",
+      "actors": [
+        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
+        { "email": "advisor.sofia@capstonehub.test", "role": "advisor" }
+      ],
+      "attachments": ["logo-proyecto.png"]
+    },
+    {
+      "name": "Reciclaje Inteligente de Residuos Electrónicos",
+      "description": "Sistema de clasificación automática de residuos electrónicos mediante visión por computador para puntos de acopio.",
+      "context": "Los puntos limpios de la ciudad no logran separar componentes peligrosos de los reutilizables.",
+      "location": "Cuenca, Azuay",
+      "estimatedCost": 16500.0,
+      "startDate": "2025-06-01",
+      "endDate": "2026-01-20",
+      "schools": ["Ingeniería Electrónica"],
+      "proposer": {
+        "type": "legal",
+        "legalName": "EcoCircular S.A.",
+        "nit": "0198765432001",
+        "email": "info@ecocircular.example.com",
+        "phone": "+593912345678",
+        "contactUrl": null
+      },
+      "targetStatus": "rejected",
+      "actors": [
+        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "eval.maria@capstonehub.test", "role": "evaluator" }
+      ],
+      "attachments": []
+    },
+    {
+      "name": "Plataforma de Riego Automatizado",
+      "description": "Controlador de riego por goteo con programación por franjas horarias y sensores de humedad de bajo costo.",
+      "context": "Pequeños productores buscan automatizar el riego para ahorrar agua y mano de obra.",
+      "location": "Latacunga, Cotopaxi",
+      "estimatedCost": 9500.0,
+      "startDate": "2026-03-05",
+      "endDate": null,
+      "schools": ["Ingeniería Electrónica", "Agronomía"],
+      "proposer": {
+        "type": "natural",
+        "fullName": "Verónica Chicaiza",
+        "idNumber": "1805556667",
+        "email": "veronica.chicaiza@example.com"
+      },
+      "targetStatus": "proposed",
+      "actors": [
+        { "email": "coord.luis@capstonehub.test", "role": "coordinator" }
+      ],
+      "attachments": []
+    }
+  ]
+}

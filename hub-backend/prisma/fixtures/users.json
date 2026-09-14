@@ -1,0 +1,60 @@
+{
+  "defaultPassword": "Capstone123!",
+  "users": [
+    {
+      "fullName": "Administrador de Datos",
+      "email": "admin.seed@capstonehub.test",
+      "roles": ["admin"]
+    },
+    {
+      "fullName": "Ana Torres",
+      "email": "coord.ana@capstonehub.test",
+      "roles": ["coordinator"]
+    },
+    {
+      "fullName": "Luis Mendoza",
+      "email": "coord.luis@capstonehub.test",
+      "roles": ["coordinator"]
+    },
+    {
+      "fullName": "María Fernanda Ruiz",
+      "email": "eval.maria@capstonehub.test",
+      "roles": ["evaluator"]
+    },
+    {
+      "fullName": "Carlos Salazar",
+      "email": "eval.carlos@capstonehub.test",
+      "roles": ["evaluator"]
+    },
+    {
+      "fullName": "Sofía Herrera",
+      "email": "advisor.sofia@capstonehub.test",
+      "roles": ["advisor"]
+    },
+    {
+      "fullName": "Diego Paredes",
+      "email": "advisor.diego@capstonehub.test",
+      "roles": ["advisor"]
+    },
+    {
+      "fullName": "Juan Pérez",
+      "email": "student.juan@capstonehub.test",
+      "roles": ["student"]
+    },
+    {
+      "fullName": "Andrea Morales",
+      "email": "student.andrea@capstonehub.test",
+      "roles": ["student"]
+    },
+    {
+      "fullName": "Pedro Cáceres",
+      "email": "student.pedro@capstonehub.test",
+      "roles": ["student"]
+    },
+    {
+      "fullName": "Lucía Naranjo",
+      "email": "student.lucia@capstonehub.test",
+      "roles": ["student"]
+    }
+  ]
+}

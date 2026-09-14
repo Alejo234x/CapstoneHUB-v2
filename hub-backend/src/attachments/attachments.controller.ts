@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
@@ -21,10 +22,8 @@ import {
   ALLOWED_ATTACHMENT_MIME_TYPES,
   MAX_ATTACHMENT_SIZE_BYTES,
 } from './attachments.constants';
-import {
-  AttachmentsService,
-  ProjectAttachmentResponse,
-} from './attachments.service';
+import { AttachmentsService } from './attachments.service';
+import { ProjectAttachmentResponse } from './attachments.select';
 
 function contentDisposition(filename: string): string {
   const ascii = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
@@ -69,15 +68,24 @@ export class AttachmentsController {
   uploadAttachment(
     @Param('projectId') projectId: string,
     @UploadedFile() file: Express.Multer.File | undefined,
+    @Body('reportId') reportId: string | undefined,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<ProjectAttachmentResponse> {
     if (!file) {
       throw new BadRequestException('A file is required');
     }
 
+    const parsedReportId =
+      reportId === undefined || reportId === '' ? undefined : Number(reportId);
+
+    if (parsedReportId !== undefined && Number.isNaN(parsedReportId)) {
+      throw new BadRequestException('reportId must be a number');
+    }
+
     return this.attachmentsService.createAttachment({
       projectId: Number(projectId),
       file,
+      reportId: parsedReportId,
       user,
     });
   }

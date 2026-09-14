@@ -1,0 +1,48 @@
+{
+  "Plataforma IoT para Monitoreo de Cultivos": [
+    {
+      "authorEmail": "eval.maria@capstonehub.test",
+      "content": "La propuesta plantea un alcance alcanzable, pero se recomienda acotar el número de variables monitoreadas para la primera entrega."
+    },
+    {
+      "authorEmail": "advisor.sofia@capstonehub.test",
+      "content": "Se sugiere documentar el protocolo de calibración de los sensores de humedad."
+    },
+    {
+      "authorEmail": "student.juan@capstonehub.test",
+      "content": "Solicitamos acceso a los datos históricos de las fincas piloto para ajustar el modelo de alertas."
+    }
+  ],
+  "Optimización de Cadena de Frío con Sensores": [
+    {
+      "authorEmail": "eval.carlos@capstonehub.test",
+      "content": "El enfoque de trazabilidad por lotes es adecuado. Falta detallar el plan de contingencia ante pérdida de conectividad."
+    },
+    {
+      "authorEmail": "advisor.diego@capstonehub.test",
+      "content": "Revisar el consumo energético del registrador para garantizar autonomía durante rutas largas."
+    }
+  ],
+  "App de Movilidad Inclusiva para Ambato": [
+    {
+      "authorEmail": "eval.maria@capstonehub.test",
+      "content": "Es necesario incluir un mecanismo de moderación para evitar reportes falsos de barreras."
+    }
+  ],
+  "Sistema de Telemedicina para Zonas Rurales": [
+    {
+      "authorEmail": "eval.carlos@capstonehub.test",
+      "content": "Aprobado con observaciones. Verificar el cumplimiento de la normativa de protección de datos de salud."
+    },
+    {
+      "authorEmail": "advisor.sofia@capstonehub.test",
+      "content": "Coordinar con el personal médico la capacitación para el uso del módulo de teleconsulta."
+    }
+  ],
+  "Reciclaje Inteligente de Residuos Electrónicos": [
+    {
+      "authorEmail": "eval.maria@capstonehub.test",
+      "content": "La propuesta fue rechazada por falta de convenio firmado con la empresa y de presupuesto detallado."
+    }
+  ]
+}

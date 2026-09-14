@@ -50,6 +50,85 @@ INITIAL_ADMIN_PASSWORD
 INITIAL_ADMIN_NAME
 ```
 
+# para generar datos de prueba
+
+Prisma seeds genera usuarios, proyectos, actores, hitos, observaciones, historial de
+estados y anexos de ejemplo. Todo en `hub-backend/prisma`:
+
+```
+prisma/seed.ts          # CLI principal
+prisma/seed/            # una sección por dominio + utilidades
+prisma/fixtures/        # datos mock en JSON y archivos de anexos
+prisma/register.cjs     # hook de ts-node para el cliente generado
+```
+
+Se ejecuta desde `hub-backend` y requiere Postgres levantado y migrado:
+
+```bash
+cd hub-backend
+
+npm run seed                 # todas las secciones
+npm run seed:users           # solo usuarios
+npm run seed:projects        # solo proyectos
+npm run seed:actors          # solo asignaciones de actores
+npm run seed:milestones      # solo hitos
+npm run seed:observations    # solo observaciones
+npm run seed:status          # solo transiciones de estado
+npm run seed:attachments     # solo anexos
+npm run seed:reset           # borra los datos sembrados y los vuelve a crear
+```
+
+También se puede ejecutar con flags:
+
+```bash
+npm run seed -- --only=users
+npm run seed -- --only=projects,actors,status   # agrega dependencias automáticamente
+npm run seed -- --dry-run                        # no escribe en la base
+npm run seed -- --strict                         # falla si MinIO no está disponible
+npm run seed -- --help
+```
+
+Y a través de Prisma CLI:
+
+```bash
+npx prisma db seed
+```
+
+si se corre varias veces no duplica registros, solo
+actualiza lo que ya existe. `npm run seed:reset` elimina únicamente los datos
+sembrados (por nombre de proyecto y email del fixture) antes de recrearlos.
+
+## Fixtures
+
+- `prisma/fixtures/users.json`: usuarios con sus roles. El campo
+  `defaultPassword` `Capstone123!` se usa para todos, salvo que un usuario
+  defina su propia contraseña.
+- `prisma/fixtures/projects.json`: proyectos con proponente (natural o legal),
+  escuelas, actores, estado objetivo y anexos.
+- `prisma/fixtures/milestones.json` y `observations.json`: indexados por el
+  nombre del proyecto.
+- `prisma/fixtures/attachments/`: archivos de ejemplo que se suben a
+  MinIO.
+
+Credenciales de ejemplo (los emails de los fixtures terminan en
+`@capstonehub.test`):
+
+```
+coord.ana@capstonehub.test   / Capstone123!   (coordinator)
+eval.maria@capstonehub.test  / Capstone123!   (evaluator)
+advisor.sofia@capstonehub.test / Capstone123! (advisor)
+student.juan@capstonehub.test / Capstone123!  (student)
+```
+
+Notas:
+
+- El hash de la contraseña solo se guarda en la base; la contraseña en claro
+  está en `users.json`, por eso se puede iniciar sesión con esos valores.
+- Los anexos requieren el MinIO configurado; sin eso el seed avisa y los omite
+  (usar `--strict` para que falle en su lugar).
+- Si corres el seed fuera de Docker, `DATABASE_URL` y `S3_ENDPOINT` en
+  `hub-backend/.env` deben apuntar a `localhost` en vez del nombre del contenedor.
+
 # Anexos de proyecto (storage)
 
 Los anexos se guardan en MinIO/S3 a través de `StorageService`

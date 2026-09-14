@@ -5,6 +5,7 @@ import ProjectObservationsPanel from "./project-observations-panel";
 import ProjectActorAssignmentPanel from "./project-actor-assignment-panel";
 import ProjectCategoriesPanel from "./project-categories-panel";
 import ProjectMilestonesPanel from "./project-milestones-panel";
+import ProjectReportsPanel from "./project-reports-panel";
 import ProjectStatusHistoryPanel from "./project-status-history-panel";
 import ProjectAttachmentsPanel from "./project-attachments-panel";
 import ProjectAssignmentBadge from "./project-assignment-badge";
@@ -106,6 +107,7 @@ export default async function ProjectDetailsPage({
               <TabsTrigger value="equipo">Equipo</TabsTrigger>
               <TabsTrigger value="observaciones">Observaciones</TabsTrigger>
               <TabsTrigger value="hitos">Hitos</TabsTrigger>
+              <TabsTrigger value="entregas">Entregas</TabsTrigger>
               <TabsTrigger value="anexos">Anexos</TabsTrigger>
               <TabsTrigger value="historial">Historial</TabsTrigger>
             </TabsList>
@@ -307,6 +309,14 @@ export default async function ProjectDetailsPage({
               <ProjectMilestonesPanel
                 projectId={project.id}
                 milestones={project.milestones ?? []}
+                actorAssignments={project.actorAssignments ?? []}
+              />
+            </TabsContent>
+
+            <TabsContent value="entregas" className="mt-6">
+              <ProjectReportsPanel
+                projectId={project.id}
+                reports={project.reports ?? []}
                 actorAssignments={project.actorAssignments ?? []}
               />
             </TabsContent>
