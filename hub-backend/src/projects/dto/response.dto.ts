@@ -3,7 +3,7 @@ import { ApiProperty, ApiPropertyOptions } from '@nestjs/swagger';
 import { Type } from '@nestjs/class-transformer';
 import { IsNumber, ValidateNested } from '@nestjs/class-validator';
 
-type Constructor<T = {}> = new (...args: any[]) => T;
+type Constructor<T = object> = new (...args: any[]) => T;
 
 export function BaseResponse<TBase extends Constructor>(
   Base: TBase,

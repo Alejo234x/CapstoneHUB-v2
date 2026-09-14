@@ -31,6 +31,28 @@ const projectStatusHistorySelect = {
   },
 } as const satisfies Prisma.ProjectStatusHistorySelect;
 
+const projectAttachmentSelect = {
+  id: true,
+  projectId: true,
+  uploadedByUserId: true,
+  originalName: true,
+  storageKey: true,
+  mimeType: true,
+  sizeBytes: true,
+  createdAt: true,
+  uploadedBy: {
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+    },
+  },
+} as const satisfies Prisma.ProjectAttachmentSelect;
+
+type ProjectAttachmentWithUploader = Prisma.ProjectAttachmentGetPayload<{
+  select: typeof projectAttachmentSelect;
+}>;
+
 type ProjectWithRelations = Prisma.ProjectGetPayload<{
   include: {
     naturalProposer: true;
@@ -58,6 +80,9 @@ type ProjectWithRelations = Prisma.ProjectGetPayload<{
     milestones: true;
     statusHistory: {
       select: typeof projectStatusHistorySelect;
+    };
+    attachments: {
+      select: typeof projectAttachmentSelect;
     };
   };
 }>;
@@ -148,6 +173,19 @@ export type ProjectDetailResponse = ProjectListResponse & {
     description: string | null;
     changedAt: Date;
     author: {
+      id: number;
+      fullName: string;
+      email: string;
+    } | null;
+  }[];
+  attachments: {
+    id: number;
+    projectId: number;
+    originalName: string;
+    mimeType: string;
+    sizeBytes: number;
+    createdAt: Date;
+    uploadedBy: {
       id: number;
       fullName: string;
       email: string;
@@ -316,6 +354,22 @@ function mapProjectDetailResponse(
             }
           : null,
       })),
+    attachments: project.attachments
+      .slice()
+      .sort(
+        (left, right) =>
+          right.createdAt.getTime() - left.createdAt.getTime() ||
+          right.id - left.id,
+      )
+      .map((attachment: ProjectAttachmentWithUploader) => ({
+        id: attachment.id,
+        projectId: attachment.projectId,
+        originalName: attachment.originalName,
+        mimeType: attachment.mimeType,
+        sizeBytes: attachment.sizeBytes,
+        createdAt: attachment.createdAt,
+        uploadedBy: attachment.uploadedBy,
+      })),
   };
 }
 
@@ -378,6 +432,9 @@ export class ProjectsService {
         statusHistory: {
           select: projectStatusHistorySelect,
         },
+        attachments: {
+          select: projectAttachmentSelect,
+        },
       },
     });
 
@@ -424,6 +481,9 @@ export class ProjectsService {
         milestones: true,
         statusHistory: {
           select: projectStatusHistorySelect,
+        },
+        attachments: {
+          select: projectAttachmentSelect,
         },
       },
     });
@@ -476,6 +536,9 @@ export class ProjectsService {
         statusHistory: {
           select: projectStatusHistorySelect,
         },
+        attachments: {
+          select: projectAttachmentSelect,
+        },
       },
     });
   }
@@ -517,6 +580,9 @@ export class ProjectsService {
         milestones: true,
         statusHistory: {
           select: projectStatusHistorySelect,
+        },
+        attachments: {
+          select: projectAttachmentSelect,
         },
       },
     });

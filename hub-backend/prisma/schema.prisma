@@ -50,6 +50,7 @@ model User {
   projectAssignments     ProjectActorAssignment[]
   projectStatusHistories ProjectStatusHistory[]
   authoredObservations   ProjectObservation[]
+  uploadedAttachments    ProjectAttachment[]
 
   @@index([fullName], map: "idx_user_full_name")
   @@map("user")
@@ -89,6 +90,7 @@ model Project {
   observations     ProjectObservation[]
   statusHistory    ProjectStatusHistory[]
   milestones       ProjectMilestones[]
+  attachments      ProjectAttachment[]
 
   @@index([status], map: "idx_project_status")
   @@index([startDate], map: "idx_project_start_date")
@@ -204,4 +206,23 @@ model ProjectMilestones {
   @@index([dueDate], map: "idx_project_milestones_due_date")
   @@index([completed], map: "idx_project_milestones_completed")
   @@map("project_milestones")
+}
+
+model ProjectAttachment {
+  id               Int      @id @default(autoincrement())
+  projectId        Int      @map("project_id")
+  uploadedByUserId Int?     @map("uploaded_by_user_id")
+  originalName     String   @map("original_name") @db.VarChar(255)
+  storageKey       String   @unique(map: "uk_project_attachment_storage_key") @map("storage_key") @db.VarChar(512)
+  mimeType         String   @map("mime_type") @db.VarChar(127)
+  sizeBytes        Int      @map("size_bytes")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy User?   @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([projectId], map: "idx_project_attachment_project_id")
+  @@index([uploadedByUserId], map: "idx_project_attachment_uploaded_by_user_id")
+  @@index([createdAt], map: "idx_project_attachment_created_at")
+  @@map("project_attachment")
 }
