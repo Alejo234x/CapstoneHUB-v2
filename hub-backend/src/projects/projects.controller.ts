@@ -22,12 +22,21 @@ import {
   ProjectActorAssignmentResponse,
   ProjectDetailResponse,
   ProjectListResponse,
+  MyProjectResponse,
 } from './projects.service';
 import { CreateProjectActorAssignmentDTO } from './dto/create-project-actor-assignment.dto';
 
 @Controller('projects')
 export class ProjectsController {
   constructor(private projectService: ProjectsService) {}
+
+  @Get('mine')
+  @UseGuards(AuthGuard)
+  async getMyProjects(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<MyProjectResponse[]> {
+    return this.projectService.projectsForUser(user.id);
+  }
 
   @Get(':id')
   async getProjectById(

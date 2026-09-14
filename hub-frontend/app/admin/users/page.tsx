@@ -25,14 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-const roleLabels: Record<string, string> = {
-  admin: "Administrador",
-  evaluator: "Evaluador",
-  coordinator: "Coordinador",
-  advisor: "Asesor",
-  student: "Estudiante",
-};
+import { formatRole } from "../../services/utils";
 
 export default function AdminUsersPage() {
   const router = useRouter();
@@ -159,7 +152,7 @@ export default function AdminUsersPage() {
                       <div className="flex flex-wrap gap-2">
                         {user.roles.map((role) => (
                           <Badge key={role} variant="outline">
-                            {roleLabels[role] ?? role}
+                            {formatRole(role)}
                           </Badge>
                         ))}
                       </div>

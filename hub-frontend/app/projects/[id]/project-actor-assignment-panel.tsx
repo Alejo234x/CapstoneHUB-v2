@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { addProjectActorAssignment, getUsers } from "../../services/projects";
 import { UserSummary } from "../../services/schemas";
+import { formatRole, getInitials } from "../../services/utils";
 import { useAuth } from "../../components/auth-provider";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -31,13 +32,6 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
-
-const roleLabels: Record<string, string> = {
-  advisor: "Asesor",
-  coordinator: "Coordinador",
-  student: "Estudiante",
-  evaluator: "Evaluador",
-};
 
 const assignableRoles = new Set([
   "advisor",
@@ -93,16 +87,7 @@ function getRoleLabel(role: string | null): string {
     return "Sin rol asignable";
   }
 
-  return roleLabels[role] ?? role;
-}
-
-function getInitials(fullName: string): string {
-  return fullName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
+  return formatRole(role);
 }
 
 function formatDate(dateValue: string): string {

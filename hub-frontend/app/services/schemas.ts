@@ -138,6 +138,15 @@ export type ProjectItem = {
   estimatedCost?: string | null;
 };
 
+export type MyProject = {
+  id: number;
+  name: string;
+  status: string;
+  startDate: string;
+  location: string | null;
+  myRole: string;
+};
+
 export type ProjectDetails = {
   id: number;
   name: string;

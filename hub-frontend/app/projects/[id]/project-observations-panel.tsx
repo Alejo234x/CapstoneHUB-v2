@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { createProjectObservation } from "../../services/projects";
 import { ProjectObservationItem } from "../../services/schemas";
+import { getInitials } from "../../services/utils";
 import { useAuth } from "../../components/auth-provider";
 
 import { Button } from "@/components/ui/button";
@@ -52,15 +53,6 @@ function formatDate(dateValue: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(dateValue));
-}
-
-function getInitials(fullName: string): string {
-  return fullName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
 }
 
 export default function ProjectObservationsPanel({
