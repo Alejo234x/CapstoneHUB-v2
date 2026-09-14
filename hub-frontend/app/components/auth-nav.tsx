@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useAuth } from "./auth-provider";
 import { Button } from "@/components/ui/button";
 
-export function AuthNav() {
+export function AuthNav({
+  showUserInfo = true,
+}: {
+  showUserInfo?: boolean;
+}) {
 
   const { session, isAuthenticated, ready, logout } = useAuth();
 
@@ -21,17 +25,19 @@ export function AuthNav() {
     .join(", ");
 
     return (
-        <div className="ml-auto flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
             {!ready ? (
             <span className="text-sm text-slate-500">Cargando...</span>
             ) : isAuthenticated ? (
             <>
+                {showUserInfo ? (
                 <span className="hidden text-right text-sm text-slate-700 sm:inline">
                 <span className="block font-medium">{session?.user.fullName}</span>
                 <span className="block text-xs text-slate-500">
                     {userRoles || "Sin rol asignado"}
                 </span>
                 </span>
+                ) : null}
                 <Button
                 variant="outline"
                 onClick={logout}
