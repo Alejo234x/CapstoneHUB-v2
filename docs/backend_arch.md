@@ -4,6 +4,9 @@ REST API built with **NestJS 11** on **Node.js 26**, using **Prisma 7** (the
 `pg` adapter) and **PostgreSQL 15**. Files are stored in **MinIO/S3**. The
 OpenAPI spec is served with Swagger.
 
+See also: [Database schema](./database_arch.md) and
+[Frontend architecture](./frontend_arch.md).
+
 ## Bootstrap
 
 `src/main.ts` is the entry point:
@@ -70,7 +73,10 @@ are validated in `ProjectsService`; every change is logged to
 `ProjectStatusHistory` inside a transaction, requires a reason (except for
 `admin`) and respects the permissions of the role making the transition.
 
-## Data model (Prisma)
+## Data model
+
+The full Prisma schema is documented in
+[database_arch.md](./database_arch.md). In short:
 
 - **User**: `User`, `UserRoleAssignment`.
 - **Project**: `Project`, `ProjectSchool`, `ProjectNaturalProposer`,
