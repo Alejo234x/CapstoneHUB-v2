@@ -7,7 +7,7 @@ export function formatStatus(status: string): string {
     case "under_review":
       return "En revisión";
     case "approved":
-      return "Aprovado";
+      return "Aprobado";
     case "assigned":
       return "Asignado";
     case "closed":

@@ -21,7 +21,7 @@ import {
   useTable,
   type ColumnFiltersState,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { columns } from "./columns";
 import {
   features,
@@ -30,27 +30,70 @@ import {
 import { ProjectItem } from "../services/schemas";
 
 type ProjectsTableProps = {
-  projects: ProjectItem[];
+  readonly projects: ProjectItem[];
 };
 
 const statusOptions = [
   { value: "all", label: "Todos los estados" },
-  { value: "Propuesto", label: "Propuesto" },
-  { value: "En revisión", label: "En revisión" },
-  { value: "Aprobado", label: "Aprobado" },
-  { value: "Asignado", label: "Asignado" },
-  { value: "En progreso", label: "En progreso" },
-  { value: "Cerrado", label: "Cerrado" },
-  { value: "Rechazado", label: "Rechazado" },
+  { value: "proposed", label: "Propuesto" },
+  { value: "under_review", label: "En revisión" },
+  { value: "approved", label: "Aprobado" },
+  { value: "assigned", label: "Asignado" },
+  { value: "in_progress", label: "En progreso" },
+  { value: "closed", label: "Cerrado" },
+  { value: "rejected", label: "Rechazado" },
 ];
 
-export default function ProjectsTable({ projects }: ProjectsTableProps) {
+function getProposerName(project: ProjectItem): string {
+  if (project.proposer?.type === "natural_person") {
+    return project.proposer.fullName ?? "";
+  }
+
+  if (project.proposer?.type === "legal_person") {
+    return project.proposer.legalName ?? "";
+  }
+
+  return "";
+}
+
+function matchesSearch(
+  project: ProjectItem,
+  searchValue: string,
+): boolean {
+  if (!searchValue) {
+    return true;
+  }
+
+  const searchableValues = [
+    project.name,
+    project.location ?? project.context ?? "",
+    getProposerName(project),
+  ];
+
+  return searchableValues.some((value) =>
+    value.toLowerCase().includes(searchValue),
+  );
+}
+
+export default function ProjectsTable({
+  projects,
+}: Readonly<ProjectsTableProps>) {
   const [columnFilters, setColumnFilters] =
     useState<ColumnFiltersState>([]);
 
+  const [searchFilter, setSearchFilter] = useState("");
+
+  const filteredProjects = useMemo(() => {
+    const normalizedSearch = searchFilter.trim().toLowerCase();
+
+    return projects.filter((project) =>
+      matchesSearch(project, normalizedSearch),
+    );
+  }, [projects, searchFilter]);
+
   const table = useTable<ProjectTableFeatures, ProjectItem>({
     features,
-    data: projects,
+    data: filteredProjects,
     columns,
     onColumnFiltersChange: setColumnFilters,
     state: {
@@ -58,20 +101,8 @@ export default function ProjectsTable({ projects }: ProjectsTableProps) {
     },
   });
 
-  const nameColumn = table.getColumn("name");
-  const locationColumn = table.getColumn("location");
-  const proposerColumn = table.getColumn("proposer");
   const statusColumn = table.getColumn("status");
   const yearColumn = table.getColumn("year");
-
-  const nameFilterValue =
-    (nameColumn?.getFilterValue() as string) ?? "";
-
-  const locationFilterValue =
-    (locationColumn?.getFilterValue() as string) ?? "";
-
-  const proposerFilterValue =
-    (proposerColumn?.getFilterValue() as string) ?? "";
 
   const statusFilterValue =
     (statusColumn?.getFilterValue() as string) ?? "all";
@@ -79,72 +110,49 @@ export default function ProjectsTable({ projects }: ProjectsTableProps) {
   const yearFilterValue =
     (yearColumn?.getFilterValue() as string) ?? "";
 
-  function setFilterAndResetPage(
-    column: typeof nameColumn,
-    value: string | null | undefined,
-  ) {
-    column?.setFilterValue(value ?? undefined);
+  function handleSearchChange(value: string) {
+    setSearchFilter(value);
     table.setPageIndex(0);
   }
 
   function clearFilters() {
+    setSearchFilter("");
     table.resetColumnFilters();
     table.setPageIndex(0);
   }
+
+  const hasFilters =
+    searchFilter.trim() !== "" || columnFilters.length > 0;
+
+  const selectedStatusLabel =
+    statusOptions.find(
+      (status) => status.value === statusFilterValue,
+    )?.label ?? "Estado";
 
   return (
     <div>
       <div className="flex flex-wrap items-center gap-3 py-4">
         <Input
           type="search"
-          placeholder="Filtrar por nombre..."
-          value={nameFilterValue}
+          placeholder="Buscar por nombre, lugar o proponente..."
+          value={searchFilter}
           onChange={(event) =>
-            setFilterAndResetPage(
-              nameColumn,
-              event.target.value,
-            )
+            handleSearchChange(event.target.value)
           }
-          className="w-full sm:max-w-sm"
-        />
-
-        <Input
-          type="search"
-          placeholder="Filtrar por lugar..."
-          value={locationFilterValue}
-          onChange={(event) =>
-            setFilterAndResetPage(
-              locationColumn,
-              event.target.value,
-            )
-          }
-          className="w-full sm:max-w-sm"
-        />
-
-        <Input
-          type="search"
-          placeholder="Filtrar por proponente..."
-          value={proposerFilterValue}
-          onChange={(event) =>
-            setFilterAndResetPage(
-              proposerColumn,
-              event.target.value,
-            )
-          }
-          className="w-full sm:max-w-sm"
+          className="w-full sm:max-w-md"
         />
 
         <Select
           value={statusFilterValue}
-          onValueChange={(value) =>
-            setFilterAndResetPage(
-              statusColumn,
+          onValueChange={(value) => {
+            statusColumn?.setFilterValue(
               value === "all" ? undefined : value,
-            )
-          }
+            );
+            table.setPageIndex(0);
+          }}
         >
           <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="Estado" />
+            <SelectValue>{selectedStatusLabel}</SelectValue>
           </SelectTrigger>
 
           <SelectContent>
@@ -163,16 +171,16 @@ export default function ProjectsTable({ projects }: ProjectsTableProps) {
           type="number"
           placeholder="Año..."
           value={yearFilterValue}
-          onChange={(event) =>
-            setFilterAndResetPage(
-              yearColumn,
-              event.target.value,
-            )
-          }
+          onChange={(event) => {
+            yearColumn?.setFilterValue(
+              event.target.value || undefined,
+            );
+            table.setPageIndex(0);
+          }}
           className="w-full sm:w-28"
         />
 
-        {columnFilters.length > 0 && (
+        {hasFilters && (
           <Button
             variant="outline"
             onClick={clearFilters}
@@ -246,4 +254,4 @@ export default function ProjectsTable({ projects }: ProjectsTableProps) {
       </div>
     </div>
   );
-}
+} 
