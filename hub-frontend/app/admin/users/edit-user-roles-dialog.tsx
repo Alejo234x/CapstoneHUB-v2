@@ -11,8 +11,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 
 const availableRoles = [
   { value: "admin", label: "Administrador" },
@@ -107,44 +115,45 @@ export default function EditUserRolesDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-3">
-            <Label>Roles</Label>
+        <form onSubmit={handleSubmit}>
+          <FieldGroup>
+            <FieldSet>
+              <FieldLegend variant="label">Roles</FieldLegend>
 
-            <div className="space-y-3">
-              {availableRoles.map((role) => (
-                <label
-                  key={role.value}
-                  className="flex cursor-pointer items-center gap-3"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedRoles.includes(role.value)}
-                    onChange={() => toggleRole(role.value)}
-                    disabled={loading}
-                    className="h-4 w-4"
-                  />
+              <FieldGroup className="gap-3">
+                {availableRoles.map((role) => (
+                  <Field key={role.value} orientation="horizontal">
+                    <Checkbox
+                      id={`role-${user.id}-${role.value}`}
+                      checked={selectedRoles.includes(role.value)}
+                      onCheckedChange={() => toggleRole(role.value)}
+                      disabled={loading}
+                    />
 
-                  <span className="text-sm">
-                    {role.label}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
+                    <FieldLabel
+                      htmlFor={`role-${user.id}-${role.value}`}
+                      className="font-normal"
+                    >
+                      {role.label}
+                    </FieldLabel>
+                  </Field>
+                ))}
+              </FieldGroup>
+            </FieldSet>
 
-          {error && (
-            <p className="text-sm text-red-600">
-              {error}
-            </p>
-          )}
+            {error ? (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
 
             <FormActions
-            loading={loading}
-            loadingText="Guardando..."
-            submitText="Guardar cambios"
-            onCancel={() => setOpen(false)}
+              loading={loading}
+              loadingText="Guardando..."
+              submitText="Guardar cambios"
+              onCancel={() => setOpen(false)}
             />
+          </FieldGroup>
         </form>
       </DialogContent>
     </Dialog>

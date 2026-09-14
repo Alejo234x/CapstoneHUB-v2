@@ -7,6 +7,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 type ProjectStatusHistoryPanelProps = {
   history: ProjectStatusHistoryItem[];
@@ -37,44 +43,50 @@ export default function ProjectStatusHistoryPanel({
       </CardHeader>
       <CardContent>
         {entries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No hay cambios de estado registrados.
-          </p>
+          <Empty className="border">
+            <EmptyHeader>
+              <EmptyTitle>Sin historial</EmptyTitle>
+              <EmptyDescription>
+                No hay cambios de estado registrados.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
-          <ol className="space-y-4">
+          <ol className="flex flex-col gap-4">
             {entries.map((entry) => (
-              <li
-                key={entry.id}
-                className="border border-slate-200 bg-white p-4"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  {entry.previousStatus ? (
-                    <>
-                      <Badge variant="outline">
-                        {formatStatus(entry.previousStatus)}
+              <li key={entry.id}>
+                <Card size="sm">
+                  <CardContent className="flex flex-col gap-3 pt-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {entry.previousStatus ? (
+                        <>
+                          <Badge variant="outline">
+                            {formatStatus(entry.previousStatus)}
+                          </Badge>
+                          <span className="text-muted-foreground">→</span>
+                        </>
+                      ) : (
+                        <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                          Estado inicial
+                        </span>
+                      )}
+                      <Badge variant="secondary">
+                        {formatStatus(entry.nextStatus)}
                       </Badge>
-                      <span className="text-muted-foreground">→</span>
-                    </>
-                  ) : (
-                    <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                      Estado inicial
-                    </span>
-                  )}
-                  <Badge variant="secondary">
-                    {formatStatus(entry.nextStatus)}
-                  </Badge>
-                </div>
+                    </div>
 
-                <p className="mt-3 whitespace-pre-wrap text-sm text-slate-800">
-                  {entry.description ?? "Sin descripción."}
-                </p>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {entry.description ?? "Sin descripción."}
+                    </p>
 
-                <p className="mt-3 text-xs text-slate-500">
-                  {entry.author
-                    ? `Por ${entry.author.fullName}`
-                    : "Por usuario desconocido"}{" "}
-                  · {formatDate(entry.changedAt)}
-                </p>
+                    <p className="text-xs text-muted-foreground">
+                      {entry.author
+                        ? `Por ${entry.author.fullName}`
+                        : "Por usuario desconocido"}{" "}
+                      · {formatDate(entry.changedAt)}
+                    </p>
+                  </CardContent>
+                </Card>
               </li>
             ))}
           </ol>

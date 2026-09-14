@@ -4,6 +4,19 @@ import Link from "next/link";
 import { useState } from "react";
 import { createProject } from "../services/projects";
 import { useAuth } from "./auth-provider";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 
 type FormState = {
   name: string;
@@ -91,211 +104,175 @@ export default function SubmitProjectForm() {
 
   if (!ready) {
     return (
-      <div className="border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <p className="text-sm text-slate-600">Cargando acceso...</p>
-      </div>
+      <Card>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Cargando acceso...</p>
+        </CardContent>
+      </Card>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <div className="border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-          Proponer un proyecto
-        </h2>
-        <p className="mt-3 text-sm text-slate-600">
-          Inicia sesión para proponer nuevos proyectos.
-        </p>
-        <Link
-          href="/login"
-          className="mt-4 inline-flex items-center justify-center border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-        >
-          Iniciar sesión
-        </Link>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Proponer un proyecto</CardTitle>
+          <CardDescription>
+            Inicia sesión para proponer nuevos proyectos.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            nativeButton={false}
+            render={<Link href="/login">Iniciar sesión</Link>}
+          />
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <label htmlFor="name" className="text-sm font-medium text-slate-700">
-          Nombre del proyecto
-        </label>
-        <input
-          id="name"
-          name="name"
-          value={form.name}
-          onChange={handleChange}
-          required
-          className="w-full rounded border border-slate-300 px-3 py-2"
-        />
-      </div>
+    <form onSubmit={handleSubmit}>
+      <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor="name">Nombre del proyecto</FieldLabel>
+          <Input
+            id="name"
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            required
+          />
+        </Field>
 
-      <div className="space-y-2">
-        <label htmlFor="namep" className="text-sm font-medium text-slate-700">
-          Nombre del responsable
-        </label>
-        <input
-          id="namep"
-          name="namep"
-          value={form.namep}
-          onChange={handleChange}
-          required
-          className="w-full rounded border border-slate-300 px-3 py-2"
-        />
-      </div>
+        <Field>
+          <FieldLabel htmlFor="namep">Nombre del responsable</FieldLabel>
+          <Input
+            id="namep"
+            name="namep"
+            value={form.namep}
+            onChange={handleChange}
+            required
+          />
+        </Field>
 
-      <div className="space-y-2">
-        <label htmlFor="ncedua" className="text-sm font-medium text-slate-700">
-          Número de cédula
-        </label>
-        <input
-          id="ncedua"
-          name="ncedua"
-          type="text"
-          inputMode="numeric"
-          maxLength={10}
-          value={form.ncedua}
-          onChange={handleChange}
-          required
-          className="w-full rounded border border-slate-300 px-3 py-2"
-        />
-      </div>
+        <Field>
+          <FieldLabel htmlFor="ncedua">Número de cédula</FieldLabel>
+          <Input
+            id="ncedua"
+            name="ncedua"
+            type="text"
+            inputMode="numeric"
+            maxLength={10}
+            value={form.ncedua}
+            onChange={handleChange}
+            required
+          />
+        </Field>
 
-      <div className="space-y-2">
-        <label htmlFor="correo" className="text-sm font-medium text-slate-700">
-          Correo electrónico
-        </label>
-        <input
-          type="email"
-          id="correo"
-          name="correo"
-          value={form.correo}
-          onChange={handleChange}
-          required
-          className="w-full rounded border border-slate-300 px-3 py-2"
-        />
-      </div>
+        <Field>
+          <FieldLabel htmlFor="correo">Correo electrónico</FieldLabel>
+          <Input
+            type="email"
+            id="correo"
+            name="correo"
+            value={form.correo}
+            onChange={handleChange}
+            required
+          />
+        </Field>
 
-      <div className="space-y-2">
-        <label
-          htmlFor="description"
-          className="text-sm font-medium text-slate-700"
-        >
-          Descripción
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          value={form.description}
-          onChange={handleChange}
-          rows={4}
-          required
-          className="w-full rounded border border-slate-300 px-3 py-2"
-        />
-      </div>
+        <Field>
+          <FieldLabel htmlFor="description">Descripción</FieldLabel>
+          <Textarea
+            id="description"
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            rows={4}
+            required
+          />
+        </Field>
 
-      <div className="space-y-2">
-        <label htmlFor="context" className="text-sm font-medium text-slate-700">
-          Justificación
-        </label>
-        <textarea
-          id="context"
-          name="context"
-          value={form.context}
-          onChange={handleChange}
-          rows={4}
-          required
-          className="w-full rounded border border-slate-300 px-3 py-2"
-        />
-      </div>
+        <Field>
+          <FieldLabel htmlFor="context">Justificación</FieldLabel>
+          <Textarea
+            id="context"
+            name="context"
+            value={form.context}
+            onChange={handleChange}
+            rows={4}
+            required
+          />
+        </Field>
 
-      <div className="space-y-2">
-        <label
-          htmlFor="location"
-          className="text-sm font-medium text-slate-700"
-        >
-          Locación
-        </label>
-        <input
-          id="location"
-          name="location"
-          value={form.location}
-          onChange={handleChange}
-          required
-          className="w-full rounded border border-slate-300 px-3 py-2"
-        />
-      </div>
+        <Field>
+          <FieldLabel htmlFor="location">Locación</FieldLabel>
+          <Input
+            id="location"
+            name="location"
+            value={form.location}
+            onChange={handleChange}
+            required
+          />
+        </Field>
 
-      <div className="space-y-2">
-        <label
-          htmlFor="startDate"
-          className="text-sm font-medium text-slate-700"
-        >
-          Tiempo estimado de inicio
-        </label>
-        <input
-          type="date"
-          id="startDate"
-          name="startDate"
-          value={form.startDate}
-          onChange={handleChange}
-          required
-          className="w-full rounded border border-slate-300 px-3 py-2"
-        />
-      </div>
+        <Field>
+          <FieldLabel htmlFor="startDate">
+            Tiempo estimado de inicio
+          </FieldLabel>
+          <Input
+            type="date"
+            id="startDate"
+            name="startDate"
+            value={form.startDate}
+            onChange={handleChange}
+            required
+          />
+        </Field>
 
-      <div className="space-y-2">
-        <label
-          htmlFor="executiontime"
-          className="text-sm font-medium text-slate-700"
-        >
-          Tiempo estimado de duracion
-        </label>
-        <input
-          id="executiontime"
-          name="executiontime"
-          value={form.executiontime}
-          onChange={handleChange}
-          required
-          className="w-full rounded border border-slate-300 px-3 py-2"
-        />
-      </div>
+        <Field>
+          <FieldLabel htmlFor="executiontime">
+            Tiempo estimado de duracion
+          </FieldLabel>
+          <Input
+            id="executiontime"
+            name="executiontime"
+            value={form.executiontime}
+            onChange={handleChange}
+            required
+          />
+        </Field>
 
-      <div className="space-y-2">
-        <label
-          htmlFor="estimatedCost"
-          className="text-sm font-medium text-slate-700"
-        >
-          Costo estimado
-        </label>
-        <input
-          type="number"
-          id="estimatedCost"
-          name="estimatedCost"
-          value={form.estimatedCost}
-          onChange={handleChange}
-          required
-          className="w-full rounded border border-slate-300 px-3 py-2"
-        />
-      </div>
+        <Field>
+          <FieldLabel htmlFor="estimatedCost">Costo estimado</FieldLabel>
+          <Input
+            type="number"
+            id="estimatedCost"
+            name="estimatedCost"
+            value={form.estimatedCost}
+            onChange={handleChange}
+            required
+          />
+        </Field>
 
-      <button
-        type="submit"
-        disabled={status === "saving"}
-        className="inline-flex items-center justify-center rounded bg-blue-600 px-4 py-2 text-white transition disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {status === "saving" ? "Saving..." : "Proponer"}
-      </button>
+        <Button type="submit" disabled={status === "saving"}>
+          {status === "saving" && <Spinner data-icon="inline-start" />}
+          {status === "saving" ? "Saving..." : "Proponer"}
+        </Button>
 
-      {status === "success" && (
-        <p className="text-sm text-green-600">Project created.</p>
-      )}
+        {status === "success" && (
+          <Alert>
+            <AlertDescription>Project created.</AlertDescription>
+          </Alert>
+        )}
 
-      {status === "error" && errorMessage && (
-        <p className="text-sm text-red-600">{errorMessage}</p>
-      )}
+        {status === "error" && errorMessage && (
+          <Alert variant="destructive">
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
+      </FieldGroup>
     </form>
   );
 }

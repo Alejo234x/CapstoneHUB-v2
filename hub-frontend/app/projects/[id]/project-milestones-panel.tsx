@@ -12,7 +12,26 @@ import { formatDate, toDateTimeLocal } from "../../services/utils";
 import Link from "next/link";
 import { useAuth } from "../../components/auth-provider";
 import FormActions from "@/app/components/form-actions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -20,8 +39,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -30,6 +55,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import {
   RiAddLine,
   RiCheckboxBlankCircleLine,
@@ -84,6 +110,9 @@ export default function ProjectMilestonesPanel({
   const [detailMilestone, setDetailMilestone] =
     useState<ProjectMilestoneItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] =
+    useState<ProjectMilestoneItem | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const canManage = useMemo(() => {
@@ -214,11 +243,20 @@ export default function ProjectMilestonesPanel({
     });
   }
 
-  function handleDelete(milestone: ProjectMilestoneItem) {
-    if (!window.confirm(`¿Eliminar el hito "${milestone.title}"?`)) {
+  function requestDelete(milestone: ProjectMilestoneItem) {
+    setDeleteTarget(milestone);
+    setDeleteOpen(true);
+  }
+
+  function handleDelete() {
+    const milestone = deleteTarget;
+
+    if (!milestone) {
       return;
     }
 
+    setDeleteOpen(false);
+    setDeleteTarget(null);
     setErrorMessage(null);
 
     startTransition(async () => {
@@ -238,163 +276,159 @@ export default function ProjectMilestonesPanel({
   const columnCount = canManage ? 4 : 3;
 
   return (
-    <section className="mt-6 border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Hitos
-          </h2>
-          <p className="mt-2 text-muted-foreground">
-            {milestones.length === 0
-              ? "Define los hitos y entregas del proyecto."
-              : `${completedCount} de ${milestones.length} completados`}
-          </p>
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle>Hitos</CardTitle>
+        <CardDescription>
+          {milestones.length === 0
+            ? "Define los hitos y entregas del proyecto."
+            : `${completedCount} de ${milestones.length} completados`}
+        </CardDescription>
 
-          {milestones.length > 0 ? (
-            <div className="mt-3 flex items-center gap-3">
-              <div className="h-2 w-40 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${completionPercentage}%` }}
-                />
-              </div>
-              <span className="text-sm font-medium">
-                {completionPercentage}%
-              </span>
-            </div>
-          ) : null}
-        </div>
+        {milestones.length > 0 ? (
+          <div className="mt-3 flex items-center gap-3">
+            <Progress value={completionPercentage} className="w-40" />
+            <span className="text-sm font-medium">{completionPercentage}%</span>
+          </div>
+        ) : null}
 
         {ready && canManage ? (
-          <Button onClick={openCreateDialog}>
-            <RiAddLine />
-            Nuevo hito
-          </Button>
+          <CardAction>
+            <Button onClick={openCreateDialog}>
+              <RiAddLine data-icon="inline-start" />
+              Nuevo hito
+            </Button>
+          </CardAction>
         ) : null}
-      </div>
+      </CardHeader>
 
-      {errorMessage && !dialogOpen ? (
-        <p className="mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-          {errorMessage}
-        </p>
-      ) : null}
+      <CardContent>
+        {errorMessage && !dialogOpen ? (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
 
-      <Table className="mt-6">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12">Estado</TableHead>
-            <TableHead>Hito</TableHead>
-            <TableHead className="w-48">Vence</TableHead>
-            {canManage ? <TableHead className="w-24 text-right">Acciones</TableHead> : null}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedMilestones.length === 0 ? (
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell
-                colSpan={columnCount}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No hay hitos todavía.
-              </TableCell>
+              <TableHead className="w-12">Estado</TableHead>
+              <TableHead>Hito</TableHead>
+              <TableHead className="w-48">Vence</TableHead>
+              {canManage ? (
+                <TableHead className="w-24 text-right">Acciones</TableHead>
+              ) : null}
             </TableRow>
-          ) : (
-            sortedMilestones.map((milestone) => (
-              <TableRow key={milestone.id}>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={
-                      milestone.completed
-                        ? "Marcar como pendiente"
-                        : "Marcar como completado"
-                    }
-                    onClick={() => handleToggle(milestone)}
-                    disabled={!canManage || isPending}
-                  >
-                    {milestone.completed ? (
-                      <RiCheckboxCircleLine className="text-green-600" />
-                    ) : (
-                      <RiCheckboxBlankCircleLine />
-                    )}
-                  </Button>
+          </TableHeader>
+          <TableBody>
+            {sortedMilestones.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columnCount}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  No hay hitos todavía.
                 </TableCell>
-                <TableCell className="whitespace-normal">
-                  <button
-                    type="button"
-                    onClick={() => openDetailDialog(milestone)}
-                    className={`text-left font-medium hover:underline ${
-                      milestone.completed
-                        ? "text-muted-foreground line-through"
-                        : "text-foreground"
-                    }`}
-                  >
-                    {milestone.title}
-                  </button>
-                  {milestone.description ? (
-                    <p className="mt-1 line-clamp-2 whitespace-pre-line text-sm text-muted-foreground">
-                      {milestone.description}
-                    </p>
-                  ) : null}
-                </TableCell>
-                <TableCell>
-                  <div className="text-muted-foreground">
-                    {formatDate(milestone.dueDate)}
-                  </div>
-                  {isOverdue(milestone) ? (
-                    <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-destructive">
-                      <RiErrorWarningLine className="size-3.5" />
-                      Vencido
-                    </span>
-                  ) : null}
-                </TableCell>
-                {canManage ? (
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="Editar hito"
-                        onClick={() => openEditDialog(milestone)}
-                      >
-                        <RiPencilLine />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="Eliminar hito"
-                        className="text-destructive"
-                        onClick={() => handleDelete(milestone)}
-                      >
-                        <RiDeleteBinLine />
-                      </Button>
-                    </div>
-                  </TableCell>
-                ) : null}
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ) : (
+              sortedMilestones.map((milestone) => (
+                <TableRow key={milestone.id}>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={
+                        milestone.completed
+                          ? "Marcar como pendiente"
+                          : "Marcar como completado"
+                      }
+                      onClick={() => handleToggle(milestone)}
+                      disabled={!canManage || isPending}
+                    >
+                      {milestone.completed ? (
+                        <RiCheckboxCircleLine className="text-success" />
+                      ) : (
+                        <RiCheckboxBlankCircleLine />
+                      )}
+                    </Button>
+                  </TableCell>
+                  <TableCell className="whitespace-normal">
+                    <Button
+                      variant="link"
+                      onClick={() => openDetailDialog(milestone)}
+                      className={cn(
+                        "h-auto justify-start whitespace-normal p-0 text-left font-medium",
+                        milestone.completed
+                          ? "text-muted-foreground line-through"
+                          : "text-foreground",
+                      )}
+                    >
+                      {milestone.title}
+                    </Button>
+                    {milestone.description ? (
+                      <p className="mt-1 line-clamp-2 whitespace-pre-line text-sm text-muted-foreground">
+                        {milestone.description}
+                      </p>
+                    ) : null}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-muted-foreground">
+                      {formatDate(milestone.dueDate)}
+                    </div>
+                    {isOverdue(milestone) ? (
+                      <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-destructive">
+                        <RiErrorWarningLine className="size-3.5" />
+                        Vencido
+                      </span>
+                    ) : null}
+                  </TableCell>
+                  {canManage ? (
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Editar hito"
+                          onClick={() => openEditDialog(milestone)}
+                        >
+                          <RiPencilLine />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Eliminar hito"
+                          className="text-destructive"
+                          onClick={() => requestDelete(milestone)}
+                        >
+                          <RiDeleteBinLine />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
 
-      {!ready ? (
-        <div className="mt-6 border border-slate-200 bg-slate-50 p-4 text-sm text-muted-foreground">
-          Cargando acceso...
-        </div>
-      ) : !isAuthenticated ? (
-        <div className="mt-6 border border-slate-200 bg-slate-50 p-4 text-sm text-muted-foreground">
-          Inicia sesión para administrar los hitos.
-          <div className="mt-3">
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-            >
-              Iniciar sesión
-            </Link>
-          </div>
-        </div>
-      ) : null}
+        {!ready ? (
+          <Alert className="mt-6">
+            <AlertDescription>Cargando acceso...</AlertDescription>
+          </Alert>
+        ) : !isAuthenticated ? (
+          <Alert className="mt-6">
+            <AlertDescription>
+              Inicia sesión para administrar los hitos.
+              <div className="mt-3">
+                <Button
+                  nativeButton={false}
+                  render={<Link href="/login">Iniciar sesión</Link>}
+                />
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+      </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -409,61 +443,68 @@ export default function ProjectMilestonesPanel({
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="milestone-title">Título</Label>
-              <Input
-                id="milestone-title"
-                value={form.title}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, title: event.target.value }))
-                }
-                placeholder="Nombre del hito"
-                disabled={isPending}
+          <form onSubmit={handleSubmit}>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="milestone-title">Título</FieldLabel>
+                <Input
+                  id="milestone-title"
+                  value={form.title}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, title: event.target.value }))
+                  }
+                  placeholder="Nombre del hito"
+                  disabled={isPending}
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="milestone-description">
+                  Descripción
+                </FieldLabel>
+                <Textarea
+                  id="milestone-description"
+                  value={form.description}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      description: event.target.value,
+                    }))
+                  }
+                  rows={3}
+                  disabled={isPending}
+                  placeholder="Descripción opcional del hito"
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="milestone-due-date">
+                  Fecha de vencimiento
+                </FieldLabel>
+                <Input
+                  id="milestone-due-date"
+                  type="datetime-local"
+                  value={form.dueDate}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, dueDate: event.target.value }))
+                  }
+                  disabled={isPending}
+                />
+              </Field>
+
+              {errorMessage ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
+              ) : null}
+
+              <FormActions
+                loading={isPending}
+                loadingText="Guardando..."
+                submitText={editingMilestone ? "Guardar cambios" : "Crear hito"}
+                onCancel={() => setDialogOpen(false)}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="milestone-description">Descripción</Label>
-              <textarea
-                id="milestone-description"
-                value={form.description}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    description: event.target.value,
-                  }))
-                }
-                rows={3}
-                disabled={isPending}
-                className="flex min-h-16 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 md:text-sm"
-                placeholder="Descripción opcional del hito"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="milestone-due-date">Fecha de vencimiento</Label>
-              <Input
-                id="milestone-due-date"
-                type="datetime-local"
-                value={form.dueDate}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, dueDate: event.target.value }))
-                }
-                disabled={isPending}
-              />
-            </div>
-
-            {errorMessage ? (
-              <p className="text-sm text-destructive">{errorMessage}</p>
-            ) : null}
-
-            <FormActions
-              loading={isPending}
-              loadingText="Guardando..."
-              submitText={editingMilestone ? "Guardar cambios" : "Crear hito"}
-              onCancel={() => setDialogOpen(false)}
-            />
+            </FieldGroup>
           </form>
         </DialogContent>
       </Dialog>
@@ -476,17 +517,17 @@ export default function ProjectMilestonesPanel({
           </DialogHeader>
 
           {detailMilestone ? (
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               {isOverdue(detailMilestone) ? (
-                <p className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                  <RiErrorWarningLine className="size-4 shrink-0" />
-                  Este hito ya venció.
-                </p>
+                <Alert variant="destructive">
+                  <RiErrorWarningLine />
+                  <AlertDescription>Este hito ya venció.</AlertDescription>
+                </Alert>
               ) : null}
 
               <div className="flex items-center gap-2">
                 {detailMilestone.completed ? (
-                  <RiCheckboxCircleLine className="text-green-600" />
+                  <RiCheckboxCircleLine className="text-success" />
                 ) : (
                   <RiCheckboxBlankCircleLine />
                 )}
@@ -531,6 +572,24 @@ export default function ProjectMilestonesPanel({
           ) : null}
         </DialogContent>
       </Dialog>
-    </section>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar hito</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Eliminar el hito &quot;{deleteTarget?.title}&quot;? Esta acción no
+              se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleDelete}>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
   );
 }

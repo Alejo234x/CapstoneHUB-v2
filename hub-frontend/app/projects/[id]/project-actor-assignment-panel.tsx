@@ -8,6 +8,8 @@ import { addProjectActorAssignment, getUsers } from "../../services/projects";
 import { UserSummary } from "../../services/schemas";
 import { useAuth } from "../../components/auth-provider";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,8 +19,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Field,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
 
 const roleLabels: Record<string, string> = {
   advisor: "Asesor",
@@ -259,7 +271,7 @@ function AssignmentForm({
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
             <UserSearch
               users={filteredUsers}
@@ -290,9 +302,9 @@ function AssignmentForm({
           ) : null}
 
           {errorMessage ? (
-            <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {errorMessage}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
           ) : null}
         </form>
       </CardContent>
@@ -318,8 +330,8 @@ function UserSearch({
   onSelectUser,
 }: Readonly<UserSearchProps>) {
   return (
-    <div className="relative space-y-2">
-      <Label htmlFor="project-user-search">Usuario</Label>
+    <Field className="relative">
+      <FieldLabel htmlFor="project-user-search">Usuario</FieldLabel>
 
       <Input
         id="project-user-search"
@@ -337,7 +349,7 @@ function UserSearch({
       {!selectedUser && search.trim() ? (
         <UserSearchResults users={users} onSelectUser={onSelectUser} />
       ) : null}
-    </div>
+    </Field>
   );
 }
 
@@ -359,27 +371,30 @@ function UserSearchResults({
   return (
     <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-border bg-popover text-popover-foreground shadow-md">
       {users.map((user) => (
-        <button
+        <Item
           key={user.id}
-          type="button"
-          onClick={() => onSelectUser(user)}
-          className="flex w-full items-center gap-3 border-b border-border px-3 py-3 text-left transition-colors last:border-b-0 hover:bg-muted"
+          render={
+            <button type="button" onClick={() => onSelectUser(user)} />
+          }
+          className="rounded-none border-b border-border last:border-b-0"
         >
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-            {getInitials(user.fullName)}
-          </span>
+          <ItemMedia>
+            <Avatar>
+              <AvatarFallback className="bg-primary/10 font-semibold text-primary">
+                {getInitials(user.fullName)}
+              </AvatarFallback>
+            </Avatar>
+          </ItemMedia>
 
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-foreground">
-              {user.fullName}
-            </span>
-            <span className="block truncate text-xs text-muted-foreground">
-              {user.email}
-            </span>
-          </span>
+          <ItemContent>
+            <ItemTitle>{user.fullName}</ItemTitle>
+            <ItemDescription>{user.email}</ItemDescription>
+          </ItemContent>
 
-          <Badge variant="outline">{getRoleLabel(getUserProjectRole(user))}</Badge>
-        </button>
+          <Badge variant="outline">
+            {getRoleLabel(getUserProjectRole(user))}
+          </Badge>
+        </Item>
       ))}
     </div>
   );
@@ -387,8 +402,8 @@ function UserSearchResults({
 
 function RoleDisplay({ role }: Readonly<{ role: string | null }>) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor="project-role">Rol</Label>
+    <Field>
+      <FieldLabel htmlFor="project-role">Rol</FieldLabel>
 
       <Input
         id="project-role"
@@ -396,7 +411,7 @@ function RoleDisplay({ role }: Readonly<{ role: string | null }>) {
         readOnly
         disabled
       />
-    </div>
+    </Field>
   );
 }
 
@@ -417,15 +432,17 @@ function AssignedUsersList({
       </CardHeader>
 
       {assignments.length > 0 ? (
-        <CardContent className="space-y-3">
+        <CardContent className="flex flex-col gap-3">
           {assignments.map((assignment) => (
             <div
               key={assignment.id}
               className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-4"
             >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                {getInitials(assignment.user.fullName)}
-              </div>
+              <Avatar>
+                <AvatarFallback className="bg-primary/10 font-semibold text-primary">
+                  {getInitials(assignment.user.fullName)}
+                </AvatarFallback>
+              </Avatar>
 
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -482,7 +499,7 @@ export default function ProjectActorAssignmentPanel({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {canAssign ? (
         <AssignmentForm
           projectId={projectId}

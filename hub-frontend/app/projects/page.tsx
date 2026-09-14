@@ -1,5 +1,12 @@
 import { getProjects } from "../services/projects";
 import ProjectsTable from "@/app/projects/projects-table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +14,7 @@ export default async function ProjectsPage() {
   const { projects, error } = await getProjects();
 
   return (
-    <main className="min-h-screen bg-gray-100 text-slate-900">
+    <main className="min-h-screen bg-background text-foreground">
       <section className="mx-auto w-full max-w-5xl px-6 py-12 sm:px-10 lg:px-12">
         <div className="mb-8 flex items-center justify-between gap-4">
           <div>
@@ -18,15 +25,20 @@ export default async function ProjectsPage() {
         </div>
 
         {error ? (
-          <div className="mb-6 border border-amber-200 bg-amber-50 p-5 text-amber-900">
-            {error}
-          </div>
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         ) : null}
 
         {!error && projects.length === 0 ? (
-          <div className="border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-            No se encontraron proyectos aún.
-          </div>
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>No hay proyectos</EmptyTitle>
+              <EmptyDescription>
+                No se encontraron proyectos aún.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : null}
 
         {!error && projects.length > 0 ? (

@@ -2,7 +2,7 @@ import SubmitCard from "../components/submit-card";
 
 export default function SubmitPage() {
   return (
-    <main className="min-h-screen bg-gray-100 text-slate-900">
+    <main className="min-h-screen bg-background text-foreground">
       <section className="mx-auto w-full max-w-5xl px-6 py-12 sm:px-10 lg:px-12">
         <div className="mb-8 flex items-center justify-between gap-4">
           <div>

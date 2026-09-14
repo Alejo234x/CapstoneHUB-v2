@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "./auth-provider";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function AuthNav({
   showUserInfo = true,
@@ -27,32 +28,26 @@ export function AuthNav({
     return (
         <div className="flex shrink-0 items-center gap-3">
             {!ready ? (
-            <span className="text-sm text-slate-500">Cargando...</span>
+            <Skeleton className="h-8 w-24" />
             ) : isAuthenticated ? (
             <>
                 {showUserInfo ? (
-                <span className="hidden text-right text-sm text-slate-700 sm:inline">
+                <span className="hidden text-right text-sm sm:inline">
                 <span className="block font-medium">{session?.user.fullName}</span>
-                <span className="block text-xs text-slate-500">
+                <span className="block text-xs text-muted-foreground">
                     {userRoles || "Sin rol asignado"}
                 </span>
                 </span>
                 ) : null}
-                <Button
-                variant="outline"
-                onClick={logout}
-                className="inline-flex items-center justify-center border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                >
+                <Button variant="outline" onClick={logout}>
                 Cerrar sesión
                 </Button>
             </>
             ) : (
-            <Link
-                href="/login"
-                className="inline-flex items-center justify-center bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-            >
-                Iniciar sesión
-            </Link>
+            <Button
+                nativeButton={false}
+                render={<Link href="/login">Iniciar sesión</Link>}
+            />
             )}
         </div>
     )

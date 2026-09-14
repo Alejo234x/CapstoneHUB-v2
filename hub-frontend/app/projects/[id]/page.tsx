@@ -75,11 +75,11 @@ export default async function ProjectDetailsPage({
   }
 
   return (
-    <main className="min-h-screen bg-gray-100 text-slate-900">
+    <main className="min-h-screen bg-background text-foreground">
       <section className="mx-auto w-full max-w-7xl px-6 py-12 sm:px-10 lg:px-12">
         <div className="mb-8 flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
               Proyecto #{project.id}
             </p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -88,7 +88,8 @@ export default async function ProjectDetailsPage({
           </div>
         </div>
 
-        <div className="border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <Card>
+          <CardContent>
           <div className="flex flex-wrap items-center gap-3">
             <Badge variant="secondary">{formatStatus(project.status)}</Badge>
             <ProjectAssignmentBadge
@@ -335,7 +336,8 @@ export default async function ProjectDetailsPage({
               />
             </TabsContent>
           </Tabs>
-        </div>
+          </CardContent>
+        </Card>
 
         <div className="mt-6 flex w-full justify-end">
           <ProjectStatusEditForm

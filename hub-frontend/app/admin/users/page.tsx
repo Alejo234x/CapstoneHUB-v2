@@ -6,6 +6,25 @@ import { useAuth } from "../../components/auth-provider";
 import { getUsers, AuthUser } from "../../services/auth";
 import CreateUserDialog from "./create-user-dialog";
 import EditUserRolesDialog from "./edit-user-roles-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const roleLabels: Record<string, string> = {
   admin: "Administrador",
@@ -64,9 +83,7 @@ export default function AdminUsersPage() {
   if (!ready || loading) {
     return (
       <main className="mx-auto w-full max-w-5xl px-6 py-8">
-        <p className="text-sm text-muted-foreground">
-          Cargando usuarios...
-        </p>
+        <Skeleton className="h-8 w-56" />
       </main>
     );
   }
@@ -88,107 +105,86 @@ export default function AdminUsersPage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-      <div className="rounded-lg border bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b px-6 py-4">
-        <div>
-            <h2 className="font-semibold">Usuarios</h2>
-            <p className="text-sm text-muted-foreground">
+      <Card>
+        <CardHeader>
+          <CardTitle>Usuarios</CardTitle>
+          <CardDescription>
             Usuarios registrados en CapstoneHUB.
-            </p>
-        </div>
+          </CardDescription>
+          <CardAction>
+            <CreateUserDialog
+              onUserCreated={(user) => {
+                setUsers((currentUsers) => [...currentUsers, user]);
+              }}
+            />
+          </CardAction>
+        </CardHeader>
 
-        <CreateUserDialog
-            onUserCreated={(user) => {
-            setUsers((currentUsers) => [...currentUsers, user]);
-            }}
-        />
-        </div>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Correo</TableHead>
+                <TableHead>Roles</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-6 py-3 text-left font-medium">
-                  Nombre
-                </th>
-
-                <th className="px-6 py-3 text-left font-medium">
-                  Correo
-                </th>
-
-                <th className="px-6 py-3 text-left font-medium">
-                  Roles
-                </th>
-
-                <th className="px-6 py-3 text-left font-medium">
-                    Acciones
-                </th>
-
-              </tr>
-            </thead>
-
-            <tbody>
+            <TableBody>
               {users.length === 0 ? (
-                <tr>
-                  <td
+                <TableRow>
+                  <TableCell
                     colSpan={4}
-                    className="px-6 py-8 text-center text-muted-foreground"
+                    className="h-24 text-center text-muted-foreground"
                   >
                     No hay usuarios registrados.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 users.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="border-b last:border-0"
-                  >
-                    <td className="px-6 py-4 font-medium">
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">
                       {user.fullName}
-                    </td>
+                    </TableCell>
 
-                    <td className="px-6 py-4">
-                      {user.email}
-                    </td>
+                    <TableCell>{user.email}</TableCell>
 
-                    <td className="px-6 py-4">
+                    <TableCell>
                       <div className="flex flex-wrap gap-2">
                         {user.roles.map((role) => (
-                          <span
-                            key={role}
-                            className="rounded-full border px-2.5 py-1 text-xs"
-                          >
+                          <Badge key={role} variant="outline">
                             {roleLabels[role] ?? role}
-                          </span>
+                          </Badge>
                         ))}
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                    <EditUserRolesDialog
+                    </TableCell>
+                    <TableCell>
+                      <EditUserRolesDialog
                         user={user}
                         onUserUpdated={(updatedUser) => {
-                        setUsers((currentUsers) =>
+                          setUsers((currentUsers) =>
                             currentUsers.map((currentUser) =>
-                            currentUser.id === updatedUser.id
+                              currentUser.id === updatedUser.id
                                 ? updatedUser
                                 : currentUser,
                             ),
-                        );
+                          );
                         }}
-                    />
-                    </td>
-                  </tr>
+                      />
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </main>
   );
 }

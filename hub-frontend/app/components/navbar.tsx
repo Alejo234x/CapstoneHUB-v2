@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { useAuth } from "./auth-provider";
 import { AuthNav } from "./auth-nav";
+import { Button } from "@/components/ui/button";
 
 import {
   NavigationMenu,
@@ -50,13 +51,13 @@ export default function Navbar() {
     .join(", ");
 
   return (
-    <nav className="border-b border-slate-200 bg-white shadow-sm">
+    <nav className="border-b bg-background shadow-sm">
       <div className="mx-auto flex w-full max-w-5xl items-center gap-4 px-6 py-3 sm:px-10 lg:px-12">
         <Link
           href="/"
           onClick={() => setMobileOpen(false)}
           className={`shrink-0 text-lg font-semibold tracking-tight ${
-            pathname === "/" ? "text-slate-950" : "text-slate-700"
+            pathname === "/" ? "text-foreground" : "text-muted-foreground"
           }`}
         >
           CapstoneHUB
@@ -104,73 +105,92 @@ export default function Navbar() {
         </div>
 
         {/* Botón hamburguesa: solo visible cuando no cabe el menú de escritorio */}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setMobileOpen((open) => !open)}
           aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={mobileOpen}
           aria-controls="mobile-menu"
-          className="ml-auto inline-flex items-center justify-center border border-slate-200 p-2 text-slate-700 transition hover:bg-slate-50 md:hidden"
+          className="ml-auto md:hidden"
         >
           {mobileOpen ? (
-            <X className="size-5" aria-hidden="true" />
+            <X aria-hidden="true" />
           ) : (
-            <Menu className="size-5" aria-hidden="true" />
+            <Menu aria-hidden="true" />
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Panel móvil: repite todo lo que el menú de escritorio esconde */}
       {mobileOpen && (
         <div
           id="mobile-menu"
-          className="border-t border-slate-200 bg-white px-6 py-4 sm:px-10 md:hidden"
+          className="border-t bg-background px-6 py-4 sm:px-10 md:hidden"
         >
           <div className="flex flex-col gap-1">
-            <Link
-              href="/projects"
-              onClick={() => setMobileOpen(false)}
-              className="px-2 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            <Button
+              variant="ghost"
+              className="justify-start"
+              nativeButton={false}
+              render={
+                <Link
+                  href="/projects"
+                  onClick={() => setMobileOpen(false)}
+                />
+              }
             >
               Proyectos
-            </Link>
+            </Button>
 
             {isAdmin && (
-              <Link
-                href="/admin/users"
-                onClick={() => setMobileOpen(false)}
-                className="px-2 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              <Button
+                variant="ghost"
+                className="justify-start"
+                nativeButton={false}
+                render={
+                  <Link
+                    href="/admin/users"
+                    onClick={() => setMobileOpen(false)}
+                  />
+                }
               >
                 Administración
-              </Link>
+              </Button>
             )}
 
             <div className="px-2 py-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 Proponer
               </p>
               <div className="mt-2 flex flex-col gap-1">
                 {components.map((component) => (
-                  <Link
+                  <Button
                     key={component.title}
-                    href={component.href}
-                    onClick={() => setMobileOpen(false)}
-                    className="px-2 py-1 text-sm text-slate-700 transition hover:bg-slate-50"
+                    variant="ghost"
+                    className="justify-start"
+                    nativeButton={false}
+                    render={
+                      <Link
+                        href={component.href}
+                        onClick={() => setMobileOpen(false)}
+                      />
+                    }
                   >
                     {component.title}
-                  </Link>
+                  </Button>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4">
+          <div className="mt-4 flex flex-col gap-3 border-t pt-4">
             {session ? (
-              <p className="px-2 text-sm text-slate-700">
+              <p className="px-2 text-sm">
                 <span className="block font-medium">
                   {session.user.fullName}
                 </span>
-                <span className="block text-xs text-slate-500">
+                <span className="block text-xs text-muted-foreground">
                   {userRoles || "Sin rol asignado"}
                 </span>
               </p>
