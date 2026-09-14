@@ -21,6 +21,7 @@
     "seed:observations": "ts-node --require ./prisma/register.cjs prisma/seed.ts --only=observations",
     "seed:status": "ts-node --require ./prisma/register.cjs prisma/seed.ts --only=status",
     "seed:attachments": "ts-node --require ./prisma/register.cjs prisma/seed.ts --only=attachments",
+    "seed:reports": "ts-node --require ./prisma/register.cjs prisma/seed.ts --only=reports",
     "seed:reset": "ts-node --require ./prisma/register.cjs prisma/seed.ts --reset",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",

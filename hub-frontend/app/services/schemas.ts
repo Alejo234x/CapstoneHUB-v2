@@ -69,6 +69,7 @@ export type ProjectMilestoneItem = {
 export type ProjectAttachmentItem = {
   id: number;
   projectId: number;
+  reportId?: number | null;
   originalName: string;
   mimeType: string;
   sizeBytes: number;
@@ -78,6 +79,37 @@ export type ProjectAttachmentItem = {
     fullName: string;
     email: string;
   } | null;
+};
+
+export type ProjectReportStatus =
+  | "pending"
+  | "submitted"
+  | "accepted"
+  | "rejected";
+
+export type ProjectReportItem = {
+  id: number;
+  projectId: number;
+  status: ProjectReportStatus;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewComment: string | null;
+  createdAt: string;
+  updatedAt: string;
+  title: string;
+  description: string | null;
+  dueDate: string;
+  createdBy: {
+    id: number;
+    fullName: string;
+    email: string;
+  } | null;
+  reviewedBy: {
+    id: number;
+    fullName: string;
+    email: string;
+  } | null;
+  attachments: ProjectAttachmentItem[];
 };
 
 export type ProjectStatusHistoryItem = {
@@ -127,4 +159,5 @@ export type ProjectDetails = {
   milestones?: ProjectMilestoneItem[];
   statusHistory?: ProjectStatusHistoryItem[];
   attachments?: ProjectAttachmentItem[];
+  reports?: ProjectReportItem[];
 };

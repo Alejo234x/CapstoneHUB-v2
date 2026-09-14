@@ -76,6 +76,17 @@ export interface ObservationFixture {
 
 export type ObservationsFixture = Record<string, ObservationFixture[]>;
 
+export interface ReportFixture {
+  title: string;
+  description?: string;
+  dueDate: string;
+  status?: 'pending' | 'submitted' | 'accepted' | 'rejected';
+  submittedAt?: string | null;
+  reviewComment?: string | null;
+}
+
+export type ReportsFixture = Record<string, ReportFixture[]>;
+
 export const loadUsers = (): UsersFixture =>
   loadFixture<UsersFixture>('users.json');
 export const loadProjects = (): ProjectsFixture =>
@@ -84,3 +95,5 @@ export const loadMilestones = (): MilestonesFixture =>
   loadFixture<MilestonesFixture>('milestones.json');
 export const loadObservations = (): ObservationsFixture =>
   loadFixture<ObservationsFixture>('observations.json');
+export const loadReports = (): ReportsFixture =>
+  loadFixture<ReportsFixture>('reports.json');

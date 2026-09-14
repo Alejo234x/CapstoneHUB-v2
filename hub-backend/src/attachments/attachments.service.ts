@@ -9,6 +9,7 @@ import { StorageService, buildStorageKey } from '../storage/storage.service';
 export const attachmentSelect = {
   id: true,
   projectId: true,
+  reportId: true,
   uploadedByUserId: true,
   originalName: true,
   storageKey: true,
@@ -31,6 +32,7 @@ export type SelectedAttachment = Prisma.ProjectAttachmentGetPayload<{
 export type ProjectAttachmentResponse = {
   id: number;
   projectId: number;
+  reportId: number | null;
   originalName: string;
   mimeType: string;
   sizeBytes: number;
@@ -53,6 +55,7 @@ function mapAttachment(
   return {
     id: attachment.id,
     projectId: attachment.projectId,
+    reportId: attachment.reportId,
     originalName: attachment.originalName,
     mimeType: attachment.mimeType,
     sizeBytes: attachment.sizeBytes,
@@ -88,11 +91,16 @@ export class AttachmentsService {
   async createAttachment(params: {
     projectId: number;
     file: Express.Multer.File;
+    reportId?: number;
     user: AuthenticatedUser;
   }): Promise<ProjectAttachmentResponse> {
-    const { projectId, file, user } = params;
+    const { projectId, file, user, reportId } = params;
     await this.assertProjectExists(projectId);
     await this.authorization.assertProjectMember(user, projectId);
+
+    if (reportId !== undefined) {
+      await this.assertReportBelongsToProject(projectId, reportId);
+    }
 
     const storageKey = buildStorageKey(projectId, file.originalname);
 
@@ -106,6 +114,7 @@ export class AttachmentsService {
       const attachment = await this.prisma.projectAttachment.create({
         data: {
           projectId,
+          reportId: reportId ?? null,
           uploadedByUserId: user.id,
           originalName: file.originalname,
           storageKey,
@@ -187,6 +196,22 @@ export class AttachmentsService {
 
     if (!project) {
       throw new NotFoundException(`Project ${projectId} not found`);
+    }
+  }
+
+  private async assertReportBelongsToProject(
+    projectId: number,
+    reportId: number,
+  ): Promise<void> {
+    const report = await this.prisma.projectReport.findFirst({
+      where: { id: reportId, projectId },
+      select: { id: true },
+    });
+
+    if (!report) {
+      throw new NotFoundException(
+        `Report ${reportId} not found in project ${projectId}`,
+      );
     }
   }
 }

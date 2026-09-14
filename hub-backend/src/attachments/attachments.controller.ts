@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
@@ -69,15 +70,24 @@ export class AttachmentsController {
   uploadAttachment(
     @Param('projectId') projectId: string,
     @UploadedFile() file: Express.Multer.File | undefined,
+    @Body('reportId') reportId: string | undefined,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<ProjectAttachmentResponse> {
     if (!file) {
       throw new BadRequestException('A file is required');
     }
 
+    const parsedReportId =
+      reportId === undefined || reportId === '' ? undefined : Number(reportId);
+
+    if (parsedReportId !== undefined && Number.isNaN(parsedReportId)) {
+      throw new BadRequestException('reportId must be a number');
+    }
+
     return this.attachmentsService.createAttachment({
       projectId: Number(projectId),
       file,
+      reportId: parsedReportId,
       user,
     });
   }

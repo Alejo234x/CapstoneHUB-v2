@@ -9,6 +9,7 @@ import {
   Prisma,
   Project,
   ProjectStatus,
+  ReportStatus,
   UserRole,
 } from '../generated/prisma/client';
 import { PrismaService } from '../prisma.service';
@@ -34,6 +35,7 @@ const projectStatusHistorySelect = {
 const projectAttachmentSelect = {
   id: true,
   projectId: true,
+  reportId: true,
   uploadedByUserId: true,
   originalName: true,
   storageKey: true,
@@ -48,6 +50,38 @@ const projectAttachmentSelect = {
     },
   },
 } as const satisfies Prisma.ProjectAttachmentSelect;
+
+const projectReportSelect = {
+  id: true,
+  projectId: true,
+  title: true,
+  description: true,
+  dueDate: true,
+  status: true,
+  submittedAt: true,
+  reviewedAt: true,
+  reviewComment: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: {
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+    },
+  },
+  reviewedBy: {
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+    },
+  },
+  attachments: {
+    select: projectAttachmentSelect,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+  },
+} as const satisfies Prisma.ProjectReportSelect;
 
 type ProjectAttachmentWithUploader = Prisma.ProjectAttachmentGetPayload<{
   select: typeof projectAttachmentSelect;
@@ -83,6 +117,9 @@ type ProjectWithRelations = Prisma.ProjectGetPayload<{
     };
     attachments: {
       select: typeof projectAttachmentSelect;
+    };
+    reports: {
+      select: typeof projectReportSelect;
     };
   };
 }>;
@@ -181,6 +218,7 @@ export type ProjectDetailResponse = ProjectListResponse & {
   attachments: {
     id: number;
     projectId: number;
+    reportId: number | null;
     originalName: string;
     mimeType: string;
     sizeBytes: number;
@@ -190,6 +228,43 @@ export type ProjectDetailResponse = ProjectListResponse & {
       fullName: string;
       email: string;
     } | null;
+  }[];
+  reports: {
+    id: number;
+    projectId: number;
+    title: string;
+    description: string | null;
+    dueDate: Date;
+    status: ReportStatus;
+    submittedAt: Date | null;
+    reviewedAt: Date | null;
+    reviewComment: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    createdBy: {
+      id: number;
+      fullName: string;
+      email: string;
+    } | null;
+    reviewedBy: {
+      id: number;
+      fullName: string;
+      email: string;
+    } | null;
+    attachments: {
+      id: number;
+      projectId: number;
+      reportId: number | null;
+      originalName: string;
+      mimeType: string;
+      sizeBytes: number;
+      createdAt: Date;
+      uploadedBy: {
+        id: number;
+        fullName: string;
+        email: string;
+      } | null;
+    }[];
   }[];
 };
 
@@ -364,11 +439,44 @@ function mapProjectDetailResponse(
       .map((attachment: ProjectAttachmentWithUploader) => ({
         id: attachment.id,
         projectId: attachment.projectId,
+        reportId: attachment.reportId,
         originalName: attachment.originalName,
         mimeType: attachment.mimeType,
         sizeBytes: attachment.sizeBytes,
         createdAt: attachment.createdAt,
         uploadedBy: attachment.uploadedBy,
+      })),
+    reports: project.reports
+      .slice()
+      .sort(
+        (left, right) =>
+          left.dueDate.getTime() - right.dueDate.getTime() ||
+          left.id - right.id,
+      )
+      .map((report) => ({
+        id: report.id,
+        projectId: report.projectId,
+        title: report.title,
+        description: report.description,
+        dueDate: report.dueDate,
+        status: report.status,
+        submittedAt: report.submittedAt,
+        reviewedAt: report.reviewedAt,
+        reviewComment: report.reviewComment,
+        createdAt: report.createdAt,
+        updatedAt: report.updatedAt,
+        createdBy: report.createdBy,
+        reviewedBy: report.reviewedBy,
+        attachments: report.attachments.map((attachment) => ({
+          id: attachment.id,
+          projectId: attachment.projectId,
+          reportId: attachment.reportId,
+          originalName: attachment.originalName,
+          mimeType: attachment.mimeType,
+          sizeBytes: attachment.sizeBytes,
+          createdAt: attachment.createdAt,
+          uploadedBy: attachment.uploadedBy,
+        })),
       })),
   };
 }
@@ -435,6 +543,9 @@ export class ProjectsService {
         attachments: {
           select: projectAttachmentSelect,
         },
+        reports: {
+          select: projectReportSelect,
+        },
       },
     });
 
@@ -484,6 +595,9 @@ export class ProjectsService {
         },
         attachments: {
           select: projectAttachmentSelect,
+        },
+        reports: {
+          select: projectReportSelect,
         },
       },
     });
@@ -539,6 +653,9 @@ export class ProjectsService {
         attachments: {
           select: projectAttachmentSelect,
         },
+        reports: {
+          select: projectReportSelect,
+        },
       },
     });
   }
@@ -583,6 +700,9 @@ export class ProjectsService {
         },
         attachments: {
           select: projectAttachmentSelect,
+        },
+        reports: {
+          select: projectReportSelect,
         },
       },
     });

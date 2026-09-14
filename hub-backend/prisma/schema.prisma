@@ -35,6 +35,13 @@ enum ActorRole {
   evaluator
 }
 
+enum ReportStatus {
+  pending
+  submitted
+  accepted
+  rejected
+}
+
 model User {
   id              Int       @id @default(autoincrement())
   fullName        String    @map("full_name") @db.VarChar(255)
@@ -51,6 +58,8 @@ model User {
   projectStatusHistories ProjectStatusHistory[]
   authoredObservations   ProjectObservation[]
   uploadedAttachments    ProjectAttachment[]
+  createdReports         ProjectReport[]          @relation("ReportCreatedBy")
+  reviewedReports        ProjectReport[]          @relation("ReportReviewedBy")
 
   @@index([fullName], map: "idx_user_full_name")
   @@map("user")
@@ -91,6 +100,7 @@ model Project {
   statusHistory    ProjectStatusHistory[]
   milestones       ProjectMilestones[]
   attachments      ProjectAttachment[]
+  reports          ProjectReport[]
 
   @@index([status], map: "idx_project_status")
   @@index([startDate], map: "idx_project_start_date")
@@ -211,6 +221,7 @@ model ProjectMilestones {
 model ProjectAttachment {
   id               Int      @id @default(autoincrement())
   projectId        Int      @map("project_id")
+  reportId         Int?     @map("report_id")
   uploadedByUserId Int?     @map("uploaded_by_user_id")
   originalName     String   @map("original_name") @db.VarChar(255)
   storageKey       String   @unique(map: "uk_project_attachment_storage_key") @map("storage_key") @db.VarChar(512)
@@ -218,11 +229,41 @@ model ProjectAttachment {
   sizeBytes        Int      @map("size_bytes")
   createdAt        DateTime @default(now()) @map("created_at")
 
-  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  uploadedBy User?   @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  project    Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  report     ProjectReport? @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  uploadedBy User?          @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
 
   @@index([projectId], map: "idx_project_attachment_project_id")
+  @@index([reportId], map: "idx_project_attachment_report_id")
   @@index([uploadedByUserId], map: "idx_project_attachment_uploaded_by_user_id")
   @@index([createdAt], map: "idx_project_attachment_created_at")
   @@map("project_attachment")
+}
+
+model ProjectReport {
+  id               Int          @id @default(autoincrement())
+  projectId        Int          @map("project_id")
+  createdByUserId  Int?         @map("created_by_user_id")
+  reviewedByUserId Int?         @map("reviewed_by_user_id")
+  title            String       @db.VarChar(255)
+  description      String?      @db.Text
+  dueDate          DateTime     @map("due_date")
+  status           ReportStatus @default(pending)
+  submittedAt      DateTime?    @map("submitted_at")
+  reviewedAt       DateTime?    @map("reviewed_at")
+  reviewComment    String?      @map("review_comment") @db.Text
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  project     Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy   User?               @relation("ReportCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  reviewedBy  User?               @relation("ReportReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  attachments ProjectAttachment[]
+
+  @@index([projectId], map: "idx_project_report_project_id")
+  @@index([dueDate], map: "idx_project_report_due_date")
+  @@index([status], map: "idx_project_report_status")
+  @@index([createdByUserId], map: "idx_project_report_created_by_user_id")
+  @@index([reviewedByUserId], map: "idx_project_report_reviewed_by_user_id")
+  @@map("project_report")
 }
