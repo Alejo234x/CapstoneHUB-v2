@@ -108,6 +108,15 @@ export type ProjectActorResponse = {
   };
 };
 
+export type MyProjectResponse = {
+  id: number;
+  name: string;
+  status: ProjectStatus;
+  startDate: Date;
+  location: string | null;
+  myRole: ActorRole;
+};
+
 export type ProjectDetailResponse = ProjectListResponse & {
   description: string;
   context: string;
@@ -394,6 +403,23 @@ export class ProjectsService {
     });
 
     return projects.map((project) => mapProjectListResponse(project));
+  }
+
+  async projectsForUser(userId: number): Promise<MyProjectResponse[]> {
+    const assignments = await this.prisma.projectActorAssignment.findMany({
+      where: { userId },
+      include: { project: true },
+      orderBy: { assignedAt: 'desc' },
+    });
+
+    return assignments.map(({ project, role }) => ({
+      id: project.id,
+      name: project.name,
+      status: project.status,
+      startDate: project.startDate,
+      location: project.location,
+      myRole: role,
+    }));
   }
 
   async createProject(

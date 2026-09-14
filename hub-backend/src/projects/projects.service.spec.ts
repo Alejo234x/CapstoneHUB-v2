@@ -242,4 +242,45 @@ describe('ProjectsService', () => {
     ).rejects.toThrow('already assigned');
     expect(createAssignment).not.toHaveBeenCalled();
   });
+
+  it('returns the current user projects with their role', async () => {
+    const startDate = new Date('2026-01-05T00:00:00.000Z');
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        id: 1,
+        projectId: 10,
+        userId: 4,
+        role: ActorRole.evaluator,
+        assignedAt: new Date(),
+        project: {
+          id: 10,
+          name: 'Project',
+          status: ProjectStatus.under_review,
+          startDate,
+          location: 'Bogotá',
+        },
+      },
+    ]);
+    const prisma = { projectActorAssignment: { findMany } };
+    const authorization = createAuthorizationMock();
+    const service = createService(prisma, authorization);
+
+    const result = await service.projectsForUser(4);
+
+    expect(findMany).toHaveBeenCalledWith({
+      where: { userId: 4 },
+      include: { project: true },
+      orderBy: { assignedAt: 'desc' },
+    });
+    expect(result).toEqual([
+      {
+        id: 10,
+        name: 'Project',
+        status: ProjectStatus.under_review,
+        startDate,
+        location: 'Bogotá',
+        myRole: ActorRole.evaluator,
+      },
+    ]);
+  });
 });

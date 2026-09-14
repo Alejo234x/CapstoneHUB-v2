@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useAuth } from "./auth-provider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatRole } from "../services/utils";
 
 export function AuthNav({
   showUserInfo = true,
@@ -13,16 +14,8 @@ export function AuthNav({
 
   const { session, isAuthenticated, ready, logout } = useAuth();
 
-  const roleLabels: Record<string, string> = {
-    admin: "Administrador",
-    evaluator: "Evaluador",
-    coordinator: "Coordinador",
-    advisor: "Asesor",
-    student: "Estudiante",
-  };
-
   const userRoles = (session?.user.roles ?? [])
-    .map((role) => roleLabels[role] ?? role)
+    .map((role) => formatRole(role))
     .join(", ");
 
     return (
@@ -32,12 +25,15 @@ export function AuthNav({
             ) : isAuthenticated ? (
             <>
                 {showUserInfo ? (
-                <span className="hidden text-right text-sm sm:inline">
+                <Link
+                href="/profile"
+                className="hidden text-right text-sm transition-colors hover:underline sm:inline"
+                >
                 <span className="block font-medium">{session?.user.fullName}</span>
                 <span className="block text-xs text-muted-foreground">
                     {userRoles || "Sin rol asignado"}
                 </span>
-                </span>
+                </Link>
                 ) : null}
                 <Button variant="outline" onClick={logout}>
                 Cerrar sesión

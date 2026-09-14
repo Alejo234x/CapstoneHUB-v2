@@ -6,6 +6,7 @@ import {
   ProjectObservationItem,
   ProjectReportItem,
   UserSummary,
+  MyProject,
 } from "./schemas";
 import { getAuthToken } from "./auth";
 
@@ -74,11 +75,40 @@ export async function getProjects(): Promise<{
   }
 }
 
-export async function getProjectById(id: string): Promise<{
-  project?: ProjectDetails;
+export async function getMyProjects(): Promise<{
+  projects: MyProject[];
   error?: string;
 }> {
   try {
+    const response = await fetch(getApiUrl("/api/projects/mine"), {
+      headers: getAuthHeaders(),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return {
+        projects: [],
+        error: `Backend responded with status ${response.status}`,
+      };
+    }
+
+    const data = (await response.json()) as MyProject[];
+    return {
+      projects: Array.isArray(data) ? data : [],
+    };
+  } catch (err) {
+    return {
+      projects: [],
+      error:
+        "Unable to reach the backend projects endpoint: " + err,
+    };
+  }
+}
+
+export async function getProjectById(id: string): Promise<{
+  project?: ProjectDetails;
+  error?: string;
+}> {  try {
     const response = await fetch(getApiUrl(`/api/projects/${id}`), {
       cache: "no-store",
     });

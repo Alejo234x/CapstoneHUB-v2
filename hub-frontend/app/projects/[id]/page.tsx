@@ -29,6 +29,17 @@ import {
   TableCell,
   TableRow,
 } from "@/components/ui/table";
+import {
+  RiAttachmentLine,
+  RiCalendarLine,
+  RiChat3Line,
+  RiFileCheckLine,
+  RiFlagLine,
+  RiHistoryLine,
+  RiInformationLine,
+  RiPriceTag3Line,
+  RiTeamLine,
+} from "@remixicon/react";
 
 export const dynamic = "force-dynamic";
 
@@ -102,15 +113,42 @@ export default async function ProjectDetailsPage({
 
           <Tabs defaultValue="general" className="mt-6 w-full">
             <TabsList className="w-full sm:w-fit">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="categorias">Categorías</TabsTrigger>
-              <TabsTrigger value="fechas">Fechas y costos</TabsTrigger>
-              <TabsTrigger value="equipo">Equipo</TabsTrigger>
-              <TabsTrigger value="observaciones">Observaciones</TabsTrigger>
-              <TabsTrigger value="hitos">Hitos</TabsTrigger>
-              <TabsTrigger value="entregas">Entregas</TabsTrigger>
-              <TabsTrigger value="anexos">Anexos</TabsTrigger>
-              <TabsTrigger value="historial">Historial</TabsTrigger>
+              <TabsTrigger value="general">
+                <RiInformationLine data-icon="inline-start" />
+                General
+              </TabsTrigger>
+              <TabsTrigger value="categorias">
+                <RiPriceTag3Line data-icon="inline-start" />
+                Categorías
+              </TabsTrigger>
+              <TabsTrigger value="fechas">
+                <RiCalendarLine data-icon="inline-start" />
+                Fechas y costos
+              </TabsTrigger>
+              <TabsTrigger value="equipo">
+                <RiTeamLine data-icon="inline-start" />
+                Equipo
+              </TabsTrigger>
+              <TabsTrigger value="observaciones">
+                <RiChat3Line data-icon="inline-start" />
+                Observaciones
+              </TabsTrigger>
+              <TabsTrigger value="hitos">
+                <RiFlagLine data-icon="inline-start" />
+                Hitos
+              </TabsTrigger>
+              <TabsTrigger value="entregas">
+                <RiFileCheckLine data-icon="inline-start" />
+                Entregas
+              </TabsTrigger>
+              <TabsTrigger value="anexos">
+                <RiAttachmentLine data-icon="inline-start" />
+                Anexos
+              </TabsTrigger>
+              <TabsTrigger value="historial">
+                <RiHistoryLine data-icon="inline-start" />
+                Historial
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="general" className="mt-6 flex flex-col gap-6">

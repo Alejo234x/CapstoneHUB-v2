@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { useAuth } from "./auth-provider";
 import { AuthNav } from "./auth-nav";
 import { Button } from "@/components/ui/button";
+import { formatRole } from "../services/utils";
 
 import {
   NavigationMenu,
@@ -32,22 +33,13 @@ const components: { title: string; href: string; description: string }[] = [
   },
 ]
 
-const roleLabels: Record<string, string> = {
-  admin: "Administrador",
-  evaluator: "Evaluador",
-  coordinator: "Coordinador",
-  advisor: "Asesor",
-  student: "Estudiante",
-};
-
-export default function Navbar() {
-  const pathname = usePathname();
+export default function Navbar() {  const pathname = usePathname();
   const { session } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isAdmin = session?.user.roles.includes("admin") ?? false;
   const userRoles = (session?.user.roles ?? [])
-    .map((role) => roleLabels[role] ?? role)
+    .map((role) => formatRole(role))
     .join(", ");
 
   return (
@@ -186,14 +178,29 @@ export default function Navbar() {
 
           <div className="mt-4 flex flex-col gap-3 border-t pt-4">
             {session ? (
-              <p className="px-2 text-sm">
-                <span className="block font-medium">
-                  {session.user.fullName}
-                </span>
-                <span className="block text-xs text-muted-foreground">
-                  {userRoles || "Sin rol asignado"}
-                </span>
-              </p>
+              <>
+                <p className="px-2 text-sm">
+                  <span className="block font-medium">
+                    {session.user.fullName}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {userRoles || "Sin rol asignado"}
+                  </span>
+                </p>
+                <Button
+                  variant="ghost"
+                  className="justify-start"
+                  nativeButton={false}
+                  render={
+                    <Link
+                      href="/profile"
+                      onClick={() => setMobileOpen(false)}
+                    />
+                  }
+                >
+                  Mi perfil
+                </Button>
+              </>
             ) : null}
             <div className="px-2">
               <AuthNav showUserInfo={false} />

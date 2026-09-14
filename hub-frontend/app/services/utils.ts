@@ -19,6 +19,32 @@ export function formatStatus(status: string): string {
   }
 }
 
+export function formatRole(role: string): string {
+  switch (role) {
+    case "admin":
+      return "Administrador";
+    case "evaluator":
+      return "Evaluador";
+    case "coordinator":
+      return "Coordinador";
+    case "advisor":
+      return "Asesor";
+    case "student":
+      return "Estudiante";
+    default:
+      return role;
+  }
+}
+
+export function getInitials(fullName: string): string {
+  return fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
+
 export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 export const ALLOWED_MIME_TYPES: ReadonlySet<string> = new Set([
