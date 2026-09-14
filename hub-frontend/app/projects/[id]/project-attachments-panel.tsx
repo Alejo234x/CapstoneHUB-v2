@@ -132,7 +132,10 @@ function AttachmentUploadCard({
       return (
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           Inicia sesión para consultar y subir anexos.
-          <Button render={<Link href="/login">Iniciar sesión</Link>} />
+          <Button
+            nativeButton={false}
+            render={<Link href="/login">Iniciar sesión</Link>}
+          />
         </div>
       );
     }
@@ -192,6 +195,7 @@ function PermissionNotice({ isAuthenticated }: { isAuthenticated: boolean }) {
           <Button
             variant="outline"
             size="sm"
+            nativeButton={false}
             render={<Link href="/login">Iniciar sesión</Link>}
           />
         )}
