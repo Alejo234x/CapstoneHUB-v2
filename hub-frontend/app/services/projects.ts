@@ -247,7 +247,7 @@ export async function createProject(payload: CreateProjectPayload) {
     description: string;
     context: string;
     status: string;
-    strartDate: string;
+    startDate: string;
     endDate: string;
     createdAt: string;
     updatedAt: string;

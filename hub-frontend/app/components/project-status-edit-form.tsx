@@ -203,7 +203,11 @@ export default function ProjectStatusEditForm({
           disabled={isPending}
         >
           <SelectTrigger className="mt-3 w-full">
-            <SelectValue placeholder="Selecciona un estado" />
+            <SelectValue>
+              {projectStatuses.find(
+                (projectStatus) => projectStatus.value === status,
+              )?.label ?? "Selecciona un estado"}
+            </SelectValue>
           </SelectTrigger>
 
           <SelectContent>

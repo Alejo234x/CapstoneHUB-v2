@@ -55,6 +55,7 @@ export class ProjectsController {
       correo: string;
       estimatedCost?: number;
       location?: string;
+      startDate: string;
     },
   ): Promise<ProjectDetailResponse> {
     const {
@@ -66,13 +67,19 @@ export class ProjectsController {
       correo,
       estimatedCost,
       location,
+      startDate,
     } = projectData;
-    const startDate = new Date();
+
+    const parsedStartDate = new Date(`${startDate}T00:00:00`);
+
+    if (Number.isNaN(parsedStartDate.getTime())) {
+      throw new BadRequestException('Invalid start date');
+    }
     return this.projectService.createProject(user, {
       name,
       description,
       context,
-      startDate,
+      startDate: parsedStartDate,
       estimatedCost,
       location,
       naturalProposer: {
