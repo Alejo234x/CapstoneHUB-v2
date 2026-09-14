@@ -1,68 +1,23 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Readable } from 'node:stream';
-import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma.service';
 import { AuthorizationService } from '../auth/authorization.service';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { StorageService, buildStorageKey } from '../storage/storage.service';
-
-export const attachmentSelect = {
-  id: true,
-  projectId: true,
-  reportId: true,
-  uploadedByUserId: true,
-  originalName: true,
-  storageKey: true,
-  mimeType: true,
-  sizeBytes: true,
-  createdAt: true,
-  uploadedBy: {
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-    },
-  },
-} as const satisfies Prisma.ProjectAttachmentSelect;
-
-export type SelectedAttachment = Prisma.ProjectAttachmentGetPayload<{
-  select: typeof attachmentSelect;
-}>;
-
-export type ProjectAttachmentResponse = {
-  id: number;
-  projectId: number;
-  reportId: number | null;
-  originalName: string;
-  mimeType: string;
-  sizeBytes: number;
-  createdAt: Date;
-  uploadedBy: {
-    id: number;
-    fullName: string;
-    email: string;
-  } | null;
-};
+import {
+  assertProjectExists,
+  assertReportBelongsToProject,
+} from '../common/lookups';
+import {
+  attachmentSelect,
+  mapAttachment,
+  ProjectAttachmentResponse,
+} from './attachments.select';
 
 export type DownloadedAttachment = {
   attachment: ProjectAttachmentResponse;
   stream: Readable;
 };
-
-function mapAttachment(
-  attachment: SelectedAttachment,
-): ProjectAttachmentResponse {
-  return {
-    id: attachment.id,
-    projectId: attachment.projectId,
-    reportId: attachment.reportId,
-    originalName: attachment.originalName,
-    mimeType: attachment.mimeType,
-    sizeBytes: attachment.sizeBytes,
-    createdAt: attachment.createdAt,
-    uploadedBy: attachment.uploadedBy,
-  };
-}
 
 @Injectable()
 export class AttachmentsService {
@@ -76,7 +31,7 @@ export class AttachmentsService {
     projectId: number,
     user: AuthenticatedUser,
   ): Promise<ProjectAttachmentResponse[]> {
-    await this.assertProjectExists(projectId);
+    await assertProjectExists(this.prisma, projectId);
     await this.authorization.assertProjectMember(user, projectId);
 
     const attachments = await this.prisma.projectAttachment.findMany({
@@ -95,11 +50,11 @@ export class AttachmentsService {
     user: AuthenticatedUser;
   }): Promise<ProjectAttachmentResponse> {
     const { projectId, file, user, reportId } = params;
-    await this.assertProjectExists(projectId);
+    await assertProjectExists(this.prisma, projectId);
     await this.authorization.assertProjectMember(user, projectId);
 
     if (reportId !== undefined) {
-      await this.assertReportBelongsToProject(projectId, reportId);
+      await assertReportBelongsToProject(this.prisma, projectId, reportId);
     }
 
     const storageKey = buildStorageKey(projectId, file.originalname);
@@ -137,7 +92,7 @@ export class AttachmentsService {
     user: AuthenticatedUser;
   }): Promise<DownloadedAttachment> {
     const { projectId, attachmentId, user } = params;
-    await this.assertProjectExists(projectId);
+    await assertProjectExists(this.prisma, projectId);
     await this.authorization.assertProjectMember(user, projectId);
 
     const attachment = await this.prisma.projectAttachment.findFirst({
@@ -162,7 +117,7 @@ export class AttachmentsService {
     user: AuthenticatedUser;
   }): Promise<ProjectAttachmentResponse> {
     const { projectId, attachmentId, user } = params;
-    await this.assertProjectExists(projectId);
+    await assertProjectExists(this.prisma, projectId);
     await this.authorization.assertProjectMember(user, projectId);
 
     const attachment = await this.prisma.projectAttachment.findFirst({
@@ -186,32 +141,5 @@ export class AttachmentsService {
     await this.storage.delete(attachment.storageKey);
 
     return mapAttachment(attachment);
-  }
-
-  private async assertProjectExists(projectId: number): Promise<void> {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-      select: { id: true },
-    });
-
-    if (!project) {
-      throw new NotFoundException(`Project ${projectId} not found`);
-    }
-  }
-
-  private async assertReportBelongsToProject(
-    projectId: number,
-    reportId: number,
-  ): Promise<void> {
-    const report = await this.prisma.projectReport.findFirst({
-      where: { id: reportId, projectId },
-      select: { id: true },
-    });
-
-    if (!report) {
-      throw new NotFoundException(
-        `Report ${reportId} not found in project ${projectId}`,
-      );
-    }
   }
 }

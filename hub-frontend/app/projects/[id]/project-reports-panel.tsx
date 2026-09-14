@@ -19,6 +19,13 @@ import {
   ProjectReportStatus,
 } from "../../services/schemas";
 import { useAuth } from "../../components/auth-provider";
+import {
+  ATTACHMENT_ACCEPT,
+  formatBytes,
+  formatDate,
+  toDateTimeLocal,
+  validateAttachmentFile,
+} from "../../services/utils";
 import FormActions from "@/app/components/form-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +54,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import {
   RiAddLine,
   RiAttachmentLine,
@@ -82,43 +90,6 @@ const emptyForm: ReportFormState = {
   description: "",
   dueDate: "",
 };
-
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-
-const ALLOWED_MIME_TYPES = new Set([
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "image/png",
-  "image/jpeg",
-]);
-
-function formatDate(dateValue: string): string {
-  return new Intl.DateTimeFormat("es-CO", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(dateValue));
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function toDateTimeLocal(dateValue: string): string {
-  const date = new Date(dateValue);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
-}
 
 function isOverdue(report: ProjectReportItem): boolean {
   if (report.status === "submitted" || report.status === "accepted") {
@@ -161,6 +132,96 @@ function ReportStatusBadge({ status }: { status: ProjectReportStatus }) {
       <RiTimeLine />
       Pendiente
     </Badge>
+  );
+}
+
+function FormField({
+  htmlFor,
+  label,
+  children,
+}: {
+  htmlFor: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function FormError({ message }: { message: string }) {
+  return <p className="text-sm text-destructive">{message}</p>;
+}
+
+function ErrorBanner({
+  message,
+  className,
+}: {
+  message: string;
+  className?: string;
+}) {
+  return (
+    <p
+      className={cn(
+        "rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive",
+        className,
+      )}
+    >
+      {message}
+    </p>
+  );
+}
+
+type ReportDialogFormProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  errorMessage: string | null;
+  loading: boolean;
+  submitText: string;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
+  children: React.ReactNode;
+};
+
+function ReportDialogForm({
+  open,
+  onOpenChange,
+  title,
+  description,
+  errorMessage,
+  loading,
+  submitText,
+  onSubmit,
+  onCancel,
+  children,
+}: ReportDialogFormProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={onSubmit} className="space-y-4">
+          {children}
+
+          {errorMessage ? <FormError message={errorMessage} /> : null}
+
+          <FormActions
+            loading={loading}
+            loadingText="Guardando..."
+            submitText={submitText}
+            onCancel={onCancel}
+          />
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -271,6 +332,21 @@ function ReportCard({
   const isEditable = report.status === "pending" || report.status === "rejected";
   const canUploadFiles = canSubmit && isEditable;
 
+  async function run(action: () => Promise<void>, fallbackError: string) {
+    setErrorMessage(null);
+    setBusy(true);
+
+    try {
+      await action();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : fallbackError,
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     setErrorMessage(null);
     const file = event.target.files?.[0] ?? null;
@@ -280,15 +356,10 @@ function ReportCard({
       return;
     }
 
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      setErrorMessage("El archivo supera el límite de 10 MB.");
-      setSelectedFile(null);
-      event.target.value = "";
-      return;
-    }
+    const validationError = validateAttachmentFile(file);
 
-    if (file.type && !ALLOWED_MIME_TYPES.has(file.type)) {
-      setErrorMessage("Tipo de archivo no permitido.");
+    if (validationError) {
+      setErrorMessage(validationError);
       setSelectedFile(null);
       event.target.value = "";
       return;
@@ -301,7 +372,6 @@ function ReportCard({
     event: React.FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
-    setErrorMessage(null);
 
     if (!selectedFile) {
       setErrorMessage("Selecciona un archivo antes de subirlo.");
@@ -309,24 +379,15 @@ function ReportCard({
     }
 
     const form = event.currentTarget;
-    setBusy(true);
 
-    try {
+    await run(async () => {
       await onUpload(report.id, selectedFile);
       setSelectedFile(null);
       form.reset();
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "No se pudo subir el archivo",
-      );
-    } finally {
-      setBusy(false);
-    }
+    }, "No se pudo subir el archivo");
   }
 
   async function handleSubmit() {
-    setErrorMessage(null);
-
     if (report.attachments.length === 0) {
       setErrorMessage("Adjunta al menos un archivo antes de enviar la entrega.");
       return;
@@ -338,17 +399,10 @@ function ReportCard({
       return;
     }
 
-    setBusy(true);
-
-    try {
-      await onSubmit(report);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "No se pudo enviar la entrega",
-      );
-    } finally {
-      setBusy(false);
-    }
+    await run(
+      () => onSubmit(report),
+      "No se pudo enviar la entrega",
+    );
   }
 
   async function handleDeleteAttachment(attachment: ProjectAttachmentItem) {
@@ -356,20 +410,10 @@ function ReportCard({
       return;
     }
 
-    setErrorMessage(null);
-    setBusy(true);
-
-    try {
-      await onDeleteAttachment(attachment.id);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "No se pudo eliminar el archivo",
-      );
-    } finally {
-      setBusy(false);
-    }
+    await run(
+      () => onDeleteAttachment(attachment.id),
+      "No se pudo eliminar el archivo",
+    );
   }
 
   return (
@@ -499,7 +543,7 @@ function ReportCard({
               type="file"
               onChange={handleFileChange}
               disabled={busy}
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+              accept={ATTACHMENT_ACCEPT}
             />
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="text-sm text-muted-foreground">
@@ -543,11 +587,7 @@ function ReportCard({
           </div>
         ) : null}
 
-        {errorMessage ? (
-          <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-            {errorMessage}
-          </p>
-        ) : null}
+        {errorMessage ? <ErrorBanner message={errorMessage} /> : null}
       </CardContent>
     </Card>
   );
@@ -642,9 +682,20 @@ export default function ProjectReportsPanel({
     setDialogOpen(true);
   }
 
+  function runTransition(action: () => Promise<void>, fallbackError: string) {
+    setErrorMessage(null);
+
+    startTransition(async () => {
+      try {
+        await action();
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : fallbackError);
+      }
+    });
+  }
+
   function handleFormSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setErrorMessage(null);
 
     const title = form.title.trim();
     const dueDate = form.dueDate;
@@ -665,23 +716,15 @@ export default function ProjectReportsPanel({
       dueDate: new Date(dueDate).toISOString(),
     };
 
-    startTransition(async () => {
-      try {
-        if (editingReport) {
-          await updateProjectReport(String(projectId), editingReport.id, payload);
-        } else {
-          await createProjectReport(String(projectId), payload);
-        }
-        setDialogOpen(false);
-        router.refresh();
-      } catch (error) {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "No se pudo guardar la entrega",
-        );
+    runTransition(async () => {
+      if (editingReport) {
+        await updateProjectReport(String(projectId), editingReport.id, payload);
+      } else {
+        await createProjectReport(String(projectId), payload);
       }
-    });
+      setDialogOpen(false);
+      router.refresh();
+    }, "No se pudo guardar la entrega");
   }
 
   function handleDelete(report: ProjectReportItem) {
@@ -689,20 +732,10 @@ export default function ProjectReportsPanel({
       return;
     }
 
-    setErrorMessage(null);
-
-    startTransition(async () => {
-      try {
-        await deleteProjectReport(String(projectId), report.id);
-        router.refresh();
-      } catch (error) {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "No se pudo eliminar la entrega",
-        );
-      }
-    });
+    runTransition(async () => {
+      await deleteProjectReport(String(projectId), report.id);
+      router.refresh();
+    }, "No se pudo eliminar la entrega");
   }
 
   function openReviewDialog(
@@ -772,6 +805,10 @@ export default function ProjectReportsPanel({
     );
   }
 
+  const reviewDecision = reviewTarget?.decision;
+  const reviewDialogTitle =
+    reviewDecision === "accepted" ? "Aceptar entrega" : "No aceptar entrega";
+
   return (
     <section className="mt-6 border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -795,9 +832,7 @@ export default function ProjectReportsPanel({
       </div>
 
       {errorMessage && !dialogOpen ? (
-        <p className="mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-          {errorMessage}
-        </p>
+        <ErrorBanner message={errorMessage} className="mt-4" />
       ) : null}
 
       {sortedReports.length === 0 ? (
@@ -842,124 +877,89 @@ export default function ProjectReportsPanel({
         </div>
       ) : null}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingReport ? "Editar entrega" : "Nueva entrega"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingReport
-                ? "Actualiza los detalles de la entrega."
-                : "Crea una entrega para que los estudiantes la envíen."}
-            </DialogDescription>
-          </DialogHeader>
+      <ReportDialogForm
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title={editingReport ? "Editar entrega" : "Nueva entrega"}
+        description={
+          editingReport
+            ? "Actualiza los detalles de la entrega."
+            : "Crea una entrega para que los estudiantes la envíen."
+        }
+        errorMessage={errorMessage}
+        loading={isPending}
+        submitText={editingReport ? "Guardar cambios" : "Crear entrega"}
+        onSubmit={handleFormSubmit}
+        onCancel={() => setDialogOpen(false)}
+      >
+        <FormField htmlFor="report-title" label="Título">
+          <Input
+            id="report-title"
+            value={form.title}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, title: event.target.value }))
+            }
+            placeholder="Nombre de la entrega"
+            disabled={isPending}
+          />
+        </FormField>
 
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="report-title">Título</Label>
-              <Input
-                id="report-title"
-                value={form.title}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, title: event.target.value }))
-                }
-                placeholder="Nombre de la entrega"
-                disabled={isPending}
-              />
-            </div>
+        <FormField htmlFor="report-description" label="Descripción">
+          <Textarea
+            id="report-description"
+            value={form.description}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                description: event.target.value,
+              }))
+            }
+            rows={3}
+            disabled={isPending}
+            placeholder="Descripción opcional de la entrega"
+          />
+        </FormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="report-description">Descripción</Label>
-              <Textarea
-                id="report-description"
-                value={form.description}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    description: event.target.value,
-                  }))
-                }
-                rows={3}
-                disabled={isPending}
-                placeholder="Descripción opcional de la entrega"
-              />
-            </div>
+        <FormField htmlFor="report-due-date" label="Fecha de entrega">
+          <Input
+            id="report-due-date"
+            type="datetime-local"
+            value={form.dueDate}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, dueDate: event.target.value }))
+            }
+            disabled={isPending}
+          />
+        </FormField>
+      </ReportDialogForm>
 
-            <div className="space-y-2">
-              <Label htmlFor="report-due-date">Fecha de entrega</Label>
-              <Input
-                id="report-due-date"
-                type="datetime-local"
-                value={form.dueDate}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, dueDate: event.target.value }))
-                }
-                disabled={isPending}
-              />
-            </div>
-
-            {errorMessage ? (
-              <p className="text-sm text-destructive">{errorMessage}</p>
-            ) : null}
-
-            <FormActions
-              loading={isPending}
-              loadingText="Guardando..."
-              submitText={editingReport ? "Guardar cambios" : "Crear entrega"}
-              onCancel={() => setDialogOpen(false)}
-            />
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {reviewTarget?.decision === "accepted"
-                ? "Aceptar entrega"
-                : "No aceptar entrega"}
-            </DialogTitle>
-            <DialogDescription>
-              {reviewTarget
-                ? `Entrega "${reviewTarget.report.title}".`
-                : ""}
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleReviewSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="review-comment">
-                Comentario {reviewTarget?.decision === "rejected" ? "" : "(opcional)"}
-              </Label>
-              <Textarea
-                id="review-comment"
-                value={reviewComment}
-                onChange={(event) => setReviewComment(event.target.value)}
-                rows={3}
-                disabled={isReviewPending}
-                placeholder="Explica brevemente tu decisión"
-              />
-            </div>
-
-            {reviewError ? (
-              <p className="text-sm text-destructive">{reviewError}</p>
-            ) : null}
-
-            <FormActions
-              loading={isReviewPending}
-              loadingText="Guardando..."
-              submitText={
-                reviewTarget?.decision === "accepted"
-                  ? "Aceptar entrega"
-                  : "No aceptar entrega"
-              }
-              onCancel={() => setReviewOpen(false)}
-            />
-          </form>
-        </DialogContent>
-      </Dialog>
+      <ReportDialogForm
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        title={reviewDialogTitle}
+        description={
+          reviewTarget ? `Entrega "${reviewTarget.report.title}".` : ""
+        }
+        errorMessage={reviewError}
+        loading={isReviewPending}
+        submitText={reviewDialogTitle}
+        onSubmit={handleReviewSubmit}
+        onCancel={() => setReviewOpen(false)}
+      >
+        <FormField
+          htmlFor="review-comment"
+          label={`Comentario ${reviewDecision === "rejected" ? "" : "(opcional)"}`}
+        >
+          <Textarea
+            id="review-comment"
+            value={reviewComment}
+            onChange={(event) => setReviewComment(event.target.value)}
+            rows={3}
+            disabled={isReviewPending}
+            placeholder="Explica brevemente tu decisión"
+          />
+        </FormField>
+      </ReportDialogForm>
     </section>
   );
 }

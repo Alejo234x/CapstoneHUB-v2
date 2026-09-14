@@ -22,10 +22,8 @@ import {
   ALLOWED_ATTACHMENT_MIME_TYPES,
   MAX_ATTACHMENT_SIZE_BYTES,
 } from './attachments.constants';
-import {
-  AttachmentsService,
-  ProjectAttachmentResponse,
-} from './attachments.service';
+import { AttachmentsService } from './attachments.service';
+import { ProjectAttachmentResponse } from './attachments.select';
 
 function contentDisposition(filename: string): string {
   const ascii = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');

@@ -7,6 +7,7 @@ import { Prisma } from '../generated/prisma/client';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { AuthorizationService } from '../auth/authorization.service';
 import { PrismaService } from '../prisma.service';
+import { assertProjectExists } from '../common/lookups';
 import { CreateMilestoneDto, UpdateMilestoneDto } from './milestones.dto';
 
 const milestoneSelect = {
@@ -40,7 +41,7 @@ export class MilestonesService {
     projectId: number,
     user: AuthenticatedUser,
   ): Promise<SelectedMilestone[]> {
-    await this.assertProjectExists(projectId);
+    await assertProjectExists(this.prisma, projectId);
     await this.authorization.assertProjectMember(user, projectId);
 
     const projectMilestones = this.prisma.projectMilestones as unknown as {
@@ -73,7 +74,7 @@ export class MilestonesService {
     data: CreateMilestoneDto;
     user: AuthenticatedUser;
   }): Promise<SelectedMilestone> {
-    await this.assertProjectExists(params.projectId);
+    await assertProjectExists(this.prisma, params.projectId);
     await this.authorization.assertCanManageMilestone(
       params.user,
       params.projectId,
@@ -112,7 +113,7 @@ export class MilestonesService {
     data: UpdateMilestoneDto;
     user: AuthenticatedUser;
   }): Promise<SelectedMilestone> {
-    await this.assertProjectExists(params.projectId);
+    await assertProjectExists(this.prisma, params.projectId);
     await this.authorization.assertCanManageMilestone(
       params.user,
       params.projectId,
@@ -160,7 +161,7 @@ export class MilestonesService {
     milestoneId: number;
     user: AuthenticatedUser;
   }): Promise<SelectedMilestone> {
-    await this.assertProjectExists(params.projectId);
+    await assertProjectExists(this.prisma, params.projectId);
     await this.authorization.assertCanManageMilestone(
       params.user,
       params.projectId,
@@ -176,17 +177,6 @@ export class MilestonesService {
     });
 
     return mapMilestone(milestone);
-  }
-
-  private async assertProjectExists(projectId: number): Promise<void> {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-      select: { id: true },
-    });
-
-    if (!project) {
-      throw new NotFoundException(`Project ${projectId} not found`);
-    }
   }
 
   private async assertMilestoneBelongsToProject(

@@ -8,6 +8,7 @@ import {
   updateProjectMilestone,
 } from "../../services/projects";
 import { ProjectMilestoneItem } from "../../services/schemas";
+import { formatDate, toDateTimeLocal } from "../../services/utils";
 import Link from "next/link";
 import { useAuth } from "../../components/auth-provider";
 import FormActions from "@/app/components/form-actions";
@@ -59,19 +60,6 @@ const emptyForm: MilestoneFormState = {
   description: "",
   dueDate: "",
 };
-
-function formatDate(dateValue: string): string {
-  return new Intl.DateTimeFormat("es-CO", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(dateValue));
-}
-
-function toDateTimeLocal(dateValue: string): string {
-  const date = new Date(dateValue);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
-}
 
 function isOverdue(milestone: ProjectMilestoneItem): boolean {
   if (milestone.completed) {

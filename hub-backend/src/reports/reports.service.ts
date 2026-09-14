@@ -2,12 +2,20 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  NotFoundException,
 } from '@nestjs/common';
 import { Prisma, ReportStatus } from '../generated/prisma/client';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { AuthorizationService } from '../auth/authorization.service';
 import { PrismaService } from '../prisma.service';
+import {
+  assertProjectExists,
+  assertReportBelongsToProject,
+} from '../common/lookups';
+import {
+  ProjectReportResponse,
+  mapReport,
+  reportSelect,
+} from './reports.select';
 import {
   CreateReportDto,
   ReviewReportDto,
@@ -15,126 +23,7 @@ import {
   UpdateReportDto,
 } from './reports.dto';
 
-const reportAttachmentSelect = {
-  id: true,
-  projectId: true,
-  reportId: true,
-  originalName: true,
-  mimeType: true,
-  sizeBytes: true,
-  createdAt: true,
-  uploadedBy: {
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-    },
-  },
-} as const satisfies Prisma.ProjectAttachmentSelect;
-
-const reportSelect = {
-  id: true,
-  projectId: true,
-  title: true,
-  description: true,
-  dueDate: true,
-  status: true,
-  submittedAt: true,
-  reviewedAt: true,
-  reviewComment: true,
-  createdAt: true,
-  updatedAt: true,
-  createdBy: {
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-    },
-  },
-  reviewedBy: {
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-    },
-  },
-  attachments: {
-    select: reportAttachmentSelect,
-    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-  },
-} as const satisfies Prisma.ProjectReportSelect;
-
-export type SelectedReport = Prisma.ProjectReportGetPayload<{
-  select: typeof reportSelect;
-}>;
-
-export type ReportAttachmentResponse = {
-  id: number;
-  projectId: number;
-  reportId: number | null;
-  originalName: string;
-  mimeType: string;
-  sizeBytes: number;
-  createdAt: Date;
-  uploadedBy: {
-    id: number;
-    fullName: string;
-    email: string;
-  } | null;
-};
-
-export type ProjectReportResponse = {
-  id: number;
-  projectId: number;
-  title: string;
-  description: string | null;
-  dueDate: Date;
-  status: ReportStatus;
-  submittedAt: Date | null;
-  reviewedAt: Date | null;
-  reviewComment: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy: {
-    id: number;
-    fullName: string;
-    email: string;
-  } | null;
-  reviewedBy: {
-    id: number;
-    fullName: string;
-    email: string;
-  } | null;
-  attachments: ReportAttachmentResponse[];
-};
-
-function mapReport(report: SelectedReport): ProjectReportResponse {
-  return {
-    id: report.id,
-    projectId: report.projectId,
-    title: report.title,
-    description: report.description,
-    dueDate: report.dueDate,
-    status: report.status,
-    submittedAt: report.submittedAt,
-    reviewedAt: report.reviewedAt,
-    reviewComment: report.reviewComment,
-    createdAt: report.createdAt,
-    updatedAt: report.updatedAt,
-    createdBy: report.createdBy,
-    reviewedBy: report.reviewedBy,
-    attachments: report.attachments.map((attachment) => ({
-      id: attachment.id,
-      projectId: attachment.projectId,
-      reportId: attachment.reportId,
-      originalName: attachment.originalName,
-      mimeType: attachment.mimeType,
-      sizeBytes: attachment.sizeBytes,
-      createdAt: attachment.createdAt,
-      uploadedBy: attachment.uploadedBy,
-    })),
-  };
-}
+export type { ProjectReportResponse } from './reports.select';
 
 @Injectable()
 export class ReportsService {
@@ -147,8 +36,7 @@ export class ReportsService {
     projectId: number,
     user: AuthenticatedUser,
   ): Promise<ProjectReportResponse[]> {
-    await this.assertProjectExists(projectId);
-    await this.authorization.assertProjectMember(user, projectId);
+    await this.assertProjectAccess(projectId, user);
 
     const reports = await this.prisma.projectReport.findMany({
       where: { projectId },
@@ -165,19 +53,13 @@ export class ReportsService {
     user: AuthenticatedUser;
   }): Promise<ProjectReportResponse> {
     const { projectId, data, user } = params;
-    await this.assertProjectExists(projectId);
-    await this.authorization.assertCanManageMilestone(user, projectId);
-
-    const title = data.title.trim();
-    if (!title) {
-      throw new BadRequestException('Report title is required');
-    }
+    await this.assertCanManageReports(projectId, user);
 
     const report = await this.prisma.projectReport.create({
       data: {
         projectId,
         createdByUserId: user.id,
-        title,
+        title: this.normalizeTitle(data.title),
         description: data.description?.trim() || null,
         dueDate: data.dueDate,
       },
@@ -194,18 +76,12 @@ export class ReportsService {
     user: AuthenticatedUser;
   }): Promise<ProjectReportResponse> {
     const { projectId, reportId, data, user } = params;
-    await this.assertProjectExists(projectId);
-    await this.authorization.assertCanManageMilestone(user, projectId);
-    await this.assertReportBelongsToProject(projectId, reportId);
+    await this.assertManageableReport(projectId, reportId, user);
 
     const updateData: Prisma.ProjectReportUpdateInput = {};
 
     if (data.title !== undefined) {
-      const title = data.title.trim();
-      if (!title) {
-        throw new BadRequestException('Report title is required');
-      }
-      updateData.title = title;
+      updateData.title = this.normalizeTitle(data.title);
     }
 
     if (data.description !== undefined) {
@@ -235,9 +111,7 @@ export class ReportsService {
     user: AuthenticatedUser;
   }): Promise<ProjectReportResponse> {
     const { projectId, reportId, user } = params;
-    await this.assertProjectExists(projectId);
-    await this.authorization.assertCanManageMilestone(user, projectId);
-    await this.assertReportBelongsToProject(projectId, reportId);
+    await this.assertManageableReport(projectId, reportId, user);
 
     const report = await this.prisma.projectReport.delete({
       where: { id: reportId },
@@ -254,9 +128,9 @@ export class ReportsService {
     user: AuthenticatedUser;
   }): Promise<ProjectReportResponse> {
     const { projectId, reportId, data, user } = params;
-    await this.assertProjectExists(projectId);
-    await this.authorization.assertProjectMember(user, projectId);
-    const existing = await this.assertReportBelongsToProject(
+    await this.assertProjectAccess(projectId, user);
+    const existing = await assertReportBelongsToProject(
+      this.prisma,
       projectId,
       reportId,
     );
@@ -269,18 +143,7 @@ export class ReportsService {
     }
 
     const attachmentIds = data.attachmentIds ?? [];
-    if (attachmentIds.length > 0) {
-      const attachments = await this.prisma.projectAttachment.findMany({
-        where: { id: { in: attachmentIds }, projectId },
-        select: { id: true },
-      });
-
-      if (attachments.length !== new Set(attachmentIds).size) {
-        throw new BadRequestException(
-          'One or more attachments do not belong to this project',
-        );
-      }
-    }
+    await this.assertAttachmentsBelongToProject(projectId, attachmentIds);
 
     const report = await this.prisma.$transaction(async (transaction) => {
       if (attachmentIds.length > 0) {
@@ -313,11 +176,10 @@ export class ReportsService {
     user: AuthenticatedUser;
   }): Promise<ProjectReportResponse> {
     const { projectId, reportId, data, user } = params;
-    await this.assertProjectExists(projectId);
-    await this.authorization.assertCanManageMilestone(user, projectId);
-    const existing = await this.assertReportBelongsToProject(
+    const existing = await this.assertManageableReport(
       projectId,
       reportId,
+      user,
     );
 
     if (existing.status !== ReportStatus.submitted) {
@@ -338,32 +200,58 @@ export class ReportsService {
     return mapReport(report);
   }
 
-  private async assertProjectExists(projectId: number): Promise<void> {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
+  private normalizeTitle(title: string): string {
+    const trimmed = title.trim();
+    if (!trimmed) {
+      throw new BadRequestException('Report title is required');
+    }
+
+    return trimmed;
+  }
+
+  private async assertProjectAccess(
+    projectId: number,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    await assertProjectExists(this.prisma, projectId);
+    await this.authorization.assertProjectMember(user, projectId);
+  }
+
+  private async assertCanManageReports(
+    projectId: number,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    await assertProjectExists(this.prisma, projectId);
+    await this.authorization.assertCanManageMilestone(user, projectId);
+  }
+
+  private async assertManageableReport(
+    projectId: number,
+    reportId: number,
+    user: AuthenticatedUser,
+  ): Promise<{ id: number; status: ReportStatus }> {
+    await this.assertCanManageReports(projectId, user);
+
+    return assertReportBelongsToProject(this.prisma, projectId, reportId);
+  }
+
+  private async assertAttachmentsBelongToProject(
+    projectId: number,
+    attachmentIds: number[],
+  ): Promise<void> {
+    if (attachmentIds.length === 0) {
+      return;
+    }
+
+    const attachments = await this.prisma.projectAttachment.findMany({
+      where: { id: { in: attachmentIds }, projectId },
       select: { id: true },
     });
 
-    if (!project) {
-      throw new NotFoundException(`Project ${projectId} not found`);
-    }
-  }
-
-  private async assertReportBelongsToProject(
-    projectId: number,
-    reportId: number,
-  ): Promise<{ id: number; status: ReportStatus }> {
-    const report = await this.prisma.projectReport.findFirst({
-      where: { id: reportId, projectId },
-      select: { id: true, status: true },
-    });
-
-    if (!report) {
-      throw new NotFoundException(
-        `Report ${reportId} not found in project ${projectId}`,
+    if (attachments.length !== new Set(attachmentIds).size) {
+      throw new BadRequestException(
+        'One or more attachments do not belong to this project',
       );
     }
-
-    return report;
   }
 }
