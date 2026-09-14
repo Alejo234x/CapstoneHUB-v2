@@ -1,122 +1,123 @@
-# Arquitectura del Backend
+# Backend Architecture
 
-API REST construida con **NestJS 11** sobre **Node.js 26**, con **Prisma 7**
-(adaptador `pg`) y **PostgreSQL 15**. Los archivos se guardan en **MinIO/S3**.
-La especificación OpenAPI se publica con Swagger.
+REST API built with **NestJS 11** on **Node.js 26**, using **Prisma 7** (the
+`pg` adapter) and **PostgreSQL 15**. Files are stored in **MinIO/S3**. The
+OpenAPI spec is served with Swagger.
 
-## Puesta en marcha
+## Bootstrap
 
-`src/main.ts` es el punto de entrada:
+`src/main.ts` is the entry point:
 
-- Crea la app con `AppModule`.
-- Registra un `ValidationPipe` global (`whitelist` + `transform`).
-- Publica Swagger en `/api`.
-- Escucha en `PORT` (por defecto `3001`).
+- Creates the app from `AppModule`.
+- Registers a global `ValidationPipe` (`whitelist` + `transform`).
+- Serves Swagger at `/api`.
+- Listens on `PORT` (default `3001`).
 
-`AppModule` importa los módulos de dominio y aplica el `LoggerMiddleware` a
-todos los controladores.
+`AppModule` imports the domain modules and applies `LoggerMiddleware` to every
+controller.
 
-## Capas
+## Layers
 
-| Capa | Responsabilidad |
+| Layer | Responsibility |
 | --- | --- |
-| **Controller** | Define rutas, valida DTOs y recibe al usuario autenticado. |
-| **Guard** | `AuthGuard` valida el token; `AdminGuard` exige rol `admin`. |
-| **Service** | Lógica de negocio, reglas de estado y mapeo de respuestas. |
-| **AuthorizationService** | Centraliza las reglas de permisos (rol global + rol en proyecto). |
-| **PrismaService** | Acceso a datos (cliente Prisma con adaptador `pg`). |
-| **StorageService** | Abstracción de archivos; implementación `S3StorageService`. |
+| **Controller** | Defines routes, validates DTOs and receives the authenticated user. |
+| **Guard** | `AuthGuard` validates the token; `AdminGuard` requires the `admin` role. |
+| **Service** | Business logic, state rules and response mapping. |
+| **AuthorizationService** | Centralizes permission rules (global role + project role). |
+| **PrismaService** | Data access (Prisma client with `pg` adapter). |
+| **StorageService** | File abstraction; implementation is `S3StorageService`. |
 
-Los servicios devuelven **tipos de respuesta propios** (`ProjectDetailResponse`,
-etc.) en vez de modelos crudos de Prisma, para no filtrar detalles de la BD.
+Services return **dedicated response types** (`ProjectDetailResponse`, etc.)
+instead of raw Prisma models, so database details don't leak out.
 
-## Módulos
+## Modules
 
-- **Auth** — login, usuarios y roles.
-- **Projects** — CRUD, actores y transición de estados.
-- **Observations** — observaciones por proyecto.
-- **Milestones** — hitos por proyecto.
-- **Attachments** — anexos (subida, descarga y borrado).
-- **Storage** — provee `StorageService` (S3/MinIO).
+- **Auth** — login, users and roles.
+- **Projects** — CRUD, actors and status transitions.
+- **Observations** — observations per project.
+- **Milestones** — milestones per project.
+- **Attachments** — attachments (upload, download and delete).
+- **Storage** — provides `StorageService` (S3/MinIO).
 
-## Autenticación y autorización
+## Authentication and authorization
 
-El login (`POST /auth/login`) verifica la contraseña con **scrypt** y emite un
-token **HMAC-SHA256** de 24 h (sin librerías externas). `AuthGuard` valida el
-`Authorization: Bearer <token>` y carga el usuario en `request.user`.
+Login (`POST /auth/login`) verifies the password with **scrypt** and issues a
+24-hour **HMAC-SHA256** token (no external libraries). `AuthGuard` validates
+`Authorization: Bearer <token>` and loads the user into `request.user`.
 
-Roles globales (`UserRole`): `admin`, `evaluator`, `coordinator`, `advisor`,
-`student`. Roles dentro de un proyecto (`ActorRole`): `advisor`, `coordinator`,
+Global roles (`UserRole`): `admin`, `evaluator`, `coordinator`, `advisor`,
+`student`. Project-scoped roles (`ActorRole`): `advisor`, `coordinator`,
 `student`, `evaluator`.
 
-`AuthorizationService` responde preguntas como "¿puede crear un proyecto?",
-"¿puede gestionar este proyecto?" o "¿puede asignar actores?", combinando el
-rol global con la asignación en el proyecto. El `admin` siempre pasa.
+`AuthorizationService` answers questions like "can this user create a project?",
+"can they manage this project?" or "can they assign actors?", combining the
+global role with the project assignment. `admin` always passes.
 
-Al arrancar, `AuthService` crea un admin inicial si la base está vacía y
-existen `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD` y `INITIAL_ADMIN_NAME`.
+On startup, `AuthService` creates an initial admin if the database is empty and
+`INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD` and `INITIAL_ADMIN_NAME` are
+set.
 
-## Ciclo de vida del proyecto
+## Project lifecycle
 
-Los estados son:
+The states are:
 
 ```
 proposed → under_review → approved → assigned → in_progress → closed
 ```
 
-`rejected` es terminal y puede alcanzarse desde cualquier estado activo. Las
-transiciones se validan en `ProjectsService`; cada cambio se registra en
-`ProjectStatusHistory` dentro de una transacción, exige un motivo (salvo para
-`admin`) y respeta los permisos del rol que hace la transición.
+`rejected` is terminal and can be reached from any active state. Transitions
+are validated in `ProjectsService`; every change is logged to
+`ProjectStatusHistory` inside a transaction, requires a reason (except for
+`admin`) and respects the permissions of the role making the transition.
 
-## Modelo de datos (Prisma)
+## Data model (Prisma)
 
-- **Usuario**: `User`, `UserRoleAssignment`.
-- **Proyecto**: `Project`, `ProjectSchool`, `ProjectNaturalProposer`,
+- **User**: `User`, `UserRoleAssignment`.
+- **Project**: `Project`, `ProjectSchool`, `ProjectNaturalProposer`,
   `ProjectLegalProposer`.
-- **Equipo y seguimiento**: `ProjectActorAssignment`, `ProjectObservation`,
+- **Team and tracking**: `ProjectActorAssignment`, `ProjectObservation`,
   `ProjectStatusHistory`, `ProjectMilestones`.
-- **Archivos**: `ProjectAttachment` (metadatos; el binario vive en S3/MinIO).
+- **Files**: `ProjectAttachment` (metadata only; the binary lives in S3/MinIO).
 
-## Anexos
+## Attachments
 
-`AttachmentsController` recibe `multipart/form-data` con `FileInterceptor`
-(almacenamiento en memoria). Límite de **10 MB** y lista blanca de MIME
-(PDF, Word, Excel, PNG, JPEG). El servicio sube el archivo a S3 y, si falla el
-registro en BD, lo elimina para no dejar huérfanos.
+`AttachmentsController` receives `multipart/form-data` via `FileInterceptor`
+(memory storage). Limit of **10 MB** and a MIME allowlist (PDF, Word, Excel,
+PNG, JPEG). The service uploads the file to S3 and, if the DB insert fails,
+deletes it to avoid orphans.
 
-## Semillas y migraciones
+## Seeds and migrations
 
-En `prisma/`:
+Under `prisma/`:
 
-- `schema.prisma` y `migrations/` — esquema y migraciones.
-- `seed.ts` + `seed/` — datos de ejemplo por dominio.
-- `fixtures/` — datos JSON y archivos de anexos.
+- `schema.prisma` and `migrations/` — schema and migrations.
+- `seed.ts` + `seed/` — sample data per domain.
+- `fixtures/` — JSON data and attachment files.
 
-Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes
+Commands: `npx prisma migrate dev`, `npm run seed` (and variants such as
 `seed:users`, `seed:projects`, etc.).
 
-## Endpoints principales
+## Main endpoints
 
-| Método | Ruta | Descripción |
+| Method | Route | Description |
 | --- | --- | --- |
-| `POST` | `/auth/login` | Iniciar sesión. |
-| `GET/POST` | `/auth/users` | Listar / crear usuarios (admin). |
-| `PATCH` | `/auth/users/:id/roles` | Reemplazar roles (admin). |
-| `GET/POST` | `/projects` | Listar / crear proyectos. |
-| `GET/PUT/DELETE` | `/projects/:id` | Detalle / editar / borrar. |
-| `PATCH` | `/projects/:id/status` | Cambiar estado. |
-| `POST` | `/projects/:id/actors` | Asignar actor. |
-| `GET/POST` | `/projects/:id/observations` | Observaciones. |
-| `GET/POST/PATCH/DELETE` | `/projects/:id/milestones` | Hitos. |
-| `GET/POST/DELETE` | `/projects/:id/attachments` | Anexos. |
-| `GET` | `/projects/:id/attachments/:aid/download` | Descargar anexo. |
+| `POST` | `/auth/login` | Sign in. |
+| `GET/POST` | `/auth/users` | List / create users (admin). |
+| `PATCH` | `/auth/users/:id/roles` | Replace roles (admin). |
+| `GET/POST` | `/projects` | List / create projects. |
+| `GET/PUT/DELETE` | `/projects/:id` | Detail / edit / delete. |
+| `PATCH` | `/projects/:id/status` | Change status. |
+| `POST` | `/projects/:id/actors` | Assign actor. |
+| `GET/POST` | `/projects/:id/observations` | Observations. |
+| `GET/POST/PATCH/DELETE` | `/projects/:id/milestones` | Milestones. |
+| `GET/POST/DELETE` | `/projects/:id/attachments` | Attachments. |
+| `GET` | `/projects/:id/attachments/:aid/download` | Download attachment. |
 
-## Diagrama
+## Diagram
 
 ```mermaid
 flowchart TD
-    Client[Cliente HTTP] -->|REST + Bearer| Controllers[Controllers]
+    Client[HTTP Client] -->|REST + Bearer| Controllers[Controllers]
     subgraph NestJS
       Controllers --> Guards[AuthGuard / AdminGuard]
       Guards --> Services[Services]

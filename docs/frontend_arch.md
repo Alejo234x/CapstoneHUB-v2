@@ -1,79 +1,79 @@
-# Arquitectura del Frontend
+# Frontend Architecture
 
-Aplicación web con **Next.js 16 (App Router)**, **React 19** y **TypeScript**.
-Los estilos usan **Tailwind CSS v4** y los componentes **shadcn/ui** (Base UI +
-lucide-react). Las tablas se construyen con **TanStack Table**.
+Web application built with **Next.js 16 (App Router)**, **React 19** and
+**TypeScript**. Styling uses **Tailwind CSS v4** and components come from
+**shadcn/ui** (Base UI + lucide-react). Tables are built with **TanStack
+Table**.
 
-## Organización
+## Layout
 
-- `app/` — rutas del App Router.
-- `app/api/` — *route handlers* que actúan como BFF/proxy hacia el backend.
-- `app/services/` — acceso a datos y sesión.
-- `app/components/` — componentes propios (navbar, auth, formularios).
-- `components/ui/` — componentes base de shadcn/ui.
-- `lib/utils.ts` — utilidades (por ejemplo `cn`).
+- `app/` — App Router routes.
+- `app/api/` — route handlers acting as a BFF/proxy to the backend.
+- `app/services/` — data access and session.
+- `app/components/` — app-specific components (navbar, auth, forms).
+- `components/ui/` — shadcn/ui base components.
+- `lib/utils.ts` — utilities (e.g. `cn`).
 
-## Rutas
+## Routes
 
-| Ruta | Pantalla |
+| Route | Screen |
 | --- | --- |
-| `/` | Inicio. |
-| `/login` | Inicio de sesión. |
-| `/projects` | Lista de proyectos. |
-| `/projects/[id]` | Detalle por pestañas (general, equipo, hitos, anexos, historial). |
-| `/submit`, `/submit/natural` | Propuesta de proyecto. |
-| `/admin/users` | Administración de usuarios y roles. |
+| `/` | Home. |
+| `/login` | Sign in. |
+| `/projects` | Project list. |
+| `/projects/[id]` | Detail with tabs (general, team, milestones, attachments, history). |
+| `/submit`, `/submit/natural` | Project proposal. |
+| `/admin/users` | User and role management. |
 
-## Patrón BFF (Backend For Frontend)
+## BFF pattern (Backend For Frontend)
 
-El navegador nunca llama al backend directamente. Cada `app/api/.../route.ts`
-recibe la petición, reenvía el header `Authorization` y hace `fetch` a
-`BACKEND_URL` (por defecto `http://localhost:3001`), devolviendo la respuesta
-tal cual. Esto evita CORS y oculta la URL del backend.
+The browser never calls the backend directly. Each `app/api/.../route.ts`
+receives the request, forwards the `Authorization` header and `fetch`es
+`BACKEND_URL` (default `http://localhost:3001`), returning the response as-is.
+This avoids CORS and hides the backend URL.
 
-`app/api/auth/proxy.ts` es un helper reutilizable para login y usuarios.
+`app/api/auth/proxy.ts` is a reusable helper for login and users.
 
-## Capa de servicios
+## Services layer
 
-`app/services/` concentra la comunicación con la API:
+`app/services/` concentrates all API communication:
 
-- `auth.ts` — sesión en `localStorage` (`capstonehub.auth.session`) y funciones
-  de login/usuarios.
-- `projects.ts` — proyectos, hitos, observaciones y anexos.
-- `schemas.ts` — tipos TypeScript compartidos (`ProjectDetails`, etc.).
-- `utils.ts` — helpers de formato (estados, fechas).
+- `auth.ts` — session in `localStorage` (`capstonehub.auth.session`) and
+  login/user functions.
+- `projects.ts` — projects, milestones, observations and attachments.
+- `schemas.ts` — shared TypeScript types (`ProjectDetails`, etc.).
+- `utils.ts` — formatting helpers (statuses, dates).
 
-Cada petición autenticada lee el token de `auth.ts` y agrega
+Every authenticated request reads the token from `auth.ts` and adds
 `Authorization: Bearer <token>`.
 
-## Autenticación
+## Authentication
 
-`AuthProvider` (cliente) mantiene la sesión y la expone por contexto
-(`useAuth`). El login guarda usuario + token en `localStorage`; los servicios
-leen el token al hacer peticiones. No hay cookies ni sesión en el servidor.
+`AuthProvider` (client) holds the session and exposes it through context
+(`useAuth`). Login stores the user + token in `localStorage`; services read the
+token when making requests. There are no cookies or server-side sessions.
 
 ## Server vs Client Components
 
-- Las páginas cargan datos con Server Components (`getProjects`,
-  `getProjectById`) y `cache: "no-store"`.
-- La interactividad (tabla de proyectos, paneles de detalle, diálogos de
-  usuarios) vive en Client Components con `"use client"`.
+- Pages fetch data with Server Components (`getProjects`, `getProjectById`)
+  using `cache: "no-store"`.
+- Interactivity (project table, detail panels, user dialogs) lives in Client
+  Components with `"use client"`.
 
-## Configuración y despliegue
+## Configuration and deployment
 
-- Variable `BACKEND_URL` para el proxy.
-- `NEXT_PUBLIC_SITE_URL` como base de la API cuando se llama desde el cliente.
-- Build Docker multi-etapa con salida *standalone*, expuesto en el puerto
-  `3000`.
+- `BACKEND_URL` variable for the proxy.
+- `NEXT_PUBLIC_SITE_URL` as the API base when calling from the client.
+- Multi-stage Docker build with *standalone* output, exposed on port `3000`.
 
-## Diagrama
+## Diagram
 
 ```mermaid
 flowchart TD
-    Browser[Navegador] --> Pages[Páginas App Router]
+    Browser[Browser] --> Pages[App Router pages]
     Pages -->|Server Components| Services[app/services]
     Pages -->|Client Components| Services
     Services -->|fetch /api/*| BFF[Route handlers / BFF]
-    BFF -->|BACKEND_URL| Backend[API NestJS]
-    Services -. token en localStorage .-> BFF
+    BFF -->|BACKEND_URL| Backend[NestJS API]
+    Services -. token in localStorage .-> BFF
 ```
