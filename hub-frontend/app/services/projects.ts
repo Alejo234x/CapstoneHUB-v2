@@ -1,4 +1,5 @@
 import {
+  ProjectAttachmentItem,
   ProjectDetails,
   ProjectItem,
   ProjectMilestoneItem,
@@ -313,4 +314,100 @@ export async function addProjectActorAssignment(
     project: { id: number; name: string };
     user: { id: number; fullName: string; email: string };
   };
+}
+
+function attachmentRequestError(response: Response, action: string): Error {
+  if (response.status === 401) {
+    return new Error(`Inicia sesión para ${action} este anexo.`);
+  }
+
+  if (response.status === 403) {
+    return new Error(`No tienes permisos para ${action} este anexo.`);
+  }
+
+  return new Error(`Backend responded with status ${response.status}`);
+}
+
+export async function getProjectAttachments(
+  id: string,
+): Promise<ProjectAttachmentItem[]> {
+  const response = await fetch(getApiUrl(`/api/projects/${id}/attachments`), {
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw attachmentRequestError(response, "consultar");
+  }
+
+  return (await response.json()) as ProjectAttachmentItem[];
+}
+
+export async function uploadProjectAttachment(
+  id: string,
+  file: File,
+): Promise<ProjectAttachmentItem> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(getApiUrl(`/api/projects/${id}/attachments`), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw attachmentRequestError(response, "subir");
+  }
+
+  return (await response.json()) as ProjectAttachmentItem;
+}
+
+export async function deleteProjectAttachment(
+  id: string,
+  attachmentId: number,
+): Promise<void> {
+  const response = await fetch(
+    getApiUrl(`/api/projects/${id}/attachments/${attachmentId}`),
+    {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    throw attachmentRequestError(response, "eliminar");
+  }
+}
+
+export async function downloadProjectAttachment(
+  id: string,
+  attachmentId: number,
+  fileName: string,
+): Promise<void> {
+  const response = await fetch(
+    getApiUrl(`/api/projects/${id}/attachments/${attachmentId}/download`),
+    {
+      headers: getAuthHeaders(),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw attachmentRequestError(response, "descargar");
+  }
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+
+  try {
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }

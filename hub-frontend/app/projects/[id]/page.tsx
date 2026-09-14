@@ -6,6 +6,7 @@ import ProjectActorAssignmentPanel from "./project-actor-assignment-panel";
 import ProjectCategoriesPanel from "./project-categories-panel";
 import ProjectMilestonesPanel from "./project-milestones-panel";
 import ProjectStatusHistoryPanel from "./project-status-history-panel";
+import ProjectAttachmentsPanel from "./project-attachments-panel";
 import ProjectAssignmentBadge from "./project-assignment-badge";
 import { formatStatus } from "@/app/services/utils";
 import {
@@ -105,6 +106,7 @@ export default async function ProjectDetailsPage({
               <TabsTrigger value="equipo">Equipo</TabsTrigger>
               <TabsTrigger value="observaciones">Observaciones</TabsTrigger>
               <TabsTrigger value="hitos">Hitos</TabsTrigger>
+              <TabsTrigger value="anexos">Anexos</TabsTrigger>
               <TabsTrigger value="historial">Historial</TabsTrigger>
             </TabsList>
 
@@ -306,6 +308,14 @@ export default async function ProjectDetailsPage({
                 projectId={project.id}
                 milestones={project.milestones ?? []}
                 actorAssignments={project.actorAssignments ?? []}
+              />
+            </TabsContent>
+
+            <TabsContent value="anexos" className="mt-6">
+              <ProjectAttachmentsPanel
+                projectId={project.id}
+                attachments={project.attachments ?? []}
+                assignments={project.actorAssignments ?? []}
               />
             </TabsContent>
 

@@ -66,6 +66,20 @@ export type ProjectMilestoneItem = {
   createdAt?: string;
 };
 
+export type ProjectAttachmentItem = {
+  id: number;
+  projectId: number;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+  uploadedBy: {
+    id: number;
+    fullName: string;
+    email: string;
+  } | null;
+};
+
 export type ProjectStatusHistoryItem = {
   id: number;
   projectId: number;
@@ -112,4 +126,5 @@ export type ProjectDetails = {
   categories?: ProjectCategory[];
   milestones?: ProjectMilestoneItem[];
   statusHistory?: ProjectStatusHistoryItem[];
+  attachments?: ProjectAttachmentItem[];
 };

@@ -1,0 +1,69 @@
+import { NextResponse } from "next/server";
+
+const backendUrl = process.env.BACKEND_URL?.replace(/\/$/, "");
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+
+  if (!backendUrl) {
+    return NextResponse.json(
+      { error: "BACKEND_URL is not set" },
+      { status: 500 },
+    );
+  }
+
+  const response = await fetch(`${backendUrl}/projects/${id}/attachments`, {
+    headers: {
+      ...(request.headers.get("authorization")
+        ? { Authorization: request.headers.get("authorization")! }
+        : {}),
+    },
+    cache: "no-store",
+  });
+  const contentType =
+    response.headers.get("content-type") ?? "application/json";
+  const body = await response.text();
+
+  return new NextResponse(body, {
+    status: response.status,
+    headers: { "Content-Type": contentType },
+  });
+}
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+
+  if (!backendUrl) {
+    return NextResponse.json(
+      { error: "BACKEND_URL is not set" },
+      { status: 500 },
+    );
+  }
+
+  const contentType = request.headers.get("content-type") ?? "";
+  const authorization = request.headers.get("authorization");
+  const body = await request.arrayBuffer();
+
+  const response = await fetch(`${backendUrl}/projects/${id}/attachments`, {
+    method: "POST",
+    headers: {
+      "Content-Type": contentType,
+      ...(authorization ? { Authorization: authorization } : {}),
+    },
+    body,
+  });
+  const responseContentType =
+    response.headers.get("content-type") ?? "application/json";
+  const responseBody = await response.text();
+
+  return new NextResponse(responseBody, {
+    status: response.status,
+    headers: { "Content-Type": responseContentType },
+  });
+}
