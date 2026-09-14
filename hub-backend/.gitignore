@@ -57,6 +57,3 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Prisma
 /src/generated/prisma
-
-# Local project attachments
-/uploads

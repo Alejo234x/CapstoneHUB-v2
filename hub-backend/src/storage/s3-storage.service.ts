@@ -12,7 +12,7 @@ function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
     throw new InternalServerErrorException(
-      `${name} is required when STORAGE_DRIVER=s3`,
+      `${name} is required to store project attachments`,
     );
   }
   return value;

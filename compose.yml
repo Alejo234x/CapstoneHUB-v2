@@ -40,8 +40,6 @@ services:
       - prisma-network
     ports:
       - "3001:3001"
-    volumes:
-      - backend_uploads:/usr/src/app/uploads
 
   frontend:
     container_name: frontend
@@ -100,5 +98,4 @@ networks:
     name: prisma-network
 
 volumes:
-  backend_uploads:
   minio_data:
