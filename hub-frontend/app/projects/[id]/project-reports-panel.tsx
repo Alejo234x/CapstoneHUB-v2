@@ -27,10 +27,22 @@ import {
   validateAttachmentFile,
 } from "../../services/utils";
 import FormActions from "@/app/components/form-actions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -43,8 +55,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  Field,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -54,7 +76,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import {
   RiAddLine,
   RiAttachmentLine,
@@ -102,7 +123,7 @@ function isOverdue(report: ProjectReportItem): boolean {
 function ReportStatusBadge({ status }: { status: ProjectReportStatus }) {
   if (status === "accepted") {
     return (
-      <Badge className="bg-green-100 text-green-800">
+      <Badge>
         <RiCheckboxCircleLine />
         Aceptada
       </Badge>
@@ -120,7 +141,7 @@ function ReportStatusBadge({ status }: { status: ProjectReportStatus }) {
 
   if (status === "submitted") {
     return (
-      <Badge className="bg-blue-100 text-blue-800">
+      <Badge variant="outline">
         <RiEyeLine />
         En revisión
       </Badge>
@@ -145,15 +166,19 @@ function FormField({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor={htmlFor}>{label}</Label>
+    <Field>
+      <FieldLabel htmlFor={htmlFor}>{label}</FieldLabel>
       {children}
-    </div>
+    </Field>
   );
 }
 
 function FormError({ message }: { message: string }) {
-  return <p className="text-sm text-destructive">{message}</p>;
+  return (
+    <Alert variant="destructive">
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
+  );
 }
 
 function ErrorBanner({
@@ -164,14 +189,9 @@ function ErrorBanner({
   className?: string;
 }) {
   return (
-    <p
-      className={cn(
-        "rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive",
-        className,
-      )}
-    >
-      {message}
-    </p>
+    <Alert variant="destructive" className={className}>
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
 
@@ -208,7 +228,7 @@ function ReportDialogForm({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="flex flex-col gap-4">
           {children}
 
           {errorMessage ? <FormError message={errorMessage} /> : null}
@@ -230,7 +250,7 @@ type ReportAttachmentRowProps = {
   canDelete: boolean;
   busy: boolean;
   onDownload: (attachment: ProjectAttachmentItem) => Promise<void>;
-  onDelete: (attachment: ProjectAttachmentItem) => Promise<void>;
+  onDelete: (attachment: ProjectAttachmentItem) => void;
 };
 
 function ReportAttachmentRow({
@@ -246,13 +266,14 @@ function ReportAttachmentRow({
         <div className="flex items-center gap-2">
           <RiAttachmentLine className="size-4 shrink-0 text-muted-foreground" />
           <div className="min-w-0">
-            <button
+            <Button
               type="button"
+              variant="link"
               onClick={() => void onDownload(attachment)}
-              className="truncate text-left font-medium hover:underline"
+              className="h-auto justify-start truncate p-0 font-medium"
             >
               {attachment.originalName}
-            </button>
+            </Button>
             {attachment.uploadedBy ? (
               <p className="truncate text-xs text-muted-foreground">
                 {attachment.uploadedBy.fullName}
@@ -327,6 +348,10 @@ function ReportCard({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [attachmentDeleteTarget, setAttachmentDeleteTarget] =
+    useState<ProjectAttachmentItem | null>(null);
+  const [attachmentDeleteOpen, setAttachmentDeleteOpen] = useState(false);
 
   const isAwaitingReview = report.status === "submitted";
   const isEditable = report.status === "pending" || report.status === "rejected";
@@ -387,17 +412,17 @@ function ReportCard({
     }, "No se pudo subir el archivo");
   }
 
-  async function handleSubmit() {
+  function handleSubmit() {
     if (report.attachments.length === 0) {
       setErrorMessage("Adjunta al menos un archivo antes de enviar la entrega.");
       return;
     }
 
-    if (
-      !window.confirm(`¿Enviar la entrega "${report.title}"? No podrá editarla.`)
-    ) {
-      return;
-    }
+    setSubmitOpen(true);
+  }
+
+  async function confirmSubmit() {
+    setSubmitOpen(false);
 
     await run(
       () => onSubmit(report),
@@ -405,10 +430,20 @@ function ReportCard({
     );
   }
 
-  async function handleDeleteAttachment(attachment: ProjectAttachmentItem) {
-    if (!window.confirm(`¿Eliminar el archivo "${attachment.originalName}"?`)) {
+  function handleDeleteAttachment(attachment: ProjectAttachmentItem) {
+    setAttachmentDeleteTarget(attachment);
+    setAttachmentDeleteOpen(true);
+  }
+
+  async function confirmDeleteAttachment() {
+    const attachment = attachmentDeleteTarget;
+
+    if (!attachment) {
       return;
     }
+
+    setAttachmentDeleteOpen(false);
+    setAttachmentDeleteTarget(null);
 
     await run(
       () => onDeleteAttachment(attachment.id),
@@ -460,7 +495,7 @@ function ReportCard({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-col gap-4">
         {report.description ? (
           <p className="whitespace-pre-line text-sm text-muted-foreground">
             {report.description}
@@ -468,10 +503,12 @@ function ReportCard({
         ) : null}
 
         {isOverdue(report) ? (
-          <p className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            <RiErrorWarningLine className="size-4 shrink-0" />
-            La fecha de entrega ya venció.
-          </p>
+          <Alert variant="destructive">
+            <RiErrorWarningLine />
+            <AlertDescription>
+              La fecha de entrega ya venció.
+            </AlertDescription>
+          </Alert>
         ) : null}
 
         {report.submittedAt ? (
@@ -481,28 +518,28 @@ function ReportCard({
         ) : null}
 
         {report.status === "accepted" || report.status === "rejected" ? (
-          <div
-            className={`rounded-md border p-3 text-sm ${
-              report.status === "accepted"
-                ? "border-green-200 bg-green-50 text-green-900"
-                : "border-destructive/30 bg-destructive/10 text-destructive"
-            }`}
+          <Alert
+            variant={
+              report.status === "rejected" ? "destructive" : "default"
+            }
           >
-            <p className="font-medium">
-              {report.status === "accepted" ? "Aceptada" : "No aceptada"}
-              {report.reviewedBy
-                ? ` por ${report.reviewedBy.fullName}`
-                : ""}
-              {report.reviewedAt
-                ? ` el ${formatDate(report.reviewedAt)}`
-                : ""}
-            </p>
-            {report.reviewComment ? (
-              <p className="mt-1 whitespace-pre-line">
-                {report.reviewComment}
+            <AlertDescription>
+              <p className="font-medium">
+                {report.status === "accepted" ? "Aceptada" : "No aceptada"}
+                {report.reviewedBy
+                  ? ` por ${report.reviewedBy.fullName}`
+                  : ""}
+                {report.reviewedAt
+                  ? ` el ${formatDate(report.reviewedAt)}`
+                  : ""}
               </p>
-            ) : null}
-          </div>
+              {report.reviewComment ? (
+                <p className="mt-1 whitespace-pre-line">
+                  {report.reviewComment}
+                </p>
+              ) : null}
+            </AlertDescription>
+          </Alert>
         ) : null}
 
         {report.attachments.length > 0 ? (
@@ -529,38 +566,46 @@ function ReportCard({
             </TableBody>
           </Table>
         ) : (
-          <p className="text-sm text-muted-foreground">
-            Sin archivos adjuntos todavía.
-          </p>
+          <Empty className="border">
+            <EmptyHeader>
+              <EmptyTitle>Sin archivos</EmptyTitle>
+              <EmptyDescription>
+                Sin archivos adjuntos todavía.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
 
         {canUploadFiles ? (
-          <form
-            onSubmit={handleUploadSubmit}
-            className="flex flex-col gap-3 border-t border-slate-200 pt-4"
-          >
-            <Input
-              type="file"
-              onChange={handleFileChange}
-              disabled={busy}
-              accept={ATTACHMENT_ACCEPT}
-            />
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="text-sm text-muted-foreground">
-                {selectedFile
-                  ? `${selectedFile.name} · ${formatBytes(selectedFile.size)}`
-                  : "Adjunta archivos a la entrega (PDF, Word, Excel, PNG o JPEG)."}
-              </span>
-              <Button type="submit" disabled={busy || !selectedFile}>
-                {busy ? "Subiendo..." : "Adjuntar archivo"}
-              </Button>
-            </div>
-          </form>
+          <>
+            <Separator />
+            <form
+              onSubmit={handleUploadSubmit}
+              className="flex flex-col gap-3"
+            >
+              <Input
+                type="file"
+                onChange={handleFileChange}
+                disabled={busy}
+                accept={ATTACHMENT_ACCEPT}
+              />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">
+                  {selectedFile
+                    ? `${selectedFile.name} · ${formatBytes(selectedFile.size)}`
+                    : "Adjunta archivos a la entrega (PDF, Word, Excel, PNG o JPEG)."}
+                </span>
+                <Button type="submit" disabled={busy || !selectedFile}>
+                  {busy ? "Subiendo..." : "Adjuntar archivo"}
+                </Button>
+              </div>
+            </form>
+          </>
         ) : null}
 
         {canSubmit && isEditable ? (
           <div className="flex justify-end">
-            <Button onClick={() => void handleSubmit()} disabled={busy}>
+            <Button onClick={handleSubmit} disabled={busy}>
               <RiSendPlaneLine />
               {report.status === "rejected" ? "Reenviar entrega" : "Enviar entrega"}
             </Button>
@@ -568,27 +613,72 @@ function ReportCard({
         ) : null}
 
         {canManage && isAwaitingReview ? (
-          <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => onReview(report, "rejected")}
-              disabled={busy}
-            >
-              <RiCloseCircleLine />
-              No aceptar
-            </Button>
-            <Button
-              onClick={() => onReview(report, "accepted")}
-              disabled={busy}
-            >
-              <RiCheckboxCircleLine />
-              Aceptar
-            </Button>
-          </div>
+          <>
+            <Separator />
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => onReview(report, "rejected")}
+                disabled={busy}
+              >
+                <RiCloseCircleLine />
+                No aceptar
+              </Button>
+              <Button
+                onClick={() => onReview(report, "accepted")}
+                disabled={busy}
+              >
+                <RiCheckboxCircleLine />
+                Aceptar
+              </Button>
+            </div>
+          </>
         ) : null}
 
         {errorMessage ? <ErrorBanner message={errorMessage} /> : null}
       </CardContent>
+
+      <AlertDialog open={submitOpen} onOpenChange={setSubmitOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enviar entrega</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Enviar la entrega &quot;{report.title}&quot;? No podrá editarla.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void confirmSubmit()}>
+              Enviar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={attachmentDeleteOpen}
+        onOpenChange={setAttachmentDeleteOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar archivo</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Eliminar el archivo &quot;
+              {attachmentDeleteTarget?.originalName}&quot;? Esta acción no se
+              puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => void confirmDeleteAttachment()}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
@@ -614,6 +704,9 @@ export default function ProjectReportsPanel({
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isReviewPending, startReviewTransition] = useTransition();
+  const [deleteTarget, setDeleteTarget] =
+    useState<ProjectReportItem | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const canManage = useMemo(() => {
     if (!session) {
@@ -728,9 +821,19 @@ export default function ProjectReportsPanel({
   }
 
   function handleDelete(report: ProjectReportItem) {
-    if (!window.confirm(`¿Eliminar la entrega "${report.title}"?`)) {
+    setDeleteTarget(report);
+    setDeleteOpen(true);
+  }
+
+  function confirmDeleteReport() {
+    const report = deleteTarget;
+
+    if (!report) {
       return;
     }
+
+    setDeleteOpen(false);
+    setDeleteTarget(null);
 
     runTransition(async () => {
       await deleteProjectReport(String(projectId), report.id);
@@ -810,72 +913,77 @@ export default function ProjectReportsPanel({
     reviewDecision === "accepted" ? "Aceptar entrega" : "No aceptar entrega";
 
   return (
-    <section className="mt-6 border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Entregas
-          </h2>
-          <p className="mt-2 text-muted-foreground">
-            {reports.length === 0
-              ? "Los asesores, evaluadores y coordinadores crean las entregas para que los estudiantes las envíen."
-              : `${acceptedCount} de ${reports.length} aceptadas`}
-          </p>
-        </div>
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle>Entregas</CardTitle>
+        <CardDescription>
+          {reports.length === 0
+            ? "Los asesores, evaluadores y coordinadores crean las entregas para que los estudiantes las envíen."
+            : `${acceptedCount} de ${reports.length} aceptadas`}
+        </CardDescription>
 
         {ready && canManage ? (
-          <Button onClick={openCreateDialog}>
-            <RiAddLine />
-            Nueva entrega
-          </Button>
+          <CardAction>
+            <Button onClick={openCreateDialog}>
+              <RiAddLine data-icon="inline-start" />
+              Nueva entrega
+            </Button>
+          </CardAction>
         ) : null}
-      </div>
+      </CardHeader>
 
-      {errorMessage && !dialogOpen ? (
-        <ErrorBanner message={errorMessage} className="mt-4" />
-      ) : null}
+      <CardContent className="flex flex-col gap-4">
+        {errorMessage && !dialogOpen ? (
+          <ErrorBanner message={errorMessage} />
+        ) : null}
 
-      {sortedReports.length === 0 ? (
-        <p className="mt-6 border border-slate-200 bg-slate-50 p-6 text-center text-sm text-muted-foreground">
-          No hay entregas registradas todavía.
-        </p>
-      ) : (
-        <div className="mt-6 space-y-4">
-          {sortedReports.map((report) => (
-            <ReportCard
-              key={report.id}
-              report={report}
-              canManage={canManage}
-              canSubmit={canSubmit}
-              onEdit={openEditDialog}
-              onDelete={handleDelete}
-              onUpload={handleUpload}
-              onSubmit={handleSubmitReport}
-              onReview={openReviewDialog}
-              onDeleteAttachment={handleDeleteAttachment}
-              onDownload={handleDownload}
-            />
-          ))}
-        </div>
-      )}
-
-      {!ready ? (
-        <div className="mt-6 border border-slate-200 bg-slate-50 p-4 text-sm text-muted-foreground">
-          Cargando acceso...
-        </div>
-      ) : !isAuthenticated ? (
-        <div className="mt-6 border border-slate-200 bg-slate-50 p-4 text-sm text-muted-foreground">
-          Inicia sesión para enviar entregas.
-          <div className="mt-3">
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-            >
-              Iniciar sesión
-            </Link>
+        {sortedReports.length === 0 ? (
+          <Empty className="border">
+            <EmptyHeader>
+              <EmptyTitle>Sin entregas</EmptyTitle>
+              <EmptyDescription>
+                No hay entregas registradas todavía.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {sortedReports.map((report) => (
+              <ReportCard
+                key={report.id}
+                report={report}
+                canManage={canManage}
+                canSubmit={canSubmit}
+                onEdit={openEditDialog}
+                onDelete={handleDelete}
+                onUpload={handleUpload}
+                onSubmit={handleSubmitReport}
+                onReview={openReviewDialog}
+                onDeleteAttachment={handleDeleteAttachment}
+                onDownload={handleDownload}
+              />
+            ))}
           </div>
-        </div>
-      ) : null}
+        )}
+
+        {!ready ? (
+          <Alert>
+            <AlertDescription>Cargando acceso...</AlertDescription>
+          </Alert>
+        ) : !isAuthenticated ? (
+          <Alert>
+            <AlertDescription>
+              Inicia sesión para enviar entregas.
+              <div className="mt-3">
+                <Button
+                  nativeButton={false}
+                  render={<Link href="/login">Iniciar sesión</Link>}
+                />
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+      </CardContent>
 
       <ReportDialogForm
         open={dialogOpen}
@@ -960,6 +1068,27 @@ export default function ProjectReportsPanel({
           />
         </FormField>
       </ReportDialogForm>
-    </section>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar entrega</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Eliminar la entrega &quot;{deleteTarget?.title}&quot;? Esta acción
+              no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={confirmDeleteReport}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
   );
 }

@@ -1,4 +1,11 @@
 import Link from "next/link";
+import { cn } from "@/lib/utils";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 type SubmitCardProps = {
   title: string;
@@ -14,16 +21,17 @@ export default function SubmitCard({
   disabled = false,
 }: SubmitCardProps) {
   const card = (
-    <div
-      className={`mb-6 border border-gray-50 bg-white p-5 transition ${
-        disabled ? "opacity-60" : "shadow-sm"
-      }`}
+    <Card
+      className={cn(
+        "mb-6 transition",
+        disabled ? "opacity-60" : "hover:bg-muted/50",
+      )}
     >
-      <div>
-        <p className="text-2xl">{title}</p>
-      </div>
-      <div>{description}</div>
-    </div>
+      <CardHeader>
+        <CardTitle className="text-2xl">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="text-muted-foreground">{description}</CardContent>
+    </Card>
   );
 
   if (href && !disabled) {

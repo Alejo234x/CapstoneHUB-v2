@@ -11,10 +11,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 const roles = [
   { value: "student", label: "Estudiante" },
@@ -94,9 +103,7 @@ export default function CreateUserDialog({
         }
       }}
     >
-        <DialogTrigger>
-        Crear usuario
-        </DialogTrigger>
+      <DialogTrigger render={<Button />}>Crear usuario</DialogTrigger>
 
       <DialogContent>
         <DialogHeader>
@@ -107,75 +114,90 @@ export default function CreateUserDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="fullName">Nombre completo</Label>
+        <form onSubmit={handleSubmit}>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="fullName">Nombre completo</FieldLabel>
 
-            <Input
-              id="fullName"
-              value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
-              placeholder="Nombre del usuario"
-              disabled={loading}
-            />
-          </div>
+              <Input
+                id="fullName"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                placeholder="Nombre del usuario"
+                disabled={loading}
+              />
+            </Field>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Correo electrónico</Label>
+            <Field>
+              <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
 
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="usuario@ejemplo.com"
-              disabled={loading}
-            />
-          </div>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="usuario@ejemplo.com"
+                disabled={loading}
+              />
+            </Field>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
+            <Field>
+              <FieldLabel htmlFor="password">Contraseña</FieldLabel>
 
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Contraseña"
-              disabled={loading}
-            />
-          </div>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Contraseña"
+                disabled={loading}
+              />
+            </Field>
 
-          <div className="space-y-2">
-            <Label htmlFor="role">Rol</Label>
+            <Field>
+              <FieldLabel htmlFor="role">Rol</FieldLabel>
 
-            <select
-              id="role"
-              value={role}
-              onChange={(event) => setRole(event.target.value)}
-              disabled={loading}
-              className="flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
-            >
-              {roles.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </div>
+              <Select
+                value={role}
+                onValueChange={(value) => {
+                  if (value) {
+                    setRole(value);
+                  }
+                }}
+                disabled={loading}
+              >
+                <SelectTrigger id="role" className="w-full">
+                  <SelectValue>
+                    {roles.find((item) => item.value === role)?.label ??
+                      "Selecciona un rol"}
+                  </SelectValue>
+                </SelectTrigger>
 
-          {error && (
-            <p className="text-sm text-red-600">
-              {error}
-            </p>
-          )}
+                <SelectContent>
+                  <SelectGroup>
+                    {roles.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+
+            {error ? (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
 
             <FormActions
-            loading={loading}
-            loadingText="Creando..."
-            submitText="Crear usuario"
-            onCancel={() => setOpen(false)}
+              loading={loading}
+              loadingText="Creando..."
+              submitText="Crear usuario"
+              onCancel={() => setOpen(false)}
             />
+          </FieldGroup>
         </form>
       </DialogContent>
     </Dialog>

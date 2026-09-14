@@ -12,7 +12,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 
 const projectStatuses = [
@@ -111,22 +121,20 @@ export default function ProjectStatusEditForm({
 
   if (!isAuthenticated || !session) {
     return (
-      <div className="w-full border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-          Actualizar estado del proyecto
-        </h2>
-
-        <p className="mt-3 text-sm text-slate-600">
-          Inicia sesión para cambiar el estado de este proyecto.
-        </p>
-
-        <Link
-          href="/login"
-          className="mt-4 inline-flex items-center justify-center border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-        >
-          Iniciar sesión
-        </Link>
-      </div>
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Actualizar estado del proyecto</CardTitle>
+          <CardDescription>
+            Inicia sesión para cambiar el estado de este proyecto.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            nativeButton={false}
+            render={<Link href="/login">Iniciar sesión</Link>}
+          />
+        </CardContent>
+      </Card>
     );
   }
 
@@ -181,88 +189,84 @@ export default function ProjectStatusEditForm({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="w-full space-y-6 border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
-    >
-      <div>
-        <label
-          htmlFor="status"
-          className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500"
-        >
-          Actualizar estado del proyecto
-        </label>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Actualizar estado del proyecto</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit}>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="status">Estado</FieldLabel>
 
-        <Select
-          value={status}
-          onValueChange={(value) => {
-            if (value) {
-              setStatus(value);
-            }
-          }}
-          disabled={isPending}
-        >
-          <SelectTrigger className="mt-3 w-full">
-            <SelectValue>
-              {projectStatuses.find(
-                (projectStatus) => projectStatus.value === status,
-              )?.label ?? "Selecciona un estado"}
-            </SelectValue>
-          </SelectTrigger>
-
-          <SelectContent>
-            {availableStatuses.map((projectStatus) => (
-              <SelectItem
-                key={projectStatus.value}
-                value={projectStatus.value}
+              <Select
+                value={status}
+                onValueChange={(value) => {
+                  if (value) {
+                    setStatus(value);
+                  }
+                }}
+                disabled={isPending}
               >
-                {projectStatus.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+                <SelectTrigger id="status" className="w-full">
+                  <SelectValue>
+                    {projectStatuses.find(
+                      (projectStatus) => projectStatus.value === status,
+                    )?.label ?? "Selecciona un estado"}
+                  </SelectValue>
+                </SelectTrigger>
 
-      <div>
-        <label
-          htmlFor="status-reason"
-          className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500"
-        >
-          Motivo del cambio
-        </label>
+                <SelectContent>
+                  {availableStatuses.map((projectStatus) => (
+                    <SelectItem
+                      key={projectStatus.value}
+                      value={projectStatus.value}
+                    >
+                      {projectStatus.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
 
-        <Textarea
-          id="status-reason"
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-          placeholder={
-            isReasonRequired
-              ? "Describe el motivo del cambio de estado..."
-              : "Motivo del cambio (opcional para administradores)"
-          }
-          rows={4}
-          disabled={isPending}
-          className="mt-3"
-        />
+            <Field>
+              <FieldLabel htmlFor="status-reason">Motivo del cambio</FieldLabel>
 
-        <p className="mt-2 text-xs text-slate-500">
-          {isReasonRequired
-            ? "Obligatorio: el historial guardará este motivo junto al cambio."
-            : "Opcional para administradores; se registrará en el historial."}
-        </p>
-      </div>
+              <Textarea
+                id="status-reason"
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder={
+                  isReasonRequired
+                    ? "Describe el motivo del cambio de estado..."
+                    : "Motivo del cambio (opcional para administradores)"
+                }
+                rows={4}
+                disabled={isPending}
+              />
 
-      <div className="flex flex-wrap gap-3">
-        <Button type="submit" disabled={isSubmitDisabled}>
-          {isPending ? "Guardando..." : "Guardar cambios"}
-        </Button>
-      </div>
+              <FieldDescription>
+                {isReasonRequired
+                  ? "Obligatorio: el historial guardará este motivo junto al cambio."
+                  : "Opcional para administradores; se registrará en el historial."}
+              </FieldDescription>
+            </Field>
 
-      {errorMessage ? (
-        <p className="border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {errorMessage}
-        </p>
-      ) : null}
-    </form>
+            <div className="flex flex-wrap gap-3">
+              <Button type="submit" disabled={isSubmitDisabled}>
+                {isPending && <Spinner data-icon="inline-start" />}
+                {isPending ? "Guardando..." : "Guardar cambios"}
+              </Button>
+            </div>
+
+            {errorMessage ? (
+              <Alert variant="destructive">
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            ) : null}
+          </FieldGroup>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

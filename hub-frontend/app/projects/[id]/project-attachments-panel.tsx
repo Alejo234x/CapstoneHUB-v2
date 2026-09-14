@@ -20,12 +20,29 @@ import {
 
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -100,32 +117,42 @@ function AttachmentUploadCard({
 
   function renderUploadContent() {
     if (!ready) {
-      return <p className="text-sm text-muted-foreground">Cargando acceso...</p>;
+      return (
+        <Alert>
+          <AlertDescription>Cargando acceso...</AlertDescription>
+        </Alert>
+      );
     }
 
     if (!isAuthenticated) {
       return (
-        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          Inicia sesión para consultar y subir anexos.
-          <Button
-            nativeButton={false}
-            render={<Link href="/login">Iniciar sesión</Link>}
-          />
-        </div>
+        <Alert>
+          <AlertDescription>
+            <div className="flex flex-wrap items-center gap-3">
+              Inicia sesión para consultar y subir anexos.
+              <Button
+                nativeButton={false}
+                render={<Link href="/login">Iniciar sesión</Link>}
+              />
+            </div>
+          </AlertDescription>
+        </Alert>
       );
     }
 
     if (!canUpload) {
       return (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <RiLockLine className="size-4 shrink-0" />
-          Solo los participantes del proyecto pueden subir anexos.
-        </p>
+        <Alert>
+          <RiLockLine />
+          <AlertDescription>
+            Solo los participantes del proyecto pueden subir anexos.
+          </AlertDescription>
+        </Alert>
       );
     }
 
     return (
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <Input
           type="file"
           onChange={onFileChange}
@@ -143,9 +170,9 @@ function AttachmentUploadCard({
         </div>
 
         {errorMessage ? (
-          <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-            {errorMessage}
-          </p>
+          <Alert variant="destructive">
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
         ) : null}
       </form>
     );
@@ -162,29 +189,29 @@ function getSelectedFileLabel(selectedFile: File | null): string {
 
 function PermissionNotice({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
-    <div className="mb-4 flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-      <RiLockLine className="mt-0.5 size-4 shrink-0" />
-      <div className="space-y-2">
-        <p className="font-medium">{getPermissionMessage(isAuthenticated)}</p>
-        {isAuthenticated ? null : (
+    <Alert className="mb-4">
+      <RiLockLine />
+      <AlertTitle>{getPermissionMessage(isAuthenticated)}</AlertTitle>
+      {isAuthenticated ? null : (
+        <AlertAction>
           <Button
             variant="outline"
             size="sm"
             nativeButton={false}
             render={<Link href="/login">Iniciar sesión</Link>}
           />
-        )}
-      </div>
-    </div>
+        </AlertAction>
+      )}
+    </Alert>
   );
 }
 
 function ListErrorBanner({ message }: { message: string }) {
   return (
-    <p className="mb-4 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-      <RiErrorWarningLine className="size-4 shrink-0" />
-      {message}
-    </p>
+    <Alert variant="destructive" className="mb-4">
+      <RiErrorWarningLine />
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
 
@@ -212,13 +239,14 @@ function AttachmentName({
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="link"
       onClick={() => onDownload(attachment)}
-      className="truncate text-left font-medium hover:underline"
+      className="h-auto justify-start truncate p-0 font-medium"
     >
       {attachment.originalName}
-    </button>
+    </Button>
   );
 }
 
@@ -480,7 +508,18 @@ function AttachmentsListCard({
             onDelete={onDelete}
           />
         </CardContent>
-      ) : null}
+      ) : (
+        <CardContent>
+          <Empty className="border">
+            <EmptyHeader>
+              <EmptyTitle>Sin anexos</EmptyTitle>
+              <EmptyDescription>
+                No hay anexos registrados.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </CardContent>
+      )}
     </Card>
   );
 }
@@ -504,6 +543,9 @@ export default function ProjectAttachmentsPanel({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] =
+    useState<ProjectAttachmentItem | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const currentUser = session?.user;
@@ -624,7 +666,22 @@ export default function ProjectAttachmentsPanel({
       return;
     }
 
-    if (!window.confirm(`¿Eliminar el anexo "${attachment.originalName}"?`)) {
+    setDeleteTarget(attachment);
+    setDeleteOpen(true);
+  }
+
+  function confirmDelete() {
+    const attachment = deleteTarget;
+
+    if (!attachment) {
+      return;
+    }
+
+    setDeleteOpen(false);
+    setDeleteTarget(null);
+
+    if (!canDelete(attachment)) {
+      setListError("No tienes permisos para eliminar este anexo.");
       return;
     }
 
@@ -645,7 +702,7 @@ export default function ProjectAttachmentsPanel({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <AttachmentUploadCard
         ready={ready}
         isAuthenticated={isAuthenticated}
@@ -668,6 +725,24 @@ export default function ProjectAttachmentsPanel({
         onDownload={handleDownload}
         onDelete={handleDelete}
       />
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar anexo</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Eliminar el anexo &quot;{deleteTarget?.originalName}&quot;? Esta
+              acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={confirmDelete}>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

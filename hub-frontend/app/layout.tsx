@@ -32,7 +32,7 @@ export default function RootLayout({
       lang="en"
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
     >
-      <body className="min-h-full flex flex-col bg-white">
+      <body className="flex min-h-full flex-col bg-background">
         <AuthProvider>
           <Navbar />
           {children}

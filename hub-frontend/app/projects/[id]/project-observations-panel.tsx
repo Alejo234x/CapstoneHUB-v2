@@ -16,7 +16,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 
 type ProjectActorAssignment = {
@@ -118,7 +120,7 @@ export default function ProjectObservationsPanel({
 
   if (!isAuthenticated) {
     return (
-      <div className="space-y-6">
+      <div className="flex flex-col gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Agregar observación</CardTitle>
@@ -140,7 +142,7 @@ export default function ProjectObservationsPanel({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
           <CardTitle>Nueva observación</CardTitle>
@@ -153,9 +155,11 @@ export default function ProjectObservationsPanel({
 
         {canCreate ? (
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="project-observation">Observación</Label>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <Field>
+                <FieldLabel htmlFor="project-observation">
+                  Observación
+                </FieldLabel>
                 <Textarea
                   id="project-observation"
                   value={content}
@@ -164,7 +168,7 @@ export default function ProjectObservationsPanel({
                   rows={4}
                   disabled={isPending}
                 />
-              </div>
+              </Field>
 
               <div className="flex justify-end">
                 <Button type="submit" disabled={isPending || !content.trim()}>
@@ -173,9 +177,9 @@ export default function ProjectObservationsPanel({
               </div>
 
               {errorMessage ? (
-                <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                  {errorMessage}
-                </p>
+                <Alert variant="destructive">
+                  <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
               ) : null}
             </form>
           </CardContent>
@@ -204,18 +208,20 @@ function ObservationsList({
       </CardHeader>
 
       {observations.length > 0 ? (
-        <CardContent className="space-y-3">
+        <CardContent className="flex flex-col gap-3">
           {observations.map((observation) => (
             <div
               key={observation.id}
               className="rounded-lg border border-border bg-muted/30 p-4"
             >
               <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                  {observation.author
-                    ? getInitials(observation.author.fullName)
-                    : "?"}
-                </div>
+                <Avatar>
+                  <AvatarFallback className="bg-primary/10 font-semibold text-primary">
+                    {observation.author
+                      ? getInitials(observation.author.fullName)
+                      : "?"}
+                  </AvatarFallback>
+                </Avatar>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">

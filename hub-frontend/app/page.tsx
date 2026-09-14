@@ -3,10 +3,10 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gray-100 text-slate-900">
+    <main className="min-h-screen bg-background text-foreground">
       <section className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-6 py-16 sm:px-10 lg:px-12">
-        <div className="max-w-2xl space-y-8">
-          <div className="space-y-4">
+        <div className="flex max-w-2xl flex-col gap-8">
+          <div className="flex flex-col gap-4">
             <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
               Gestion de proyectos Capstone
             </h1>
@@ -25,13 +25,18 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button variant="default">
-              <Link href="/projects"> Ver lista de proyectos </Link>
+            <Button
+              nativeButton={false}
+              render={<Link href="/projects" />}
+            >
+              Ver lista de proyectos
             </Button>
-            <Button variant="outline">
-              <Link href="/submit">
-                Proponer un Proyecto
-              </Link>
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/submit" />}
+            >
+              Proponer un Proyecto
             </Button>
           </div>
         </div>
