@@ -191,6 +191,13 @@ export type ProjectActorAssignmentResponse = {
   };
 };
 
+export type AssignableUserResponse = {
+  id: number;
+  fullName: string;
+  email: string;
+  roles: UserRole[];
+};
+
 function mapProjectProposer(
   project: Pick<ProjectWithRelations, 'naturalProposer' | 'legalProposer'>,
 ): ProjectProposerResponse | null {
@@ -530,6 +537,30 @@ export class ProjectsService {
     const projectId = this.projectIdFromWhere(where);
     await this.authorization.assertCanManageProject(user, projectId);
     return this.prisma.project.delete({ where });
+  }
+
+  async assignableUsers(
+    user: AuthenticatedUser,
+    projectId: number,
+  ): Promise<AssignableUserResponse[]> {
+    await this.authorization.assertCanAssignActors(user, projectId);
+
+    const users = await this.prisma.user.findMany({
+      orderBy: { fullName: 'asc' },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        roleAssignments: { select: { role: true } },
+      },
+    });
+
+    return users.map((candidate) => ({
+      id: candidate.id,
+      fullName: candidate.fullName,
+      email: candidate.email,
+      roles: candidate.roleAssignments.map(({ role }) => role),
+    }));
   }
 
   async addProjectActorAssignment(params: {
