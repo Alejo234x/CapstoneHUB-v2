@@ -9,6 +9,7 @@ import ProjectReportsPanel from "./project-reports-panel";
 import ProjectStatusHistoryPanel from "./project-status-history-panel";
 import ProjectAttachmentsPanel from "./project-attachments-panel";
 import ProjectAssignmentBadge from "./project-assignment-badge";
+import ProjectLegalizationBadge from "./project-legalization-badge";
 import { formatStatus } from "@/app/services/utils";
 import {
   Tabs,
@@ -102,13 +103,13 @@ export default async function ProjectDetailsPage({
         <Card>
           <CardContent>
           <div className="flex flex-wrap items-center gap-3">
-            <Badge variant="secondary">{formatStatus(project.status)}</Badge>
+            <Badge variant="secondary">Estado: {formatStatus(project.status)}</Badge>
             <ProjectAssignmentBadge
               assignments={project.actorAssignments ?? []}
             />
-            {project.requiresLegalization ? (
-              <Badge variant="outline">Requiere legalización</Badge>
-            ) : null}
+            <ProjectLegalizationBadge
+              requiresLegalization={project.requiresLegalization}
+            />
             <span className="text-sm text-muted-foreground">
               Creado el {formatDate(project.createdAt)}
             </span>
