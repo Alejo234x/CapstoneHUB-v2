@@ -89,6 +89,7 @@ model Project {
   startDate     DateTime      @map("start_date")
   endDate       DateTime?     @map("end_date")
   estimatedCost Decimal?      @map("estimated_cost") @db.Decimal(12, 2)
+  requiresLegalization Boolean @default(false) @map("requires_legalization")
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
