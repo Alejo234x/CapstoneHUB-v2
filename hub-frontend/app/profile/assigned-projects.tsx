@@ -31,7 +31,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-function formatDate(value: string): string {
+function formatDate(value: string | null): string {
+  if (!value) {
+    return "Sin fecha";
+  }
+
   return new Intl.DateTimeFormat("es-CO", { dateStyle: "medium" }).format(
     new Date(value),
   );

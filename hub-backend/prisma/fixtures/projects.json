@@ -17,6 +17,10 @@
         "idNumber": "1801234567",
         "email": "roberto.jimenez@example.com"
       },
+      "facultyAdvisor": "Ing. Daniela Paredes",
+      "teamRequirements": "2 estudiantes de Ingeniería en Software y 1 de Ingeniería Electrónica con interés en IoT.",
+      "expectedOutcomes": "Prototipo funcional desplegado en al menos una finca piloto con reporte de resultados.",
+      "deliverables": ["Documento de arquitectura de la solución", "Prototipo de sensores funcionando", "Manual de usuario y despliegue"],
       "targetStatus": "in_progress",
       "actors": [
         { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
@@ -46,6 +50,10 @@
         "phone": "+593987654321",
         "contactUrl": "https://frioandino.example.com"
       },
+      "facultyAdvisor": null,
+      "teamRequirements": "1 estudiante de Ingeniería Industrial y 1 de Ingeniería Mecánica.",
+      "expectedOutcomes": "Sistema de monitoreo validado en una ruta interprovincial.",
+      "deliverables": ["Diseño del sistema de monitoreo", "Prototipo de hardware", "Informe de validación en campo"],
       "targetStatus": "assigned",
       "actors": [
         { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
@@ -72,6 +80,10 @@
         "idNumber": "1807654321",
         "email": "gabriela.suarez@example.com"
       },
+      "facultyAdvisor": "Mg. Carolina Núñez",
+      "teamRequirements": "2 estudiantes de Ingeniería en Software y 1 de Diseño Gráfico.",
+      "expectedOutcomes": "Aplicación móvil publicada con datos de accesibilidad de Ambato.",
+      "deliverables": ["Prototipo de alta fidelidad", "Aplicación móvil funcional", "Conjunto de datos abiertos"],
       "targetStatus": "under_review",
       "actors": [
         { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
@@ -96,6 +108,10 @@
         "idNumber": "1802223334",
         "email": "marco.villacis@example.com"
       },
+      "facultyAdvisor": null,
+      "teamRequirements": "2 estudiantes de Ingeniería en Software con interés en salud digital.",
+      "expectedOutcomes": "Plataforma de teleconsulta operativa en modo offline en centros rurales.",
+      "deliverables": ["Plataforma de teleconsulta", "Módulo de sincronización offline", "Documentación técnica"],
       "targetStatus": "approved",
       "actors": [
         { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
@@ -123,6 +139,10 @@
         "phone": "+593912345678",
         "contactUrl": null
       },
+      "facultyAdvisor": "Ing. Pablo Herrera",
+      "teamRequirements": "1 estudiante de Ingeniería Electrónica con experiencia en visión por computador.",
+      "expectedOutcomes": "Clasificador de residuos con precisión superior al 85%.",
+      "deliverables": ["Modelo de visión por computador", "Prototipo de clasificación", "Informe de métricas"],
       "targetStatus": "rejected",
       "actors": [
         { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
@@ -147,6 +167,10 @@
         "idNumber": "1805556667",
         "email": "veronica.chicaiza@example.com"
       },
+      "facultyAdvisor": null,
+      "teamRequirements": "1 estudiante de Ingeniería Electrónica y 1 de Agronomía.",
+      "expectedOutcomes": "Controlador de riego probado en un cultivo piloto.",
+      "deliverables": ["Diseño del controlador", "Prototipo instalado", "Guía de operación"],
       "targetStatus": "proposed",
       "actors": [
         { "email": "coord.luis@capstonehub.test", "role": "coordinator" }

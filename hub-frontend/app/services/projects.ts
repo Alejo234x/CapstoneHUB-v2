@@ -37,17 +37,16 @@ function getAuthHeaders(): Record<string, string> {
 export type CreateProjectPayload = {
   name: string;
   namep: string;
-  ncedua: string;
-  age: number;
   correo: string;
   description: string;
   context: string;
-  location: string;
-  executiontime: string;
-  estimatedCost: number;
-  startDate: string;
   requiresLegalization?: boolean;
   source?: ProjectSource;
+  ncedua?: string;
+  facultyAdvisor?: string;
+  teamRequirements?: string;
+  expectedOutcomes?: string;
+  deliverables?: string[];
 };
 
 export async function getProjects(): Promise<{
@@ -261,7 +260,9 @@ export async function deleteProjectMilestone(
   }
 }
 
-export async function createProject(payload: CreateProjectPayload) {
+export async function createProject(
+  payload: CreateProjectPayload,
+): Promise<ProjectDetails> {
   const res = await fetch(getApiUrl("/api/projects"), {
     method: "POST",
     headers: {
@@ -275,17 +276,7 @@ export async function createProject(payload: CreateProjectPayload) {
     throw new Error(`Backend responded with status ${res.status}, ${res.url}`);
   }
 
-  return (await res.json()) as {
-    id: number;
-    name: string;
-    description: string;
-    context: string;
-    status: string;
-    startDate: string;
-    endDate: string;
-    createdAt: string;
-    updatedAt: string;
-  };
+  return (await res.json()) as ProjectDetails;
 }
 
 export async function getAssignableUsers(

@@ -74,7 +74,11 @@ export const ALLOWED_MIME_TYPES: ReadonlySet<string> = new Set([
 
 export const ATTACHMENT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg";
 
-export function formatDate(dateValue: string): string {
+export function formatDate(dateValue: string | null): string {
+  if (!dateValue) {
+    return "Sin fecha";
+  }
+
   return new Intl.DateTimeFormat("es-CO", {
     dateStyle: "medium",
     timeStyle: "short",

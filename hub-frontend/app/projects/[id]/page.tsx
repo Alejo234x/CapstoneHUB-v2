@@ -181,7 +181,7 @@ export default async function ProjectDetailsPage({
                                 Cédula
                               </TableCell>
                               <TableCell className="text-right">
-                                {project.proposer.idNumber}
+                                {project.proposer.idNumber ?? "Sin información"}
                               </TableCell>
                             </TableRow>
                             <TableRow>
@@ -292,6 +292,60 @@ export default async function ProjectDetailsPage({
                   </p>
                 </CardContent>
               </Card>
+
+              {project.facultyAdvisor ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Asesor de la facultad</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">
+                      {project.facultyAdvisor}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {project.teamRequirements ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Equipo requerido</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-line text-muted-foreground">
+                      {project.teamRequirements}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {project.deliverables && project.deliverables.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Entregables</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="list-disc pl-5 text-muted-foreground">
+                      {project.deliverables.map((deliverable) => (
+                        <li key={deliverable.id}>{deliverable.description}</li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {project.expectedOutcomes ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Expectativas al finalizar</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-line text-muted-foreground">
+                      {project.expectedOutcomes}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : null}
 
               <Card>
                 <CardHeader>

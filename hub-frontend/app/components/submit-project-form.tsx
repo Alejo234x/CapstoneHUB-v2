@@ -20,6 +20,8 @@ import {
   FieldDescription,
   FieldGroup,
   FieldLabel,
+  FieldLegend,
+  FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -32,6 +34,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RiAddLine, RiDeleteBinLine } from "@remixicon/react";
 
 const projectSources: ReadonlyArray<{
   value: ProjectSource;
@@ -45,34 +48,30 @@ const projectSources: ReadonlyArray<{
 
 type FormState = {
   name: string;
+  source: ProjectSource;
   namep: string;
-  ncedua: string;
-  age: number | "";
   correo: string;
   description: string;
   context: string;
-  location: string;
-  startDate: string;
-  executiontime: string;
-  estimatedCost: number | "";
+  facultyAdvisor: string;
+  teamRequirements: string;
+  expectedOutcomes: string;
+  deliverables: string[];
   requiresLegalization: boolean;
-  source: ProjectSource;
 };
 
 const initialForm: FormState = {
   name: "",
+  source: "external_entity",
   namep: "",
-  ncedua: "",
-  age: "",
   correo: "",
   description: "",
   context: "",
-  location: "",
-  startDate: "",
-  executiontime: "",
-  estimatedCost: "",
+  facultyAdvisor: "",
+  teamRequirements: "",
+  expectedOutcomes: "",
+  deliverables: [""],
   requiresLegalization: false,
-  source: "external_entity",
 };
 
 export default function SubmitProjectForm() {
@@ -90,22 +89,28 @@ export default function SubmitProjectForm() {
   ) {
     const { name, value } = event.target;
 
-    if (name === "age") {
-      if (!/^\d*$/.test(value) || value.length > 2) return;
-    }
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }
 
-    if (name === "ncedua") {
-      if (!/^\d*$/.test(value) || value.length > 10) return;
-    }
+  function handleDeliverableChange(index: number, value: string) {
+    setForm((prev) => {
+      const deliverables = [...prev.deliverables];
+      deliverables[index] = value;
+      return { ...prev, deliverables };
+    });
+  }
 
+  function addDeliverable() {
     setForm((prev) => ({
       ...prev,
-      [name]:
-        name === "age" || name === "estimatedCost"
-          ? value === ""
-            ? ""
-            : Number(value)
-          : value,
+      deliverables: [...prev.deliverables, ""],
+    }));
+  }
+
+  function removeDeliverable(index: number) {
+    setForm((prev) => ({
+      ...prev,
+      deliverables: prev.deliverables.filter((_, itemIndex) => itemIndex !== index),
     }));
   }
 
@@ -116,9 +121,19 @@ export default function SubmitProjectForm() {
 
     try {
       await createProject({
-        ...form,
-        age: Number(form.age),
-        estimatedCost: Number(form.estimatedCost),
+        name: form.name,
+        namep: form.namep,
+        correo: form.correo,
+        description: form.description,
+        context: form.context,
+        source: form.source,
+        requiresLegalization: form.requiresLegalization,
+        facultyAdvisor: form.facultyAdvisor.trim() || undefined,
+        teamRequirements: form.teamRequirements.trim() || undefined,
+        expectedOutcomes: form.expectedOutcomes.trim() || undefined,
+        deliverables: form.deliverables
+          .map((deliverable) => deliverable.trim())
+          .filter(Boolean),
       });
 
       setStatus("success");
@@ -163,184 +178,217 @@ export default function SubmitProjectForm() {
   return (
     <form onSubmit={handleSubmit}>
       <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="name">Nombre del proyecto</FieldLabel>
-          <Input
-            id="name"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            required
-          />
-        </Field>
+        <FieldSet>
+          <FieldLegend>Proponente</FieldLegend>
 
-        <Field>
-          <FieldLabel htmlFor="source">Fuente del proyecto</FieldLabel>
-          <Select
-            value={form.source}
-            onValueChange={(value) =>
-              setForm((prev) => ({
-                ...prev,
-                source: value as ProjectSource,
-              }))
-            }
-          >
-            <SelectTrigger id="source" className="w-full">
-              <SelectValue>
-                {projectSources.find((option) => option.value === form.source)
-                  ?.label ?? "Selecciona una fuente"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {projectSources.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldDescription>
-            Indica de dónde proviene el proyecto: entidad externa,
-            investigación, necesidad interna o impacto social.
-          </FieldDescription>
-        </Field>
+          <Field>
+            <FieldLabel htmlFor="namep">Nombre del responsable</FieldLabel>
+            <Input
+              id="namep"
+              name="namep"
+              value={form.namep}
+              onChange={handleChange}
+              required
+            />
+          </Field>
 
-        <Field>
-          <FieldLabel htmlFor="namep">Nombre del responsable</FieldLabel>
-          <Input
-            id="namep"
-            name="namep"
-            value={form.namep}
-            onChange={handleChange}
-            required
-          />
-        </Field>
+          <Field>
+            <FieldLabel htmlFor="correo">Correo electrónico</FieldLabel>
+            <Input
+              type="email"
+              id="correo"
+              name="correo"
+              value={form.correo}
+              onChange={handleChange}
+              required
+            />
+          </Field>
+        </FieldSet>
 
-        <Field>
-          <FieldLabel htmlFor="ncedua">Número de cédula</FieldLabel>
-          <Input
-            id="ncedua"
-            name="ncedua"
-            type="text"
-            inputMode="numeric"
-            maxLength={10}
-            value={form.ncedua}
-            onChange={handleChange}
-            required
-          />
-        </Field>
+        <FieldSet>
+          <FieldLegend>Proyecto</FieldLegend>
 
-        <Field>
-          <FieldLabel htmlFor="correo">Correo electrónico</FieldLabel>
-          <Input
-            type="email"
-            id="correo"
-            name="correo"
-            value={form.correo}
-            onChange={handleChange}
-            required
-          />
-        </Field>
+          <Field>
+            <FieldLabel htmlFor="name">Nombre del proyecto</FieldLabel>
+            <Input
+              id="name"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              required
+            />
+          </Field>
 
-        <Field>
-          <FieldLabel htmlFor="description">Descripción</FieldLabel>
-          <Textarea
-            id="description"
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            rows={4}
-            required
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="context">Justificación</FieldLabel>
-          <Textarea
-            id="context"
-            name="context"
-            value={form.context}
-            onChange={handleChange}
-            rows={4}
-            required
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="location">Locación</FieldLabel>
-          <Input
-            id="location"
-            name="location"
-            value={form.location}
-            onChange={handleChange}
-            required
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="startDate">
-            Tiempo estimado de inicio
-          </FieldLabel>
-          <Input
-            type="date"
-            id="startDate"
-            name="startDate"
-            value={form.startDate}
-            onChange={handleChange}
-            required
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="executiontime">
-            Tiempo estimado de duracion
-          </FieldLabel>
-          <Input
-            id="executiontime"
-            name="executiontime"
-            value={form.executiontime}
-            onChange={handleChange}
-            required
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="estimatedCost">Costo estimado</FieldLabel>
-          <Input
-            type="number"
-            id="estimatedCost"
-            name="estimatedCost"
-            value={form.estimatedCost}
-            onChange={handleChange}
-            required
-          />
-        </Field>
-
-        <Field orientation="horizontal">
-          <Checkbox
-            id="requiresLegalization"
-            checked={form.requiresLegalization}
-            onCheckedChange={(checked) =>
-              setForm((prev) => ({
-                ...prev,
-                requiresLegalization: checked === true,
-              }))
-            }
-          />
-          <FieldContent>
-            <FieldLabel
-              htmlFor="requiresLegalization"
-              className="font-normal"
+          <Field>
+            <FieldLabel htmlFor="source">Fuente del proyecto</FieldLabel>
+            <Select
+              value={form.source}
+              onValueChange={(value) =>
+                setForm((prev) => ({
+                  ...prev,
+                  source: value as ProjectSource,
+                }))
+              }
             >
-              Requiere proceso de legalización
-            </FieldLabel>
+              <SelectTrigger id="source" className="w-full">
+                <SelectValue>
+                  {projectSources.find((option) => option.value === form.source)
+                    ?.label ?? "Selecciona una fuente"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {projectSources.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <FieldDescription>
-              Marca esta opción si el proyecto necesita contratos de
-              confidencialidad, convenios u otros trámites legales con el
-              proponente.
+              Indica de dónde proviene el proyecto: entidad externa,
+              investigación, necesidad interna o impacto social.
             </FieldDescription>
-          </FieldContent>
-        </Field>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="description">Descripción</FieldLabel>
+            <Textarea
+              id="description"
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              rows={4}
+              required
+            />
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="context">Justificación</FieldLabel>
+            <Textarea
+              id="context"
+              name="context"
+              value={form.context}
+              onChange={handleChange}
+              rows={4}
+              required
+            />
+          </Field>
+        </FieldSet>
+
+        <FieldSet>
+          <FieldLegend>Requisitos y expectativas</FieldLegend>
+
+          <Field>
+            <FieldLabel htmlFor="facultyAdvisor">
+              Asesor de la facultad
+            </FieldLabel>
+            <Input
+              id="facultyAdvisor"
+              name="facultyAdvisor"
+              value={form.facultyAdvisor}
+              onChange={handleChange}
+              placeholder="Docente recomendado, si aplica"
+            />
+            <FieldDescription>
+              Si deseas recomendar un docente para que acompañe el proyecto,
+              indícalo aquí.
+            </FieldDescription>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="teamRequirements">
+              Equipo requerido
+            </FieldLabel>
+            <Textarea
+              id="teamRequirements"
+              name="teamRequirements"
+              value={form.teamRequirements}
+              onChange={handleChange}
+              rows={3}
+              placeholder="Tipo de estudiantes o perfiles que el proyecto necesita"
+            />
+          </Field>
+
+          <Field>
+            <FieldLabel>Entregables</FieldLabel>
+            <div className="flex flex-col gap-2">
+              {form.deliverables.map((deliverable, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input
+                    value={deliverable}
+                    onChange={(event) =>
+                      handleDeliverableChange(index, event.target.value)
+                    }
+                    placeholder={`Entregable ${index + 1}`}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeDeliverable(index)}
+                    aria-label="Eliminar entregable"
+                  >
+                    <RiDeleteBinLine />
+                  </Button>
+                </div>
+              ))}
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-fit"
+                onClick={addDeliverable}
+              >
+                <RiAddLine data-icon="inline-start" />
+                Agregar entregable
+              </Button>
+            </div>
+            <FieldDescription>
+              Lista los productos o resultados que dejará el proyecto.
+            </FieldDescription>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="expectedOutcomes">
+              Expectativas al finalizar
+            </FieldLabel>
+            <Textarea
+              id="expectedOutcomes"
+              name="expectedOutcomes"
+              value={form.expectedOutcomes}
+              onChange={handleChange}
+              rows={3}
+              placeholder="Qué se espera lograr al terminar el proyecto"
+            />
+          </Field>
+
+          <Field orientation="horizontal">
+            <Checkbox
+              id="requiresLegalization"
+              checked={form.requiresLegalization}
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({
+                  ...prev,
+                  requiresLegalization: checked === true,
+                }))
+              }
+            />
+            <FieldContent>
+              <FieldLabel
+                htmlFor="requiresLegalization"
+                className="font-normal"
+              >
+                Requiere proceso de legalización
+              </FieldLabel>
+              <FieldDescription>
+                Marca esta opción si el proyecto necesita contratos de
+                confidencialidad, convenios u otros trámites legales con el
+                proponente.
+              </FieldDescription>
+            </FieldContent>
+          </Field>
+        </FieldSet>
 
         <Button type="submit" disabled={status === "saving"}>
           {status === "saving" && <Spinner data-icon="inline-start" />}

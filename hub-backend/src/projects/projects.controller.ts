@@ -62,13 +62,17 @@ export class ProjectsController {
       description: string;
       context: string;
       namep: string;
-      ncedua: string;
+      ncedua?: string;
       correo: string;
       estimatedCost?: number;
       location?: string;
-      startDate: string;
+      startDate?: string;
       requiresLegalization?: boolean;
       source?: ProjectSource;
+      facultyAdvisor?: string;
+      teamRequirements?: string;
+      expectedOutcomes?: string;
+      deliverables?: string[];
     },
   ): Promise<ProjectDetailResponse> {
     const {
@@ -83,13 +87,24 @@ export class ProjectsController {
       startDate,
       requiresLegalization,
       source,
+      facultyAdvisor,
+      teamRequirements,
+      expectedOutcomes,
+      deliverables,
     } = projectData;
 
-    const parsedStartDate = new Date(`${startDate}T00:00:00`);
+    const parsedStartDate = startDate
+      ? new Date(`${startDate}T00:00:00`)
+      : null;
 
-    if (Number.isNaN(parsedStartDate.getTime())) {
+    if (parsedStartDate && Number.isNaN(parsedStartDate.getTime())) {
       throw new BadRequestException('Invalid start date');
     }
+
+    const deliverableDescriptions = (deliverables ?? [])
+      .map((deliverable) => deliverable.trim())
+      .filter((deliverable) => deliverable.length > 0);
+
     return this.projectService.createProject(user, {
       name,
       description,
@@ -99,10 +114,20 @@ export class ProjectsController {
       location,
       requiresLegalization: requiresLegalization ?? false,
       source: source ?? ProjectSource.external_entity,
+      facultyAdvisor: facultyAdvisor?.trim() || null,
+      teamRequirements: teamRequirements?.trim() || null,
+      expectedOutcomes: expectedOutcomes?.trim() || null,
+      deliverables: deliverableDescriptions.length
+        ? {
+            create: deliverableDescriptions.map((description) => ({
+              description,
+            })),
+          }
+        : undefined,
       naturalProposer: {
         create: {
           fullName: namep,
-          idNumber: ncedua,
+          idNumber: ncedua?.trim() || null,
           email: correo,
         },
       },

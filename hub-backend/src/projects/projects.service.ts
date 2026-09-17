@@ -65,6 +65,7 @@ const projectInclude = {
   statusHistory: { select: projectStatusHistorySelect },
   attachments: { select: attachmentSelect },
   reports: { select: reportSelect },
+  deliverables: true,
 } as const satisfies Prisma.ProjectInclude;
 
 type ProjectWithRelations = Prisma.ProjectGetPayload<{
@@ -75,7 +76,7 @@ export type ProjectProposerResponse =
   | {
       type: 'natural_person';
       fullName: string;
-      idNumber: string;
+      idNumber: string | null;
       email: string;
     }
   | {
@@ -91,7 +92,7 @@ export type ProjectListResponse = {
   id: number;
   name: string;
   status: ProjectStatus;
-  startDate: Date;
+  startDate: Date | null;
   location: string | null;
   requiresLegalization: boolean;
   source: ProjectSource;
@@ -115,17 +116,28 @@ export type MyProjectResponse = {
   id: number;
   name: string;
   status: ProjectStatus;
-  startDate: Date;
+  startDate: Date | null;
   location: string | null;
   myRole: ActorRole;
+};
+
+export type ProjectDeliverableResponse = {
+  id: number;
+  projectId: number;
+  description: string;
+  createdAt: Date;
 };
 
 export type ProjectDetailResponse = ProjectListResponse & {
   description: string;
   context: string;
-  startDate: Date;
+  startDate: Date | null;
   endDate: Date | null;
   estimatedCost: Prisma.Decimal | null;
+  facultyAdvisor: string | null;
+  teamRequirements: string | null;
+  expectedOutcomes: string | null;
+  deliverables: ProjectDeliverableResponse[];
   createdAt: Date;
   updatedAt: Date;
   observations: {
@@ -324,6 +336,18 @@ function mapProjectDetailResponse(
     startDate: project.startDate,
     endDate: project.endDate,
     estimatedCost: project.estimatedCost,
+    facultyAdvisor: project.facultyAdvisor,
+    teamRequirements: project.teamRequirements,
+    expectedOutcomes: project.expectedOutcomes,
+    deliverables: project.deliverables
+      .slice()
+      .sort((left, right) => left.id - right.id)
+      .map((deliverable) => ({
+        id: deliverable.id,
+        projectId: deliverable.projectId,
+        description: deliverable.description,
+        createdAt: deliverable.createdAt,
+      })),
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
     observations: project.observations.map(mapObservation),

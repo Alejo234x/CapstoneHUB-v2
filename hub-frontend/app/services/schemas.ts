@@ -1,7 +1,7 @@
 type ProjectNaturalProposer = {
   type: "natural_person";
   fullName: string;
-  idNumber: string;
+  idNumber: string | null;
   email: string;
 };
 
@@ -138,7 +138,7 @@ export type ProjectItem = {
   location?: string;
   context?: string;
   status: string;
-  startDate: string;
+  startDate: string | null;
   requiresLegalization?: boolean;
   source?: ProjectSource;
   proposer?: ProjectProposer;
@@ -150,9 +150,16 @@ export type MyProject = {
   id: number;
   name: string;
   status: string;
-  startDate: string;
+  startDate: string | null;
   location: string | null;
   myRole: string;
+};
+
+export type ProjectDeliverableItem = {
+  id: number;
+  projectId: number;
+  description: string;
+  createdAt: string;
 };
 
 export type ProjectDetails = {
@@ -165,9 +172,13 @@ export type ProjectDetails = {
   requiresLegalization?: boolean;
   source?: ProjectSource;
   proposer?: ProjectProposer;
-  startDate: string;
+  startDate: string | null;
   endDate: string | null;
   estimatedCost: string | null;
+  facultyAdvisor?: string | null;
+  teamRequirements?: string | null;
+  expectedOutcomes?: string | null;
+  deliverables?: ProjectDeliverableItem[];
   createdAt: string;
   updatedAt: string;
   observations: ProjectObservationItem[];

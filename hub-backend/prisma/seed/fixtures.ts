@@ -21,7 +21,7 @@ export interface UsersFixture {
 export interface NaturalProposerFixture {
   type: 'natural';
   fullName: string;
-  idNumber: string;
+  idNumber?: string;
   email: string;
 }
 
@@ -49,6 +49,10 @@ export interface ProjectFixture {
   estimatedCost?: number | null;
   requiresLegalization?: boolean;
   source?: ProjectSource;
+  facultyAdvisor?: string | null;
+  teamRequirements?: string | null;
+  expectedOutcomes?: string | null;
+  deliverables?: string[];
   startDate: string;
   endDate?: string | null;
   schools?: string[];

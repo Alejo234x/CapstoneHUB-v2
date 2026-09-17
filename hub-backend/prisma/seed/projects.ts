@@ -33,17 +33,27 @@ export async function seedProjects({
         estimatedCost: project.estimatedCost ?? null,
         requiresLegalization: project.requiresLegalization ?? false,
         source: project.source ?? ProjectSource.external_entity,
+        facultyAdvisor: project.facultyAdvisor ?? null,
+        teamRequirements: project.teamRequirements ?? null,
+        expectedOutcomes: project.expectedOutcomes ?? null,
         startDate: new Date(project.startDate),
         endDate: project.endDate ? new Date(project.endDate) : null,
         schools: project.schools?.length
           ? { create: project.schools.map((schoolName) => ({ schoolName })) }
+          : undefined,
+        deliverables: project.deliverables?.length
+          ? {
+              create: project.deliverables.map((description) => ({
+                description,
+              })),
+            }
           : undefined,
         naturalProposer:
           project.proposer.type === 'natural'
             ? {
                 create: {
                   fullName: project.proposer.fullName,
-                  idNumber: project.proposer.idNumber,
+                  idNumber: project.proposer.idNumber ?? null,
                   email: project.proposer.email,
                 },
               }

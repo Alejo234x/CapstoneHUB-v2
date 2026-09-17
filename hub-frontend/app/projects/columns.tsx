@@ -122,7 +122,9 @@ export const columns = columnHelper.columns([
 
   columnHelper.accessor(
     (project: ProjectItem) =>
-      new Date(project.startDate).getFullYear().toString(),
+      project.startDate
+        ? new Date(project.startDate).getFullYear().toString()
+        : "—",
     {
       id: "year",
       header: ({ column }) => (
