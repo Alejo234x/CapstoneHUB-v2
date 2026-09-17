@@ -30,6 +30,7 @@ export async function seedProjects({
         context: project.context,
         location: project.location ?? null,
         estimatedCost: project.estimatedCost ?? null,
+        requiresLegalization: project.requiresLegalization ?? false,
         startDate: new Date(project.startDate),
         endDate: project.endDate ? new Date(project.endDate) : null,
         schools: project.schools?.length

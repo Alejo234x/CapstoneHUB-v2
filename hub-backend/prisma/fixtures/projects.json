@@ -9,6 +9,7 @@
       "startDate": "2026-01-15",
       "endDate": "2026-08-30",
       "schools": ["Ingeniería en Software", "Ingeniería Electrónica"],
+      "requiresLegalization": false,
       "proposer": {
         "type": "natural",
         "fullName": "Roberto Jiménez",
@@ -34,6 +35,7 @@
       "startDate": "2025-11-01",
       "endDate": "2026-07-15",
       "schools": ["Ingeniería Industrial", "Ingeniería Mecánica"],
+      "requiresLegalization": true,
       "proposer": {
         "type": "legal",
         "legalName": "Frío Andino Cía. Ltda.",
@@ -60,6 +62,7 @@
       "startDate": "2026-02-20",
       "endDate": null,
       "schools": ["Ingeniería en Software", "Diseño Gráfico"],
+      "requiresLegalization": false,
       "proposer": {
         "type": "natural",
         "fullName": "Gabriela Suárez",
@@ -82,6 +85,7 @@
       "startDate": "2025-09-10",
       "endDate": "2026-06-01",
       "schools": ["Ingeniería en Software", "Medicina"],
+      "requiresLegalization": true,
       "proposer": {
         "type": "natural",
         "fullName": "Marco Villacís",
@@ -105,6 +109,7 @@
       "startDate": "2025-06-01",
       "endDate": "2026-01-20",
       "schools": ["Ingeniería Electrónica"],
+      "requiresLegalization": true,
       "proposer": {
         "type": "legal",
         "legalName": "EcoCircular S.A.",
@@ -129,6 +134,7 @@
       "startDate": "2026-03-05",
       "endDate": null,
       "schools": ["Ingeniería Electrónica", "Agronomía"],
+      "requiresLegalization": false,
       "proposer": {
         "type": "natural",
         "fullName": "Verónica Chicaiza",

@@ -46,6 +46,7 @@ export interface ProjectFixture {
   context: string;
   location?: string | null;
   estimatedCost?: number | null;
+  requiresLegalization?: boolean;
   startDate: string;
   endDate?: string | null;
   schools?: string[];
