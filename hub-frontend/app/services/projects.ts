@@ -45,6 +45,7 @@ export type CreateProjectPayload = {
   executiontime: string;
   estimatedCost: number;
   startDate: string;
+  requiresLegalization?: boolean;
 };
 
 export async function getProjects(): Promise<{

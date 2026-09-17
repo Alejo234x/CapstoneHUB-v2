@@ -66,6 +66,7 @@ export class ProjectsController {
       estimatedCost?: number;
       location?: string;
       startDate: string;
+      requiresLegalization?: boolean;
     },
   ): Promise<ProjectDetailResponse> {
     const {
@@ -78,6 +79,7 @@ export class ProjectsController {
       estimatedCost,
       location,
       startDate,
+      requiresLegalization,
     } = projectData;
 
     const parsedStartDate = new Date(`${startDate}T00:00:00`);
@@ -92,6 +94,7 @@ export class ProjectsController {
       startDate: parsedStartDate,
       estimatedCost,
       location,
+      requiresLegalization: requiresLegalization ?? false,
       naturalProposer: {
         create: {
           fullName: namep,

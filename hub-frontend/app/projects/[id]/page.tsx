@@ -106,6 +106,9 @@ export default async function ProjectDetailsPage({
             <ProjectAssignmentBadge
               assignments={project.actorAssignments ?? []}
             />
+            {project.requiresLegalization ? (
+              <Badge variant="outline">Requiere legalización</Badge>
+            ) : null}
             <span className="text-sm text-muted-foreground">
               Creado el {formatDate(project.createdAt)}
             </span>
@@ -270,6 +273,19 @@ export default async function ProjectDetailsPage({
                 <CardContent>
                   <p className="text-muted-foreground">
                     {project.location || "Sin información"}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Proceso de legalización</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    {project.requiresLegalization
+                      ? "El proyecto requiere proceso de legalización (contrato de confidencialidad, convenio u otros trámites con el proponente)."
+                      : "El proyecto no requiere proceso de legalización."}
                   </p>
                 </CardContent>
               </Card>

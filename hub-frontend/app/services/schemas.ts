@@ -133,6 +133,7 @@ export type ProjectItem = {
   context?: string;
   status: string;
   startDate: string;
+  requiresLegalization?: boolean;
   proposer?: ProjectProposer;
   actors: ProjectActor[];
   estimatedCost?: string | null;
@@ -154,6 +155,7 @@ export type ProjectDetails = {
   context: string;
   location?: string | null;
   status: string;
+  requiresLegalization?: boolean;
   proposer?: ProjectProposer;
   startDate: string;
   endDate: string | null;

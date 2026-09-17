@@ -32,6 +32,7 @@ function createProjectDetail() {
     description: 'Description',
     context: 'Context',
     location: null,
+    requiresLegalization: false,
     startDate: new Date(),
     endDate: null,
     estimatedCost: null,

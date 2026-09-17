@@ -13,10 +13,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type FormState = {
   name: string;
@@ -30,6 +37,7 @@ type FormState = {
   startDate: string;
   executiontime: string;
   estimatedCost: number | "";
+  requiresLegalization: boolean;
 };
 
 const initialForm: FormState = {
@@ -44,6 +52,7 @@ const initialForm: FormState = {
   startDate: "",
   executiontime: "",
   estimatedCost: "",
+  requiresLegalization: false,
 };
 
 export default function SubmitProjectForm() {
@@ -254,6 +263,32 @@ export default function SubmitProjectForm() {
             onChange={handleChange}
             required
           />
+        </Field>
+
+        <Field orientation="horizontal">
+          <Checkbox
+            id="requiresLegalization"
+            checked={form.requiresLegalization}
+            onCheckedChange={(checked) =>
+              setForm((prev) => ({
+                ...prev,
+                requiresLegalization: checked === true,
+              }))
+            }
+          />
+          <FieldContent>
+            <FieldLabel
+              htmlFor="requiresLegalization"
+              className="font-normal"
+            >
+              Requiere proceso de legalización
+            </FieldLabel>
+            <FieldDescription>
+              Marca esta opción si el proyecto necesita contratos de
+              confidencialidad, convenios u otros trámites legales con el
+              proponente.
+            </FieldDescription>
+          </FieldContent>
         </Field>
 
         <Button type="submit" disabled={status === "saving"}>

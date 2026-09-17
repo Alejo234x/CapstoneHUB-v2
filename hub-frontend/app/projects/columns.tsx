@@ -3,6 +3,7 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { type ProjectItem } from "../services/schemas";
 import { formatStatus } from "../services/utils";
 import { type ProjectTableFeatures } from "./projects-table-features";
@@ -89,6 +90,23 @@ export const columns = columnHelper.columns([
       <span>{formatStatus(getValue())}</span>
     ),
   }),
+
+  columnHelper.accessor(
+    (project: ProjectItem) => (project.requiresLegalization ? "Sí" : "No"),
+    {
+      id: "requiresLegalization",
+      header: ({ column }) => (
+        <SortableHeader label="Legalización" column={column} />
+      ),
+      filterFn: "includesString",
+      cell: ({ getValue }) =>
+        getValue() === "Sí" ? (
+          <Badge variant="outline">Sí</Badge>
+        ) : (
+          <span className="text-muted-foreground">No</span>
+        ),
+    },
+  ),
 
   columnHelper.accessor(
     (project: ProjectItem) =>

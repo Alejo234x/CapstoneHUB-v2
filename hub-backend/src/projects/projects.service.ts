@@ -92,6 +92,7 @@ export type ProjectListResponse = {
   status: ProjectStatus;
   startDate: Date;
   location: string | null;
+  requiresLegalization: boolean;
   proposer: ProjectProposerResponse | null;
   actors: ProjectActorResponse[];
 };
@@ -304,6 +305,7 @@ function mapProjectListResponse(
     status: project.status,
     startDate: project.startDate,
     location: project.location,
+    requiresLegalization: project.requiresLegalization,
     proposer: mapProjectProposer(project),
     actors: project.actorAssignments.map(mapActorBase),
   };
