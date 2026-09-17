@@ -28,7 +28,9 @@ Tabla intermedia que da a un usuario uno o más roles globales. Única por
 ### Project
 
 La entidad central. Contiene campos descriptivos, estado, fechas y costo
-estimado, y es dueña de todos los registros relacionados mediante borrado en
+estimado, e indica si el proyecto requiere un proceso de legalización
+(`requiresLegalization`, por ejemplo contrato de confidencialidad o convenio con
+el proponente). Es dueña de todos los registros relacionados mediante borrado en
 cascada.
 
 ### ProjectSchool
@@ -104,6 +106,7 @@ classDiagram
         +DateTime startDate
         +DateTime endDate
         +Decimal estimatedCost
+        +Boolean requiresLegalization
         +DateTime createdAt
         +DateTime updatedAt
     }
