@@ -1,5 +1,6 @@
 import {
   ActorRole,
+  ProjectSource,
   ProjectStatus,
   UserRole,
 } from '../../src/generated/prisma/client';
@@ -20,20 +21,11 @@ export interface UsersFixture {
 export interface NaturalProposerFixture {
   type: 'natural';
   fullName: string;
-  idNumber: string;
+  idNumber?: string;
   email: string;
 }
 
-export interface LegalProposerFixture {
-  type: 'legal';
-  legalName: string;
-  nit: string;
-  email: string;
-  phone: string;
-  contactUrl?: string | null;
-}
-
-export type ProposerFixture = NaturalProposerFixture | LegalProposerFixture;
+export type ProposerFixture = NaturalProposerFixture;
 
 export interface ProjectActorFixture {
   email: string;
@@ -46,6 +38,12 @@ export interface ProjectFixture {
   context: string;
   location?: string | null;
   estimatedCost?: number | null;
+  requiresLegalization?: boolean;
+  source?: ProjectSource;
+  facultyAdvisor?: string | null;
+  teamRequirements?: string | null;
+  expectedOutcomes?: string | null;
+  deliverables?: string[];
   startDate: string;
   endDate?: string | null;
   schools?: string[];

@@ -9,7 +9,9 @@ import ProjectReportsPanel from "./project-reports-panel";
 import ProjectStatusHistoryPanel from "./project-status-history-panel";
 import ProjectAttachmentsPanel from "./project-attachments-panel";
 import ProjectAssignmentBadge from "./project-assignment-badge";
-import { formatStatus } from "@/app/services/utils";
+import ProjectLegalizationBadge from "./project-legalization-badge";
+import ProjectSourceBadge from "./project-source-badge";
+import { formatStatus, formatProjectSource } from "@/app/services/utils";
 import {
   Tabs,
   TabsContent,
@@ -31,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import {
   RiAttachmentLine,
-  RiCalendarLine,
+  // RiCalendarLine,
   RiChat3Line,
   RiFileCheckLine,
   RiFlagLine,
@@ -102,10 +104,14 @@ export default async function ProjectDetailsPage({
         <Card>
           <CardContent>
           <div className="flex flex-wrap items-center gap-3">
-            <Badge variant="secondary">{formatStatus(project.status)}</Badge>
+            <Badge variant="secondary">Estado: {formatStatus(project.status)}</Badge>
             <ProjectAssignmentBadge
               assignments={project.actorAssignments ?? []}
             />
+            <ProjectLegalizationBadge
+              requiresLegalization={project.requiresLegalization}
+            />
+            <ProjectSourceBadge source={project.source} />
             <span className="text-sm text-muted-foreground">
               Creado el {formatDate(project.createdAt)}
             </span>
@@ -121,10 +127,10 @@ export default async function ProjectDetailsPage({
                 <RiPriceTag3Line data-icon="inline-start" />
                 Categorías
               </TabsTrigger>
-              <TabsTrigger value="fechas">
+              {/* <TabsTrigger value="fechas">
                 <RiCalendarLine data-icon="inline-start" />
                 Fechas y costos
-              </TabsTrigger>
+              </TabsTrigger> */}
               <TabsTrigger value="equipo">
                 <RiTeamLine data-icon="inline-start" />
                 Equipo
@@ -160,77 +166,30 @@ export default async function ProjectDetailsPage({
                   {project.proposer ? (
                     <Table>
                       <TableBody>
-                        {project.proposer.type === "natural_person" ? (
-                          <>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Nombre completo
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.fullName}
-                              </TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Cédula
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.idNumber}
-                              </TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Correo
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.email}
-                              </TableCell>
-                            </TableRow>
-                          </>
-                        ) : (
-                          <>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Razón social
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.legalName}
-                              </TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                NIT
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.nit}
-                              </TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Correo
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.email}
-                              </TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Teléfono
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.phone}
-                              </TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Contacto
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.contactUrl ?? "Sin enlace"}
-                              </TableCell>
-                            </TableRow>
-                          </>
-                        )}
+                        <TableRow>
+                          <TableCell className="text-muted-foreground">
+                            Nombre completo
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {project.proposer.fullName}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="text-muted-foreground">
+                            Cédula
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {project.proposer.idNumber ?? "Sin información"}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="text-muted-foreground">
+                            Correo
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {project.proposer.email}
+                          </TableCell>
+                        </TableRow>
                       </TableBody>
                     </Table>
                   ) : (
@@ -265,11 +224,80 @@ export default async function ProjectDetailsPage({
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Lugar</CardTitle>
+                  <CardTitle>Fuente del proyecto</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">
-                    {project.location || "Sin información"}
+                    {project.source
+                      ? formatProjectSource(project.source)
+                      : "Sin información"}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {project.facultyAdvisor ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Asesor de la facultad</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">
+                      {project.facultyAdvisor}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {project.teamRequirements ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Equipo requerido</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-line text-muted-foreground">
+                      {project.teamRequirements}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {project.deliverables && project.deliverables.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Entregables</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="list-disc pl-5 text-muted-foreground">
+                      {project.deliverables.map((deliverable) => (
+                        <li key={deliverable.id}>{deliverable.description}</li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {project.expectedOutcomes ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Expectativas al finalizar</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-line text-muted-foreground">
+                      {project.expectedOutcomes}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Proceso de legalización</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    {project.requiresLegalization
+                      ? "El proyecto requiere proceso de legalización (contrato de confidencialidad, convenio u otros trámites con el proponente)."
+                      : "El proyecto no requiere proceso de legalización."}
                   </p>
                 </CardContent>
               </Card>

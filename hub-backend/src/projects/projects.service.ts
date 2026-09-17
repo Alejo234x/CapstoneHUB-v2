@@ -8,6 +8,7 @@ import {
   ActorRole,
   Prisma,
   Project,
+  ProjectSource,
   ProjectStatus,
   UserRole,
 } from '../generated/prisma/client';
@@ -57,41 +58,34 @@ const projectObservationSelect = {
 
 const projectInclude = {
   naturalProposer: true,
-  legalProposer: true,
   observations: { select: projectObservationSelect },
   actorAssignments: { include: { user: true } },
   milestones: true,
   statusHistory: { select: projectStatusHistorySelect },
   attachments: { select: attachmentSelect },
   reports: { select: reportSelect },
+  deliverables: true,
 } as const satisfies Prisma.ProjectInclude;
 
 type ProjectWithRelations = Prisma.ProjectGetPayload<{
   include: typeof projectInclude;
 }>;
 
-export type ProjectProposerResponse =
-  | {
-      type: 'natural_person';
-      fullName: string;
-      idNumber: string;
-      email: string;
-    }
-  | {
-      type: 'legal_person';
-      legalName: string;
-      nit: string;
-      email: string;
-      phone: string;
-      contactUrl: string | null;
-    };
+export type ProjectProposerResponse = {
+  type: 'natural_person';
+  fullName: string;
+  idNumber: string | null;
+  email: string;
+};
 
 export type ProjectListResponse = {
   id: number;
   name: string;
   status: ProjectStatus;
-  startDate: Date;
+  startDate: Date | null;
   location: string | null;
+  requiresLegalization: boolean;
+  source: ProjectSource;
   proposer: ProjectProposerResponse | null;
   actors: ProjectActorResponse[];
 };
@@ -112,17 +106,28 @@ export type MyProjectResponse = {
   id: number;
   name: string;
   status: ProjectStatus;
-  startDate: Date;
+  startDate: Date | null;
   location: string | null;
   myRole: ActorRole;
+};
+
+export type ProjectDeliverableResponse = {
+  id: number;
+  projectId: number;
+  description: string;
+  createdAt: Date;
 };
 
 export type ProjectDetailResponse = ProjectListResponse & {
   description: string;
   context: string;
-  startDate: Date;
+  startDate: Date | null;
   endDate: Date | null;
   estimatedCost: Prisma.Decimal | null;
+  facultyAdvisor: string | null;
+  teamRequirements: string | null;
+  expectedOutcomes: string | null;
+  deliverables: ProjectDeliverableResponse[];
   createdAt: Date;
   updatedAt: Date;
   observations: {
@@ -199,7 +204,7 @@ export type AssignableUserResponse = {
 };
 
 function mapProjectProposer(
-  project: Pick<ProjectWithRelations, 'naturalProposer' | 'legalProposer'>,
+  project: Pick<ProjectWithRelations, 'naturalProposer'>,
 ): ProjectProposerResponse | null {
   if (project.naturalProposer) {
     return {
@@ -207,17 +212,6 @@ function mapProjectProposer(
       fullName: project.naturalProposer.fullName,
       idNumber: project.naturalProposer.idNumber,
       email: project.naturalProposer.email,
-    };
-  }
-
-  if (project.legalProposer) {
-    return {
-      type: 'legal_person',
-      legalName: project.legalProposer.legalName,
-      nit: project.legalProposer.nit,
-      email: project.legalProposer.email,
-      phone: project.legalProposer.phone,
-      contactUrl: project.legalProposer.contactUrl,
     };
   }
 
@@ -304,6 +298,8 @@ function mapProjectListResponse(
     status: project.status,
     startDate: project.startDate,
     location: project.location,
+    requiresLegalization: project.requiresLegalization,
+    source: project.source,
     proposer: mapProjectProposer(project),
     actors: project.actorAssignments.map(mapActorBase),
   };
@@ -319,6 +315,18 @@ function mapProjectDetailResponse(
     startDate: project.startDate,
     endDate: project.endDate,
     estimatedCost: project.estimatedCost,
+    facultyAdvisor: project.facultyAdvisor,
+    teamRequirements: project.teamRequirements,
+    expectedOutcomes: project.expectedOutcomes,
+    deliverables: project.deliverables
+      .slice()
+      .sort((left, right) => left.id - right.id)
+      .map((deliverable) => ({
+        id: deliverable.id,
+        projectId: deliverable.projectId,
+        description: deliverable.description,
+        createdAt: deliverable.createdAt,
+      })),
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
     observations: project.observations.map(mapObservation),

@@ -3,8 +3,9 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { type ProjectItem } from "../services/schemas";
-import { formatStatus } from "../services/utils";
+import { formatStatus, formatProjectSource } from "../services/utils";
 import { type ProjectTableFeatures } from "./projects-table-features";
 
 const columnHelper = createColumnHelper<ProjectTableFeatures, ProjectItem>();
@@ -50,28 +51,7 @@ export const columns = columnHelper.columns([
 
   columnHelper.accessor(
     (project: ProjectItem) =>
-      project.location || project.context || "Sin información",
-    {
-      id: "location",
-      header: ({ column }) => (
-        <SortableHeader label="Lugar" column={column} />
-      ),
-      filterFn: "includesString",
-    },
-  ),
-
-  columnHelper.accessor(
-    (project: ProjectItem) => {
-      if (project.proposer?.type === "natural_person") {
-        return project.proposer.fullName;
-      }
-
-      if (project.proposer?.type === "legal_person") {
-        return project.proposer.legalName;
-      }
-
-      return "Sin información";
-    },
+      project.proposer?.fullName ?? "Sin información",
     {
       id: "proposer",
       header: ({ column }) => (
@@ -92,7 +72,38 @@ export const columns = columnHelper.columns([
 
   columnHelper.accessor(
     (project: ProjectItem) =>
-      new Date(project.startDate).getFullYear().toString(),
+      project.source ? formatProjectSource(project.source) : "Sin información",
+    {
+      id: "source",
+      header: ({ column }) => (
+        <SortableHeader label="Fuente" column={column} />
+      ),
+      filterFn: "includesString",
+    },
+  ),
+
+  columnHelper.accessor(
+    (project: ProjectItem) => (project.requiresLegalization ? "Sí" : "No"),
+    {
+      id: "requiresLegalization",
+      header: ({ column }) => (
+        <SortableHeader label="Legalización" column={column} />
+      ),
+      filterFn: "includesString",
+      cell: ({ getValue }) =>
+        getValue() === "Sí" ? (
+          <Badge variant="outline">Sí</Badge>
+        ) : (
+          <span className="text-muted-foreground">No</span>
+        ),
+    },
+  ),
+
+  columnHelper.accessor(
+    (project: ProjectItem) =>
+      project.startDate
+        ? new Date(project.startDate).getFullYear().toString()
+        : "—",
     {
       id: "year",
       header: ({ column }) => (

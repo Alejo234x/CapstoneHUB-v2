@@ -12,6 +12,8 @@ Ver también: [Arquitectura del backend](./backend_arch.md).
   `in_progress`, `closed`, `rejected`.
 - `UserRole`: `admin`, `evaluator`, `coordinator`, `advisor`, `student`.
 - `ActorRole`: `advisor`, `coordinator`, `student`, `evaluator`.
+- `ProjectSource`: `external_entity`, `research`, `internal_need`,
+  `social_impact`.
 
 ## Entidades
 
@@ -27,21 +29,31 @@ Tabla intermedia que da a un usuario uno o más roles globales. Única por
 
 ### Project
 
-La entidad central. Contiene campos descriptivos, estado, fechas y costo
-estimado, y es dueña de todos los registros relacionados mediante borrado en
-cascada.
+La entidad central. Contiene campos descriptivos, estado y costo estimado
+(opcional), e indica si el proyecto requiere un proceso de legalización
+(`requiresLegalization`, por ejemplo contrato de confidencialidad o convenio con
+el proponente) y su origen (`source`: entidad externa, investigación, necesidad
+interna o impacto social). Incluye además el asesor de facultad recomendado
+(`facultyAdvisor`), el equipo requerido (`teamRequirements`), las expectativas
+finales (`expectedOutcomes`) y una lista de entregables. `startDate` es opcional.
+Es dueña de todos los registros relacionados mediante borrado en cascada.
 
 ### ProjectSchool
 
 Escuelas asociadas a un proyecto. Clave primaria compuesta
 `(projectId, schoolName)`.
 
-### ProjectNaturalProposer / ProjectLegalProposer
+### ProjectDeliverable
 
-Datos opcionales del proponente: persona natural (`fullName`, `idNumber`,
-`email`) o persona jurídica (`legalName`, `nit` único, `email`, `phone`,
-`contactUrl`). Un proyecto tiene como máximo uno de cada uno (uno a uno vía
-`projectId`).
+Entregables de texto libre asociados a un proyecto (uno a muchos vía
+`projectId`). Alimenta el formulario dinámico de entregables.
+
+### ProjectNaturalProposer
+
+Datos opcionales del proponente (`fullName`, `idNumber` opcional, `email`). Un
+proyecto tiene como máximo uno (uno a uno vía `projectId`). El proponente puede
+representar a una entidad externa, una investigación, una necesidad interna o una
+iniciativa de impacto social; el formulario de propuesta es único y flexible.
 
 ### ProjectActorAssignment
 
@@ -104,6 +116,11 @@ classDiagram
         +DateTime startDate
         +DateTime endDate
         +Decimal estimatedCost
+        +Boolean requiresLegalization
+        +ProjectSource source
+        +String facultyAdvisor
+        +String teamRequirements
+        +String expectedOutcomes
         +DateTime createdAt
         +DateTime updatedAt
     }
@@ -114,21 +131,18 @@ classDiagram
         +DateTime createdAt
     }
 
+    class ProjectDeliverable {
+        +Int id
+        +Int projectId
+        +String description
+        +DateTime createdAt
+    }
+
     class ProjectNaturalProposer {
         +Int projectId
         +String fullName
         +String idNumber
         +String email
-        +DateTime createdAt
-    }
-
-    class ProjectLegalProposer {
-        +Int projectId
-        +String legalName
-        +String nit
-        +String email
-        +String phone
-        +String contactUrl
         +DateTime createdAt
     }
 
@@ -214,8 +228,8 @@ classDiagram
     User "0..1" --> "0..*" ProjectAttachment : uploadedAttachments
 
     Project "1" *-- "0..*" ProjectSchool : schools
+    Project "1" *-- "0..*" ProjectDeliverable : deliverables
     Project "1" *-- "0..1" ProjectNaturalProposer : naturalProposer
-    Project "1" *-- "0..1" ProjectLegalProposer : legalProposer
     Project "1" *-- "0..*" ProjectActorAssignment : actorAssignments
     Project "1" *-- "0..*" ProjectObservation : observations
     Project "1" *-- "0..*" ProjectStatusHistory : statusHistory

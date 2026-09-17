@@ -6,7 +6,7 @@ import {
 import { AuthorizationService } from '../auth/authorization.service';
 import { PrismaService } from '../prisma.service';
 import { ProjectStatus } from '../generated/prisma/client';
-import { ActorRole, UserRole } from '../generated/prisma/client';
+import { ActorRole, ProjectSource, UserRole } from '../generated/prisma/client';
 
 const ADMIN_USER = {
   id: 1,
@@ -32,6 +32,12 @@ function createProjectDetail() {
     description: 'Description',
     context: 'Context',
     location: null,
+    requiresLegalization: false,
+    source: ProjectSource.external_entity,
+    facultyAdvisor: null,
+    teamRequirements: null,
+    expectedOutcomes: null,
+    deliverables: [],
     startDate: new Date(),
     endDate: null,
     estimatedCost: null,

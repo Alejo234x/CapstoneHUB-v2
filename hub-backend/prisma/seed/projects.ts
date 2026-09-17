@@ -1,5 +1,6 @@
 import { SeedContext, log } from './common';
 import { loadProjects } from './fixtures';
+import { ProjectSource } from '../../src/generated/prisma/client';
 
 export async function seedProjects({
   prisma,
@@ -30,33 +31,30 @@ export async function seedProjects({
         context: project.context,
         location: project.location ?? null,
         estimatedCost: project.estimatedCost ?? null,
+        requiresLegalization: project.requiresLegalization ?? false,
+        source: project.source ?? ProjectSource.external_entity,
+        facultyAdvisor: project.facultyAdvisor ?? null,
+        teamRequirements: project.teamRequirements ?? null,
+        expectedOutcomes: project.expectedOutcomes ?? null,
         startDate: new Date(project.startDate),
         endDate: project.endDate ? new Date(project.endDate) : null,
         schools: project.schools?.length
           ? { create: project.schools.map((schoolName) => ({ schoolName })) }
           : undefined,
-        naturalProposer:
-          project.proposer.type === 'natural'
-            ? {
-                create: {
-                  fullName: project.proposer.fullName,
-                  idNumber: project.proposer.idNumber,
-                  email: project.proposer.email,
-                },
-              }
-            : undefined,
-        legalProposer:
-          project.proposer.type === 'legal'
-            ? {
-                create: {
-                  legalName: project.proposer.legalName,
-                  nit: project.proposer.nit,
-                  email: project.proposer.email,
-                  phone: project.proposer.phone,
-                  contactUrl: project.proposer.contactUrl ?? null,
-                },
-              }
-            : undefined,
+        deliverables: project.deliverables?.length
+          ? {
+              create: project.deliverables.map((description) => ({
+                description,
+              })),
+            }
+          : undefined,
+        naturalProposer: {
+          create: {
+            fullName: project.proposer.fullName,
+            idNumber: project.proposer.idNumber ?? null,
+            email: project.proposer.email,
+          },
+        },
       },
       select: { id: true },
     });

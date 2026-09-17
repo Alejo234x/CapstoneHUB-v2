@@ -10,7 +10,7 @@ Class Proyecto
 - context: Text
 - type: ProjectType
 - status: ProjectStatus
-- startDate: Date [0..1]
+- startDate: Date
 - endDate: Date [0..1]
 - estimatedCost: Decimal [0..1]
 - createdAt: DateTime
@@ -23,9 +23,17 @@ Class EscuelaProyecto
 Class ProponenteNatural
 - projectId: UUID
 - fullName: String
-- idNumber: String [0..1]
+- idNumber: String
 - age: Integer
 - email: String
+
+Class ProponenteJuridico
+- projectId: UUID
+- legalName: String
+- taxId: String
+- email: String
+- phone: String
+- contactUrl: String [0..1]
 
 Class Actor
 - id: UUID
@@ -80,11 +88,13 @@ Enum ActorRole
 
 Enum ProposerType
 - natural_person
+- legal_entity
 
 ## Relaciones
 
 Proyecto "1" -- "0..*" EscuelaProyecto : incluye
 Proyecto "1" -- "0..1" ProponenteNatural : tiene
+Proyecto "1" -- "0..1" ProponenteJuridico : tiene
 Proyecto "1" -- "0..*" AsignacionActorProyecto : define
 Actor "1" -- "0..*" AsignacionActorProyecto : participa
 Proyecto "1" -- "0..*" ObservacionProyecto : registra
@@ -95,7 +105,7 @@ Actor "0..1" -- "0..*" HistorialEstadoProyecto : autor
 
 - Codigo de proyecto unico. No pueden existir dos proyectos con el mismo projectCode.
 
-- Un proyecto puede tener como maximo un ProponenteNatural.
+- Proponente exclusivo por proyecto, Cada Proyecto debe tener exactamente un tipo de proponente: ProponenteNatural o ProponenteJuridico, nunca ambos al mismo tiempo.
 
 - Un actor, un rol por proyecto. En un mismo Proyecto, un Actor no puede aparecer dos veces en AsignacionActorProyecto.
 
@@ -110,3 +120,4 @@ Transiciones de estado controladas
   - approved -> assigned | rejected
   - assigned -> in_progress | rejected
   - in_progress -> closed | rejected
+

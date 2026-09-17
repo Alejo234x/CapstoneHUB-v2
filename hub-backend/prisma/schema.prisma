@@ -42,6 +42,13 @@ enum ReportStatus {
   rejected
 }
 
+enum ProjectSource {
+  external_entity
+  research
+  internal_need
+  social_impact
+}
+
 model User {
   id              Int       @id @default(autoincrement())
   fullName        String    @map("full_name") @db.VarChar(255)
@@ -80,27 +87,32 @@ model UserRoleAssignment {
 }
 
 model Project {
-  id            Int           @id @default(autoincrement())
-  name          String        @db.VarChar(255)
-  description   String        @db.Text
-  context       String        @db.Text
-  location      String?       @db.VarChar(255)
-  status        ProjectStatus @default(proposed)
-  startDate     DateTime      @map("start_date")
-  endDate       DateTime?     @map("end_date")
-  estimatedCost Decimal?      @map("estimated_cost") @db.Decimal(12, 2)
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  id                   Int           @id @default(autoincrement())
+  name                 String        @db.VarChar(255)
+  description          String        @db.Text
+  context              String        @db.Text
+  location             String?       @db.VarChar(255)
+  status               ProjectStatus @default(proposed)
+  startDate            DateTime?     @map("start_date")
+  endDate              DateTime?     @map("end_date")
+  estimatedCost        Decimal?      @map("estimated_cost") @db.Decimal(12, 2)
+  requiresLegalization Boolean       @default(false) @map("requires_legalization")
+  source               ProjectSource @default(external_entity)
+  facultyAdvisor       String?       @map("faculty_advisor") @db.VarChar(255)
+  teamRequirements     String?       @map("team_requirements") @db.Text
+  expectedOutcomes     String?       @map("expected_outcomes") @db.Text
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
 
   schools          ProjectSchool[]
   naturalProposer  ProjectNaturalProposer?
-  legalProposer    ProjectLegalProposer?
   actorAssignments ProjectActorAssignment[]
   observations     ProjectObservation[]
   statusHistory    ProjectStatusHistory[]
   milestones       ProjectMilestones[]
   attachments      ProjectAttachment[]
   reports          ProjectReport[]
+  deliverables     ProjectDeliverable[]
 
   @@index([status], map: "idx_project_status")
   @@index([startDate], map: "idx_project_start_date")
@@ -120,10 +132,22 @@ model ProjectSchool {
   @@map("project_school")
 }
 
+model ProjectDeliverable {
+  id          Int      @id @default(autoincrement())
+  projectId   Int      @map("project_id")
+  description String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId], map: "idx_project_deliverable_project_id")
+  @@map("project_deliverable")
+}
+
 model ProjectNaturalProposer {
   projectId Int      @id @map("project_id")
   fullName  String   @map("full_name") @db.VarChar(255)
-  idNumber  String   @map("id_number") @db.VarChar(50)
+  idNumber  String?  @map("id_number") @db.VarChar(50)
   email     String   @db.VarChar(255)
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -132,22 +156,6 @@ model ProjectNaturalProposer {
   @@index([idNumber], map: "idx_project_natural_id_number")
   @@index([email], map: "idx_project_natural_email")
   @@map("project_natural_proposer")
-}
-
-model ProjectLegalProposer {
-  projectId  Int      @id @map("project_id")
-  legalName  String   @map("legal_name") @db.VarChar(255)
-  nit        String   @unique(map: "uk_project_legal_nit") @db.VarChar(50)
-  email      String   @db.VarChar(255)
-  phone      String   @db.VarChar(20)
-  contactUrl String?  @map("contact_url") @db.VarChar(255)
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@index([nit], map: "idx_project_legal_nit")
-  @@index([email], map: "idx_project_legal_email")
-  @@map("project_legal_proposer")
 }
 
 model ProjectActorAssignment {

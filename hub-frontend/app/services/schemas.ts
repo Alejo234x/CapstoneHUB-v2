@@ -1,22 +1,17 @@
 type ProjectNaturalProposer = {
   type: "natural_person";
   fullName: string;
-  idNumber: string;
+  idNumber: string | null;
   email: string;
 };
 
-type ProjectLegalProposer = {
-  type: "legal_person";
-  legalName: string;
-  nit: string;
-  email: string;
-  phone: string;
-  contactUrl: string | null;
-};
+export type ProjectProposer = ProjectNaturalProposer;
 
-export type ProjectProposer =
-  | ProjectNaturalProposer
-  | ProjectLegalProposer;
+export type ProjectSource =
+  | "external_entity"
+  | "research"
+  | "internal_need"
+  | "social_impact";
 
 type ProjectActor = {
   id: number;
@@ -132,7 +127,9 @@ export type ProjectItem = {
   location?: string;
   context?: string;
   status: string;
-  startDate: string;
+  startDate: string | null;
+  requiresLegalization?: boolean;
+  source?: ProjectSource;
   proposer?: ProjectProposer;
   actors: ProjectActor[];
   estimatedCost?: string | null;
@@ -142,9 +139,16 @@ export type MyProject = {
   id: number;
   name: string;
   status: string;
-  startDate: string;
+  startDate: string | null;
   location: string | null;
   myRole: string;
+};
+
+export type ProjectDeliverableItem = {
+  id: number;
+  projectId: number;
+  description: string;
+  createdAt: string;
 };
 
 export type ProjectDetails = {
@@ -154,10 +158,16 @@ export type ProjectDetails = {
   context: string;
   location?: string | null;
   status: string;
+  requiresLegalization?: boolean;
+  source?: ProjectSource;
   proposer?: ProjectProposer;
-  startDate: string;
+  startDate: string | null;
   endDate: string | null;
   estimatedCost: string | null;
+  facultyAdvisor?: string | null;
+  teamRequirements?: string | null;
+  expectedOutcomes?: string | null;
+  deliverables?: ProjectDeliverableItem[];
   createdAt: string;
   updatedAt: string;
   observations: ProjectObservationItem[];

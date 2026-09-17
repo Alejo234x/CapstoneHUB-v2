@@ -19,6 +19,21 @@ export function formatStatus(status: string): string {
   }
 }
 
+export function formatProjectSource(source: string): string {
+  switch (source) {
+    case "external_entity":
+      return "Entidad externa";
+    case "research":
+      return "Investigación";
+    case "internal_need":
+      return "Necesidad interna";
+    case "social_impact":
+      return "Impacto social";
+    default:
+      return source;
+  }
+}
+
 export function formatRole(role: string): string {
   switch (role) {
     case "admin":
@@ -59,7 +74,11 @@ export const ALLOWED_MIME_TYPES: ReadonlySet<string> = new Set([
 
 export const ATTACHMENT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg";
 
-export function formatDate(dateValue: string): string {
+export function formatDate(dateValue: string | null): string {
+  if (!dateValue) {
+    return "Sin fecha";
+  }
+
   return new Intl.DateTimeFormat("es-CO", {
     dateStyle: "medium",
     timeStyle: "short",
