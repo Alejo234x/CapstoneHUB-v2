@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { createProject } from "../services/projects";
+import { type ProjectSource } from "../services/schemas";
 import { useAuth } from "./auth-provider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -21,9 +22,26 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+
+const projectSources: ReadonlyArray<{
+  value: ProjectSource;
+  label: string;
+}> = [
+  { value: "external_entity", label: "Entidad externa" },
+  { value: "research", label: "Investigación" },
+  { value: "internal_need", label: "Necesidad interna" },
+  { value: "social_impact", label: "Impacto social" },
+];
 
 type FormState = {
   name: string;
@@ -38,6 +56,7 @@ type FormState = {
   executiontime: string;
   estimatedCost: number | "";
   requiresLegalization: boolean;
+  source: ProjectSource;
 };
 
 const initialForm: FormState = {
@@ -53,6 +72,7 @@ const initialForm: FormState = {
   executiontime: "",
   estimatedCost: "",
   requiresLegalization: false,
+  source: "external_entity",
 };
 
 export default function SubmitProjectForm() {
@@ -152,6 +172,37 @@ export default function SubmitProjectForm() {
             onChange={handleChange}
             required
           />
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="source">Fuente del proyecto</FieldLabel>
+          <Select
+            value={form.source}
+            onValueChange={(value) =>
+              setForm((prev) => ({
+                ...prev,
+                source: value as ProjectSource,
+              }))
+            }
+          >
+            <SelectTrigger id="source" className="w-full">
+              <SelectValue>
+                {projectSources.find((option) => option.value === form.source)
+                  ?.label ?? "Selecciona una fuente"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {projectSources.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <FieldDescription>
+            Indica de dónde proviene el proyecto: entidad externa,
+            investigación, necesidad interna o impacto social.
+          </FieldDescription>
         </Field>
 
         <Field>

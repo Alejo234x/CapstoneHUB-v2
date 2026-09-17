@@ -8,6 +8,7 @@ import {
   ActorRole,
   Prisma,
   Project,
+  ProjectSource,
   ProjectStatus,
   UserRole,
 } from '../generated/prisma/client';
@@ -93,6 +94,7 @@ export type ProjectListResponse = {
   startDate: Date;
   location: string | null;
   requiresLegalization: boolean;
+  source: ProjectSource;
   proposer: ProjectProposerResponse | null;
   actors: ProjectActorResponse[];
 };
@@ -306,6 +308,7 @@ function mapProjectListResponse(
     startDate: project.startDate,
     location: project.location,
     requiresLegalization: project.requiresLegalization,
+    source: project.source,
     proposer: mapProjectProposer(project),
     actors: project.actorAssignments.map(mapActorBase),
   };

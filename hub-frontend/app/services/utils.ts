@@ -19,6 +19,21 @@ export function formatStatus(status: string): string {
   }
 }
 
+export function formatProjectSource(source: string): string {
+  switch (source) {
+    case "external_entity":
+      return "Entidad externa";
+    case "research":
+      return "Investigación";
+    case "internal_need":
+      return "Necesidad interna";
+    case "social_impact":
+      return "Impacto social";
+    default:
+      return source;
+  }
+}
+
 export function formatRole(role: string): string {
   switch (role) {
     case "admin":

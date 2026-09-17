@@ -42,6 +42,13 @@ enum ReportStatus {
   rejected
 }
 
+enum ProjectSource {
+  external_entity
+  research
+  internal_need
+  social_impact
+}
+
 model User {
   id              Int       @id @default(autoincrement())
   fullName        String    @map("full_name") @db.VarChar(255)
@@ -80,18 +87,19 @@ model UserRoleAssignment {
 }
 
 model Project {
-  id            Int           @id @default(autoincrement())
-  name          String        @db.VarChar(255)
-  description   String        @db.Text
-  context       String        @db.Text
-  location      String?       @db.VarChar(255)
-  status        ProjectStatus @default(proposed)
-  startDate     DateTime      @map("start_date")
-  endDate       DateTime?     @map("end_date")
-  estimatedCost Decimal?      @map("estimated_cost") @db.Decimal(12, 2)
-  requiresLegalization Boolean @default(false) @map("requires_legalization")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  id                   Int           @id @default(autoincrement())
+  name                 String        @db.VarChar(255)
+  description          String        @db.Text
+  context              String        @db.Text
+  location             String?       @db.VarChar(255)
+  status               ProjectStatus @default(proposed)
+  startDate            DateTime      @map("start_date")
+  endDate              DateTime?     @map("end_date")
+  estimatedCost        Decimal?      @map("estimated_cost") @db.Decimal(12, 2)
+  requiresLegalization Boolean       @default(false) @map("requires_legalization")
+  source               ProjectSource @default(external_entity)
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
 
   schools          ProjectSchool[]
   naturalProposer  ProjectNaturalProposer?

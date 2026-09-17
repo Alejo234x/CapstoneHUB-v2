@@ -5,6 +5,7 @@ import {
   ProjectMilestoneItem,
   ProjectObservationItem,
   ProjectReportItem,
+  ProjectSource,
   UserSummary,
   MyProject,
 } from "./schemas";
@@ -46,6 +47,7 @@ export type CreateProjectPayload = {
   estimatedCost: number;
   startDate: string;
   requiresLegalization?: boolean;
+  source?: ProjectSource;
 };
 
 export async function getProjects(): Promise<{

@@ -16,6 +16,7 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 import { ProjectsService } from './projects.service';
 import {
   Project as ProjectModel,
+  ProjectSource,
   ProjectStatus,
 } from '../generated/prisma/client';
 import {
@@ -67,6 +68,7 @@ export class ProjectsController {
       location?: string;
       startDate: string;
       requiresLegalization?: boolean;
+      source?: ProjectSource;
     },
   ): Promise<ProjectDetailResponse> {
     const {
@@ -80,6 +82,7 @@ export class ProjectsController {
       location,
       startDate,
       requiresLegalization,
+      source,
     } = projectData;
 
     const parsedStartDate = new Date(`${startDate}T00:00:00`);
@@ -95,6 +98,7 @@ export class ProjectsController {
       estimatedCost,
       location,
       requiresLegalization: requiresLegalization ?? false,
+      source: source ?? ProjectSource.external_entity,
       naturalProposer: {
         create: {
           fullName: namep,

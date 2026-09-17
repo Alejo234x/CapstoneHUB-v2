@@ -1,5 +1,6 @@
 import { SeedContext, log } from './common';
 import { loadProjects } from './fixtures';
+import { ProjectSource } from '../../src/generated/prisma/client';
 
 export async function seedProjects({
   prisma,
@@ -31,6 +32,7 @@ export async function seedProjects({
         location: project.location ?? null,
         estimatedCost: project.estimatedCost ?? null,
         requiresLegalization: project.requiresLegalization ?? false,
+        source: project.source ?? ProjectSource.external_entity,
         startDate: new Date(project.startDate),
         endDate: project.endDate ? new Date(project.endDate) : null,
         schools: project.schools?.length

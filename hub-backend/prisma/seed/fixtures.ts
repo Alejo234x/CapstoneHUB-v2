@@ -1,5 +1,6 @@
 import {
   ActorRole,
+  ProjectSource,
   ProjectStatus,
   UserRole,
 } from '../../src/generated/prisma/client';
@@ -47,6 +48,7 @@ export interface ProjectFixture {
   location?: string | null;
   estimatedCost?: number | null;
   requiresLegalization?: boolean;
+  source?: ProjectSource;
   startDate: string;
   endDate?: string | null;
   schools?: string[];

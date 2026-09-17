@@ -18,6 +18,12 @@ export type ProjectProposer =
   | ProjectNaturalProposer
   | ProjectLegalProposer;
 
+export type ProjectSource =
+  | "external_entity"
+  | "research"
+  | "internal_need"
+  | "social_impact";
+
 type ProjectActor = {
   id: number;
   projectId: number;
@@ -134,6 +140,7 @@ export type ProjectItem = {
   status: string;
   startDate: string;
   requiresLegalization?: boolean;
+  source?: ProjectSource;
   proposer?: ProjectProposer;
   actors: ProjectActor[];
   estimatedCost?: string | null;
@@ -156,6 +163,7 @@ export type ProjectDetails = {
   location?: string | null;
   status: string;
   requiresLegalization?: boolean;
+  source?: ProjectSource;
   proposer?: ProjectProposer;
   startDate: string;
   endDate: string | null;

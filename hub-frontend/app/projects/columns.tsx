@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { type ProjectItem } from "../services/schemas";
-import { formatStatus } from "../services/utils";
+import { formatStatus, formatProjectSource } from "../services/utils";
 import { type ProjectTableFeatures } from "./projects-table-features";
 
 const columnHelper = createColumnHelper<ProjectTableFeatures, ProjectItem>();
@@ -90,6 +90,18 @@ export const columns = columnHelper.columns([
       <span>{formatStatus(getValue())}</span>
     ),
   }),
+
+  columnHelper.accessor(
+    (project: ProjectItem) =>
+      project.source ? formatProjectSource(project.source) : "Sin información",
+    {
+      id: "source",
+      header: ({ column }) => (
+        <SortableHeader label="Fuente" column={column} />
+      ),
+      filterFn: "includesString",
+    },
+  ),
 
   columnHelper.accessor(
     (project: ProjectItem) => (project.requiresLegalization ? "Sí" : "No"),

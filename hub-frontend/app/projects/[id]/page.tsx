@@ -10,7 +10,8 @@ import ProjectStatusHistoryPanel from "./project-status-history-panel";
 import ProjectAttachmentsPanel from "./project-attachments-panel";
 import ProjectAssignmentBadge from "./project-assignment-badge";
 import ProjectLegalizationBadge from "./project-legalization-badge";
-import { formatStatus } from "@/app/services/utils";
+import ProjectSourceBadge from "./project-source-badge";
+import { formatStatus, formatProjectSource } from "@/app/services/utils";
 import {
   Tabs,
   TabsContent,
@@ -110,6 +111,7 @@ export default async function ProjectDetailsPage({
             <ProjectLegalizationBadge
               requiresLegalization={project.requiresLegalization}
             />
+            <ProjectSourceBadge source={project.source} />
             <span className="text-sm text-muted-foreground">
               Creado el {formatDate(project.createdAt)}
             </span>
@@ -274,6 +276,19 @@ export default async function ProjectDetailsPage({
                 <CardContent>
                   <p className="text-muted-foreground">
                     {project.location || "Sin información"}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Fuente del proyecto</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    {project.source
+                      ? formatProjectSource(project.source)
+                      : "Sin información"}
                   </p>
                 </CardContent>
               </Card>
