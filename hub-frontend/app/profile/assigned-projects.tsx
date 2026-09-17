@@ -118,7 +118,6 @@ export default function AssignedProjects() {
                 <TableHead>Rol</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Inicio</TableHead>
-                <TableHead>Lugar</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -148,9 +147,6 @@ export default function AssignedProjects() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {formatDate(project.startDate)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {project.location || "Sin información"}
                   </TableCell>
                 </TableRow>
               ))}

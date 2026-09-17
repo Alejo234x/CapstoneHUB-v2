@@ -15,7 +15,9 @@ El MVP debe validar el siguiente flujo:
 
 ### Backend
 
-1. Crear proyectos mediante un formulario flexible de propuesta.
+1. Crear proyectos:
+   - Persona natural.
+   - Persona juridica.
 2. Listar proyectos y consultar detalle por identificador.
 3. Actualizar estado del proyecto segun flujo definido.
 4. Gestionar actores del proyecto en el modelo de dominio.
@@ -62,7 +64,7 @@ Se adopta el flujo de estados actualmente definido en backend:
 
 El MVP se considera aceptado cuando se cumpla lo siguiente:
 
-1. Se puede crear al menos un proyecto mediante el formulario de propuesta.
+1. Se puede crear al menos un proyecto de persona natural y uno de persona juridica.
 2. Se pueden listar proyectos y consultar un proyecto por id.
 3. Se puede cambiar el estado respetando transiciones validas.
 4. El dominio rechaza duplicidad de rol por persona dentro del mismo proyecto.
@@ -87,7 +89,7 @@ El MVP se considera aceptado cuando se cumpla lo siguiente:
 
 1. Retraso en integracion SSO institucional.
 2. Cambios de alcance durante validaciones funcionales.
-3. Ajustes de modelo por nuevos roles, tipos de proyectos o campos de propuesta.
+3. Ajustes de modelo por nuevos roles, tipos de proyectos o tipos de proponente.
 
 ## Definicion de Terminado
 
@@ -95,3 +97,4 @@ El MVP se considera aceptado cuando se cumpla lo siguiente:
 2. Pruebas minimas de flujo principal ejecutadas.
 3. Entorno local reproducible mediante Docker Compose.
 4. Documentacion del código y de infraestructura.
+

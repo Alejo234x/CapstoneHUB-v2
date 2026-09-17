@@ -58,7 +58,6 @@ const projectObservationSelect = {
 
 const projectInclude = {
   naturalProposer: true,
-  legalProposer: true,
   observations: { select: projectObservationSelect },
   actorAssignments: { include: { user: true } },
   milestones: true,
@@ -72,21 +71,12 @@ type ProjectWithRelations = Prisma.ProjectGetPayload<{
   include: typeof projectInclude;
 }>;
 
-export type ProjectProposerResponse =
-  | {
-      type: 'natural_person';
-      fullName: string;
-      idNumber: string | null;
-      email: string;
-    }
-  | {
-      type: 'legal_person';
-      legalName: string;
-      nit: string;
-      email: string;
-      phone: string;
-      contactUrl: string | null;
-    };
+export type ProjectProposerResponse = {
+  type: 'natural_person';
+  fullName: string;
+  idNumber: string | null;
+  email: string;
+};
 
 export type ProjectListResponse = {
   id: number;
@@ -214,7 +204,7 @@ export type AssignableUserResponse = {
 };
 
 function mapProjectProposer(
-  project: Pick<ProjectWithRelations, 'naturalProposer' | 'legalProposer'>,
+  project: Pick<ProjectWithRelations, 'naturalProposer'>,
 ): ProjectProposerResponse | null {
   if (project.naturalProposer) {
     return {
@@ -222,17 +212,6 @@ function mapProjectProposer(
       fullName: project.naturalProposer.fullName,
       idNumber: project.naturalProposer.idNumber,
       email: project.naturalProposer.email,
-    };
-  }
-
-  if (project.legalProposer) {
-    return {
-      type: 'legal_person',
-      legalName: project.legalProposer.legalName,
-      nit: project.legalProposer.nit,
-      email: project.legalProposer.email,
-      phone: project.legalProposer.phone,
-      contactUrl: project.legalProposer.contactUrl,
     };
   }
 

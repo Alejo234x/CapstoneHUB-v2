@@ -48,28 +48,13 @@ export async function seedProjects({
               })),
             }
           : undefined,
-        naturalProposer:
-          project.proposer.type === 'natural'
-            ? {
-                create: {
-                  fullName: project.proposer.fullName,
-                  idNumber: project.proposer.idNumber ?? null,
-                  email: project.proposer.email,
-                },
-              }
-            : undefined,
-        legalProposer:
-          project.proposer.type === 'legal'
-            ? {
-                create: {
-                  legalName: project.proposer.legalName,
-                  nit: project.proposer.nit,
-                  email: project.proposer.email,
-                  phone: project.proposer.phone,
-                  contactUrl: project.proposer.contactUrl ?? null,
-                },
-              }
-            : undefined,
+        naturalProposer: {
+          create: {
+            fullName: project.proposer.fullName,
+            idNumber: project.proposer.idNumber ?? null,
+            email: project.proposer.email,
+          },
+        },
       },
       select: { id: true },
     });

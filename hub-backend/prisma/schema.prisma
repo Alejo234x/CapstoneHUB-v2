@@ -106,7 +106,6 @@ model Project {
 
   schools          ProjectSchool[]
   naturalProposer  ProjectNaturalProposer?
-  legalProposer    ProjectLegalProposer?
   actorAssignments ProjectActorAssignment[]
   observations     ProjectObservation[]
   statusHistory    ProjectStatusHistory[]
@@ -157,22 +156,6 @@ model ProjectNaturalProposer {
   @@index([idNumber], map: "idx_project_natural_id_number")
   @@index([email], map: "idx_project_natural_email")
   @@map("project_natural_proposer")
-}
-
-model ProjectLegalProposer {
-  projectId  Int      @id @map("project_id")
-  legalName  String   @map("legal_name") @db.VarChar(255)
-  nit        String   @unique(map: "uk_project_legal_nit") @db.VarChar(50)
-  email      String   @db.VarChar(255)
-  phone      String   @db.VarChar(20)
-  contactUrl String?  @map("contact_url") @db.VarChar(255)
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@index([nit], map: "idx_project_legal_nit")
-  @@index([email], map: "idx_project_legal_email")
-  @@map("project_legal_proposer")
 }
 
 model ProjectActorAssignment {

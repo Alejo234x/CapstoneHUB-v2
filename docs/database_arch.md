@@ -48,12 +48,12 @@ Escuelas asociadas a un proyecto. Clave primaria compuesta
 Entregables de texto libre asociados a un proyecto (uno a muchos vía
 `projectId`). Alimenta el formulario dinámico de entregables.
 
-### ProjectNaturalProposer / ProjectLegalProposer
+### ProjectNaturalProposer
 
-Datos opcionales del proponente: persona natural (`fullName`, `idNumber`
-opcional, `email`) o persona jurídica (`legalName`, `nit` único, `email`,
-`phone`, `contactUrl`). Un proyecto tiene como máximo uno de cada uno (uno a uno
-vía `projectId`).
+Datos opcionales del proponente (`fullName`, `idNumber` opcional, `email`). Un
+proyecto tiene como máximo uno (uno a uno vía `projectId`). El proponente puede
+representar a una entidad externa, una investigación, una necesidad interna o una
+iniciativa de impacto social; el formulario de propuesta es único y flexible.
 
 ### ProjectActorAssignment
 
@@ -146,16 +146,6 @@ classDiagram
         +DateTime createdAt
     }
 
-    class ProjectLegalProposer {
-        +Int projectId
-        +String legalName
-        +String nit
-        +String email
-        +String phone
-        +String contactUrl
-        +DateTime createdAt
-    }
-
     class ProjectActorAssignment {
         +Int id
         +Int projectId
@@ -240,7 +230,6 @@ classDiagram
     Project "1" *-- "0..*" ProjectSchool : schools
     Project "1" *-- "0..*" ProjectDeliverable : deliverables
     Project "1" *-- "0..1" ProjectNaturalProposer : naturalProposer
-    Project "1" *-- "0..1" ProjectLegalProposer : legalProposer
     Project "1" *-- "0..*" ProjectActorAssignment : actorAssignments
     Project "1" *-- "0..*" ProjectObservation : observations
     Project "1" *-- "0..*" ProjectStatusHistory : statusHistory

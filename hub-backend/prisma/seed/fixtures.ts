@@ -25,16 +25,7 @@ export interface NaturalProposerFixture {
   email: string;
 }
 
-export interface LegalProposerFixture {
-  type: 'legal';
-  legalName: string;
-  nit: string;
-  email: string;
-  phone: string;
-  contactUrl?: string | null;
-}
-
-export type ProposerFixture = NaturalProposerFixture | LegalProposerFixture;
+export type ProposerFixture = NaturalProposerFixture;
 
 export interface ProjectActorFixture {
   email: string;

@@ -1,25 +1,36 @@
 ## Formatos para postulación de proyectos
 
-### Formulario de propuesta
+### Persona natural
 
-Formulario unico y flexible para cualquier origen del proyecto (entidad externa, investigacion, necesidad interna o impacto social).
+* Nombre proyecto (tipo: string / máximo 100 caracteres)
+* Nombre (tipo: string / primer nombre y primer apellido)
+* Número de cédula (tipo: integer/string numérico / 10 dígitos)
+* Edad (tipo: integer / 2 dígitos numéricos)
+* Correo electrónico (tipo: email/string / máximo 64 caracteres antes del @)
+* Descripción del proyecto (tipo: text/string largo / resumen breve del proyecto, objetivos y funcionamiento)
+* Localización del proyecto (tipo: string / ciudad, departamento y país)
+* Tiempo de ejecución (tipo: string o integer / duración estimada en días, semanas o meses)
+* Costo total del proyecto (tipo: float/decimal / presupuesto total estimado)
+* Justificación del proyecto (tipo: text/string largo / explicación de la importancia o necesidad del proyecto)
 
-* Nombre proyecto (tipo: string / maximo 100 caracteres)
-* Nombre del responsable (tipo: string / primer nombre y primer apellido)
-* Numero de cedula (tipo: integer/string numerico / 10 digitos / opcional)
-* Correo electronico (tipo: email/string / maximo 64 caracteres antes del @)
-* Descripcion del proyecto (tipo: text/string largo / resumen breve del proyecto, objetivos y funcionamiento)
-* Justificacion del proyecto (tipo: text/string largo / explicacion de la importancia o necesidad del proyecto)
-* Fuente del proyecto (tipo: enum / entidad externa, investigacion, necesidad interna o impacto social)
-* Asesor de la facultad (tipo: string / docente recomendado, opcional)
-* Equipo requerido (tipo: text/string largo / tipo de estudiantes o perfiles que el proyecto necesita, opcional)
-* Entregables (tipo: lista de texto / productos o resultados esperados, opcional)
-* Expectativas al finalizar (tipo: text/string largo / resultado esperado al terminar, opcional)
-* Requiere legalizacion (tipo: boolean / contratos de confidencialidad, convenios u otros tramites)
+### Persona jurídica
+
+* Nombre del proyecto (tipo: string / nombre oficial del proyecto)
+* Nombre de la organización (tipo: string / nombre legal de la empresa o entidad)
+* Correo (tipo: email/string / correo electrónico oficial de contacto)
+* URL (medios de contacto) (tipo: url/string / sitio web o enlace oficial de contacto)
+* NIT (tipo: integer/string numérico / Número de Identificación Tributaria)
+* Localidad (tipo: string / ciudad o ubicación principal)
+* Teléfono (tipo: string numérico / número de contacto oficial)
+* Descripción del proyecto (tipo: text/string largo / explicación breve del proyecto y sus objetivos)
+* Localización del proyecto (tipo: string / lugar donde se ejecutará el proyecto)
+* Tiempo de ejecución (tipo: string o integer / duración aproximada del proyecto)
+* Costo total del proyecto (tipo: float/decimal / valor total estimado)
+* Justificación del proyecto (tipo: text/string largo / motivo o impacto esperado del proyecto)
 
 ## Estructura interna de un proyecto
 
-Despues de la investigacion de varios bancos de proyectos hemos llegado a la conclusion de que las caracteristicas mas  importantes son: 
+Después de la investigación de varios bancos de proyectos hemos llegado a la conclusión de que las características más  importantes son: 
 
 **Código identificador**: un pequeño código para búsqueda rápida del proyecto.  
 **Nombre del proyecto**: nombre completo del proyecto   

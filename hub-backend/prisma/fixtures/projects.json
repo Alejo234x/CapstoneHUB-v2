@@ -43,12 +43,9 @@
       "requiresLegalization": true,
       "source": "external_entity",
       "proposer": {
-        "type": "legal",
-        "legalName": "Frío Andino Cía. Ltda.",
-        "nit": "1792345678001",
-        "email": "contacto@frioandino.example.com",
-        "phone": "+593987654321",
-        "contactUrl": "https://frioandino.example.com"
+        "type": "natural",
+        "fullName": "Frío Andino Cía. Ltda.",
+        "email": "contacto@frioandino.example.com"
       },
       "facultyAdvisor": null,
       "teamRequirements": "1 estudiante de Ingeniería Industrial y 1 de Ingeniería Mecánica.",
@@ -132,12 +129,9 @@
       "requiresLegalization": true,
       "source": "research",
       "proposer": {
-        "type": "legal",
-        "legalName": "EcoCircular S.A.",
-        "nit": "0198765432001",
-        "email": "info@ecocircular.example.com",
-        "phone": "+593912345678",
-        "contactUrl": null
+        "type": "natural",
+        "fullName": "EcoCircular S.A.",
+        "email": "info@ecocircular.example.com"
       },
       "facultyAdvisor": "Ing. Pablo Herrera",
       "teamRequirements": "1 estudiante de Ingeniería Electrónica con experiencia en visión por computador.",

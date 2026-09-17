@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import {
   RiAttachmentLine,
-  RiCalendarLine,
+  // RiCalendarLine,
   RiChat3Line,
   RiFileCheckLine,
   RiFlagLine,
@@ -127,10 +127,10 @@ export default async function ProjectDetailsPage({
                 <RiPriceTag3Line data-icon="inline-start" />
                 Categorías
               </TabsTrigger>
-              <TabsTrigger value="fechas">
+              {/* <TabsTrigger value="fechas">
                 <RiCalendarLine data-icon="inline-start" />
                 Fechas y costos
-              </TabsTrigger>
+              </TabsTrigger> */}
               <TabsTrigger value="equipo">
                 <RiTeamLine data-icon="inline-start" />
                 Equipo
@@ -166,77 +166,30 @@ export default async function ProjectDetailsPage({
                   {project.proposer ? (
                     <Table>
                       <TableBody>
-                        {project.proposer.type === "natural_person" ? (
-                          <>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Nombre completo
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.fullName}
-                              </TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Cédula
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.idNumber ?? "Sin información"}
-                              </TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Correo
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.email}
-                              </TableCell>
-                            </TableRow>
-                          </>
-                        ) : (
-                          <>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Razón social
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.legalName}
-                              </TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                NIT
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.nit}
-                              </TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Correo
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.email}
-                              </TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Teléfono
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.phone}
-                              </TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="text-muted-foreground">
-                                Contacto
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {project.proposer.contactUrl ?? "Sin enlace"}
-                              </TableCell>
-                            </TableRow>
-                          </>
-                        )}
+                        <TableRow>
+                          <TableCell className="text-muted-foreground">
+                            Nombre completo
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {project.proposer.fullName}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="text-muted-foreground">
+                            Cédula
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {project.proposer.idNumber ?? "Sin información"}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="text-muted-foreground">
+                            Correo
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {project.proposer.email}
+                          </TableCell>
+                        </TableRow>
                       </TableBody>
                     </Table>
                   ) : (
@@ -265,17 +218,6 @@ export default async function ProjectDetailsPage({
                 <CardContent>
                   <p className="whitespace-pre-line text-muted-foreground">
                     {project.context}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Lugar</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    {project.location || "Sin información"}
                   </p>
                 </CardContent>
               </Card>

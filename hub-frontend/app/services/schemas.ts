@@ -5,18 +5,7 @@ type ProjectNaturalProposer = {
   email: string;
 };
 
-type ProjectLegalProposer = {
-  type: "legal_person";
-  legalName: string;
-  nit: string;
-  email: string;
-  phone: string;
-  contactUrl: string | null;
-};
-
-export type ProjectProposer =
-  | ProjectNaturalProposer
-  | ProjectLegalProposer;
+export type ProjectProposer = ProjectNaturalProposer;
 
 export type ProjectSource =
   | "external_entity"

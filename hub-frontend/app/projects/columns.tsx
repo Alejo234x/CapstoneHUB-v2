@@ -51,28 +51,7 @@ export const columns = columnHelper.columns([
 
   columnHelper.accessor(
     (project: ProjectItem) =>
-      project.location || project.context || "Sin información",
-    {
-      id: "location",
-      header: ({ column }) => (
-        <SortableHeader label="Lugar" column={column} />
-      ),
-      filterFn: "includesString",
-    },
-  ),
-
-  columnHelper.accessor(
-    (project: ProjectItem) => {
-      if (project.proposer?.type === "natural_person") {
-        return project.proposer.fullName;
-      }
-
-      if (project.proposer?.type === "legal_person") {
-        return project.proposer.legalName;
-      }
-
-      return "Sin información";
-    },
+      project.proposer?.fullName ?? "Sin información",
     {
       id: "proposer",
       header: ({ column }) => (

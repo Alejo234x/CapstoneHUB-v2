@@ -11,27 +11,10 @@ import { formatRole } from "../services/utils";
 
 import {
   NavigationMenu,
-  NavigationMenuContent,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu"
-
-const components: { title: string; href: string; description: string }[] = [
-  {
-    title: "Persona Natural",
-    href: "/submit/natural",
-    description:
-      "Persona Natural...",
-  },
-  {
-    title: "Persona Jurídica",
-    href: "#",
-    description:
-      "Persona Jurídica...",
-  },
-]
 
 export default function Navbar() {  const pathname = usePathname();
   const { session } = useAuth();
@@ -74,20 +57,9 @@ export default function Navbar() {  const pathname = usePathname();
             )}
 
             <NavigationMenuItem>
-              <NavigationMenuTrigger>Proponer</NavigationMenuTrigger>
-              <NavigationMenuContent>
-                <ul className="grid w-400px gap-2 md:w-500px md:grid-cols-2 lg:w-600px">
-                  {components.map((component) => (
-                    <ListItem
-                      key={component.title}
-                      title={component.title}
-                      href={component.href}
-                    >
-                      {component.description}
-                    </ListItem>
-                  ))}
-                </ul>
-              </NavigationMenuContent>
+              <NavigationMenuLink
+                render={<Link href="/submit">Proponer</Link>}
+              />
             </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
@@ -151,29 +123,19 @@ export default function Navbar() {  const pathname = usePathname();
               </Button>
             )}
 
-            <div className="px-2 py-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Proponer
-              </p>
-              <div className="mt-2 flex flex-col gap-1">
-                {components.map((component) => (
-                  <Button
-                    key={component.title}
-                    variant="ghost"
-                    className="justify-start"
-                    nativeButton={false}
-                    render={
-                      <Link
-                        href={component.href}
-                        onClick={() => setMobileOpen(false)}
-                      />
-                    }
-                  >
-                    {component.title}
-                  </Button>
-                ))}
-              </div>
-            </div>
+            <Button
+              variant="ghost"
+              className="justify-start"
+              nativeButton={false}
+              render={
+                <Link
+                  href="/submit"
+                  onClick={() => setMobileOpen(false)}
+                />
+              }
+            >
+              Proponer
+            </Button>
           </div>
 
           <div className="mt-4 flex flex-col gap-3 border-t pt-4">
@@ -209,21 +171,5 @@ export default function Navbar() {  const pathname = usePathname();
         </div>
       )}
     </nav>
-  )
-}
-
-function ListItem({
-  title,
-  children,
-  href,
-  ...props
-}: React.ComponentPropsWithoutRef<"li"> & { href: string }) {
-  return (
-    <li {...props}>
-      <NavigationMenuLink render={<Link href={href}><div className="flex flex-col gap-1 text-sm">
-          <div className="leading-none font-medium">{title}</div>
-          <div className="line-clamp-2 text-muted-foreground">{children}</div>
-        </div></Link>} />
-    </li>
   )
 }

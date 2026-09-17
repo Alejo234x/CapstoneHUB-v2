@@ -45,15 +45,7 @@ const statusOptions = [
 ];
 
 function getProposerName(project: ProjectItem): string {
-  if (project.proposer?.type === "natural_person") {
-    return project.proposer.fullName ?? "";
-  }
-
-  if (project.proposer?.type === "legal_person") {
-    return project.proposer.legalName ?? "";
-  }
-
-  return "";
+  return project.proposer?.fullName ?? "";
 }
 
 function matchesSearch(

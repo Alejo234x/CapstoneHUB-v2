@@ -163,7 +163,7 @@ El esquema Prisma completo está documentado en
 
 - **Usuario**: `User`, `UserRoleAssignment`.
 - **Proyecto**: `Project`, `ProjectSchool`, `ProjectNaturalProposer`,
-  `ProjectLegalProposer`.
+  `ProjectDeliverable`.
 - **Equipo y seguimiento**: `ProjectActorAssignment`, `ProjectObservation`,
   `ProjectStatusHistory`, `ProjectMilestones`.
 - **Archivos**: `ProjectAttachment` (solo metadatos; el binario vive en
