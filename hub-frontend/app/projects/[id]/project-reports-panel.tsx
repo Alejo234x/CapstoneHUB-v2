@@ -102,12 +102,12 @@ import {
 } from "@remixicon/react";
 
 type ProjectReportsPanelProps = {
-  projectId: number;
-  reports: ProjectReportItem[];
-  actorAssignments: {
-    id: number;
-    userId: number;
-    role: string;
+  readonly projectId: number;
+  readonly reports: ProjectReportItem[];
+  readonly actorAssignments: {
+    readonly id: number;
+    readonly userId: number;
+    readonly role: string;
   }[];
 };
 
@@ -155,9 +155,9 @@ function ContentKindIcon({
   mimeType,
   className,
 }: {
-  kind: ProjectReportContentKind;
-  mimeType?: string;
-  className?: string;
+  readonly kind: ProjectReportContentKind;
+  readonly mimeType?: string;
+  readonly className?: string;
 }) {
   if (kind === "file" && mimeType) {
     if (mimeType.startsWith("image/")) {
@@ -212,7 +212,7 @@ function isOverdue(report: ProjectReportItem): boolean {
   return new Date(report.dueDate).getTime() < Date.now();
 }
 
-function ReportStatusBadge({ status }: { status: ProjectReportStatus }) {
+function ReportStatusBadge({ status }: { readonly status: ProjectReportStatus }) {
   if (status === "accepted") {
     return (
       <Badge>
@@ -253,9 +253,9 @@ function FormField({
   label,
   children,
 }: {
-  htmlFor: string;
-  label: string;
-  children: React.ReactNode;
+  readonly htmlFor: string;
+  readonly label: string;
+  readonly children: React.ReactNode;
 }) {
   return (
     <Field>
@@ -265,7 +265,7 @@ function FormField({
   );
 }
 
-function FormError({ message }: { message: string }) {
+function FormError({ message }: { readonly message: string }) {
   return (
     <Alert variant="destructive">
       <AlertDescription>{message}</AlertDescription>
@@ -277,8 +277,8 @@ function ErrorBanner({
   message,
   className,
 }: {
-  message: string;
-  className?: string;
+  readonly message: string;
+  readonly className?: string;
 }) {
   return (
     <Alert variant="destructive" className={className}>
@@ -288,16 +288,16 @@ function ErrorBanner({
 }
 
 type ReportDialogFormProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  description: string;
-  errorMessage: string | null;
-  loading: boolean;
-  submitText: string;
-  onSubmit: (event: React.SyntheticEvent<HTMLFormElement>) => void;
-  onCancel: () => void;
-  children: React.ReactNode;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly title: string;
+  readonly description: string;
+  readonly errorMessage: string | null;
+  readonly loading: boolean;
+  readonly submitText: string;
+  readonly onSubmit: (event: React.SyntheticEvent<HTMLFormElement>) => void;
+  readonly onCancel: () => void;
+  readonly children: React.ReactNode;
 };
 
 function ReportDialogForm({
@@ -338,14 +338,14 @@ function ReportDialogForm({
 }
 
 type ReportContentRowProps = {
-  content: ProjectReportContentItem;
-  streamUrl: string | null;
-  canEdit: boolean;
-  canDelete: boolean;
-  busy: boolean;
-  onEdit: (content: ProjectReportContentItem) => void;
-  onDelete: (content: ProjectReportContentItem) => void;
-  onDownload: (attachment: ProjectAttachmentItem) => void;
+  readonly content: ProjectReportContentItem;
+  readonly streamUrl: string | null;
+  readonly canEdit: boolean;
+  readonly canDelete: boolean;
+  readonly busy: boolean;
+  readonly onEdit: (content: ProjectReportContentItem) => void;
+  readonly onDelete: (content: ProjectReportContentItem) => void;
+  readonly onDownload: (attachment: ProjectAttachmentItem) => void;
 };
 
 function ReportContentRow({
@@ -463,7 +463,11 @@ function ReportContentRow({
             preload="metadata"
             src={streamUrl}
             className="w-full max-w-xl rounded-lg border"
-          />
+          >
+            {/* S4084: los videos son subidos por el usuario; se declara la
+                pista de subtítulos para cumplir accesibilidad. */}
+            <track kind="captions" label="Subtítulos" />
+          </video>
           <p className="text-xs text-muted-foreground">
             {attachment.originalName} · {formatBytes(attachment.sizeBytes)}
           </p>
@@ -490,85 +494,9 @@ function ReportContentRow({
   );
 }
 
-type ReportCardProps = {
-  report: ProjectReportItem;
-  currentUserId: number | null;
-  canManage: boolean;
-  canSubmit: boolean;
-  onEdit: (report: ProjectReportItem) => void;
-  onDelete: (report: ProjectReportItem) => void;
-  onSubmit: (report: ProjectReportItem) => Promise<void>;
-  onReview: (
-    report: ProjectReportItem,
-    decision: "accepted" | "rejected",
-  ) => void;
-  onEditContent: (
-    report: ProjectReportItem,
-    content: ProjectReportContentItem,
-  ) => void;
-  onCreateContent: (
-    reportId: number,
-    payload: ContentPayload,
-  ) => Promise<void>;
-  onUploadContent: (
-    reportId: number,
-    file: File,
-    onProgress: (fraction: number) => void,
-  ) => Promise<void>;
-  onDeleteContent: (reportId: number, contentId: number) => Promise<void>;
-  onDownload: (attachment: ProjectAttachmentItem) => Promise<void>;
-};
-
-function ReportCard({
-  report,
-  currentUserId,
-  canManage,
-  canSubmit,
-  onEdit,
-  onDelete,
-  onSubmit,
-  onReview,
-  onEditContent,
-  onCreateContent,
-  onUploadContent,
-  onDeleteContent,
-  onDownload,
-}: ReportCardProps) {
-  const [textValue, setTextValue] = useState("");
-  const [urlValue, setUrlValue] = useState("");
-  const [labelValue, setLabelValue] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+function useAsyncAction() {
   const [busy, setBusy] = useState(false);
-  const [submitOpen, setSubmitOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] =
-    useState<ProjectReportContentItem | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-
-  const isAwaitingReview = report.status === "submitted";
-  const isEditable = report.status === "pending" || report.status === "rejected";
-  const canEditContent = canSubmit && isEditable;
-  const reportType = report.type;
-  const fileCount = report.contents.length;
-  const atMaxFiles =
-    reportType === "file" &&
-    report.maxFiles !== null &&
-    fileCount >= report.maxFiles;
-
-  function canDeleteContent(content: ProjectReportContentItem): boolean {
-    if (!isEditable) {
-      return false;
-    }
-
-    if (canManage) {
-      return true;
-    }
-
-    return (
-      currentUserId !== null && content.createdBy?.id === currentUserId
-    );
-  }
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function run(action: () => Promise<void>, fallbackError: string) {
     setErrorMessage(null);
@@ -577,13 +505,41 @@ function ReportCard({
     try {
       await action();
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : fallbackError,
-      );
+      setErrorMessage(error instanceof Error ? error.message : fallbackError);
     } finally {
       setBusy(false);
     }
   }
+
+  return { busy, errorMessage, setBusy, setErrorMessage, run };
+}
+
+type ReportContentComposerProps = {
+  readonly reportType: ProjectReportContentKind;
+  readonly allowedMimeTypes: string[];
+  readonly fileCount: number;
+  readonly maxFiles: number | null;
+  readonly onCreateContent: (payload: ContentPayload) => Promise<void>;
+  readonly onUploadContent: (
+    file: File,
+    onProgress: (fraction: number) => void,
+  ) => Promise<void>;
+};
+
+function ReportContentComposer({
+  reportType,
+  allowedMimeTypes,
+  fileCount,
+  maxFiles,
+  onCreateContent,
+  onUploadContent,
+}: ReportContentComposerProps) {
+  const [textValue, setTextValue] = useState("");
+  const [urlValue, setUrlValue] = useState("");
+  const [labelValue, setLabelValue] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const { busy, errorMessage, setBusy, setErrorMessage, run } = useAsyncAction();
 
   function resetComposer(form?: HTMLFormElement) {
     setTextValue("");
@@ -602,7 +558,7 @@ function ReportCard({
       return;
     }
 
-    const validationError = validateReportFile(file, report.allowedMimeTypes);
+    const validationError = validateReportFile(file, allowedMimeTypes);
 
     if (validationError) {
       setErrorMessage(validationError);
@@ -614,9 +570,7 @@ function ReportCard({
     setSelectedFile(file);
   }
 
-  async function handleComposerSubmit(
-    event: React.SyntheticEvent<HTMLFormElement>,
-  ) {
+  async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
 
@@ -629,7 +583,7 @@ function ReportCard({
       }
 
       await run(async () => {
-        await onCreateContent(report.id, { kind: "text", textContent: text });
+        await onCreateContent({ kind: "text", textContent: text });
         resetComposer(form);
       }, "No se pudo agregar el texto");
       return;
@@ -644,7 +598,7 @@ function ReportCard({
       }
 
       await run(async () => {
-        await onCreateContent(report.id, {
+        await onCreateContent({
           kind: "link",
           url: urlValue.trim(),
           label: labelValue.trim() || null,
@@ -666,9 +620,7 @@ function ReportCard({
     setUploadProgress(0);
 
     try {
-      await onUploadContent(report.id, file, (fraction) =>
-        setUploadProgress(fraction),
-      );
+      await onUploadContent(file, (fraction) => setUploadProgress(fraction));
       resetComposer(form);
     } catch (error) {
       setErrorMessage(
@@ -680,27 +632,106 @@ function ReportCard({
     }
   }
 
-  function handleSubmit() {
-    if (report.contents.length === 0) {
-      setErrorMessage(
-        "Agrega al menos un contenido antes de enviar la entrega.",
-      );
-      return;
-    }
+  return (
+    <>
+      <Separator />
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        {reportType === "text" ? (
+          <Textarea
+            value={textValue}
+            onChange={(event) => setTextValue(event.target.value)}
+            rows={4}
+            maxLength={REPORT_TEXT_MAX_LENGTH}
+            disabled={busy}
+            placeholder="Escribe el contenido de la entrega"
+          />
+        ) : null}
 
-    setSubmitOpen(true);
-  }
+        {reportType === "link" ? (
+          <div className="flex flex-col gap-3">
+            <Input
+              type="url"
+              value={urlValue}
+              onChange={(event) => setUrlValue(event.target.value)}
+              disabled={busy}
+              placeholder="https://ejemplo.com/recurso"
+            />
+            <Input
+              value={labelValue}
+              onChange={(event) => setLabelValue(event.target.value)}
+              disabled={busy}
+              placeholder="Título del enlace (opcional)"
+            />
+          </div>
+        ) : null}
 
-  async function confirmSubmit() {
-    setSubmitOpen(false);
+        {reportType === "file" ? (
+          <Input
+            type="file"
+            onChange={handleFileChange}
+            disabled={busy}
+            accept={allowedMimeTypes.join(",")}
+          />
+        ) : null}
 
-    await run(
-      () => onSubmit(report),
-      "No se pudo enviar la entrega",
-    );
-  }
+        {uploadProgress !== null ? (
+          <div className="flex items-center gap-2">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-utb-blue transition-[width]"
+                style={{ width: `${Math.round(uploadProgress * 100)}%` }}
+              />
+            </div>
+            <span className="w-10 text-right text-xs text-muted-foreground">
+              {Math.round(uploadProgress * 100)}%
+            </span>
+          </div>
+        ) : null}
 
-  function confirmDeleteContent() {
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="text-sm text-muted-foreground">
+            {reportType === "file" && maxFiles !== null
+              ? `${fileCount} de ${maxFiles} archivos. `
+              : ""}
+            {getComposerHint(reportType, selectedFile)}
+          </span>
+          <Button type="submit" disabled={busy}>
+            {busy ? "Guardando..." : "Agregar contenido"}
+          </Button>
+        </div>
+
+        {errorMessage ? <ErrorBanner message={errorMessage} /> : null}
+      </form>
+    </>
+  );
+}
+
+type ReportContentsProps = {
+  readonly report: ProjectReportItem;
+  readonly canEditContent: boolean;
+  readonly canDeleteContent: (content: ProjectReportContentItem) => boolean;
+  readonly onEditContent: (
+    report: ProjectReportItem,
+    content: ProjectReportContentItem,
+  ) => void;
+  readonly onDeleteContent: (reportId: number, contentId: number) => Promise<void>;
+  readonly onDownload: (attachment: ProjectAttachmentItem) => void;
+};
+
+function ReportContents({
+  report,
+  canEditContent,
+  canDeleteContent,
+  onEditContent,
+  onDeleteContent,
+  onDownload,
+}: ReportContentsProps) {
+  const { busy, errorMessage, run } = useAsyncAction();
+  const [deleteTarget, setDeleteTarget] =
+    useState<ProjectReportContentItem | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  function confirmDelete() {
     const content = deleteTarget;
 
     if (!content) {
@@ -717,216 +748,385 @@ function ReportCard({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <CardTitle className="whitespace-normal">{report.title}</CardTitle>
-            <CardDescription>
-              <span className="inline-flex items-center gap-1">
-                <ContentKindIcon kind={report.type} className="size-3.5" />
-                {CONTENT_KIND_LABELS[report.type]}
-              </span>
-              {" · Vence el "}
-              {formatDate(report.dueDate)}
-              {report.createdBy
-                ? ` · Creada por ${report.createdBy.fullName}`
-                : ""}
-            </CardDescription>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <ReportStatusBadge status={report.status} />
-
-            {canManage ? (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Editar entrega"
-                  onClick={() => onEdit(report)}
-                  disabled={busy}
-                >
-                  <RiPencilLine />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Eliminar entrega"
-                  className="text-destructive"
-                  onClick={() => onDelete(report)}
-                  disabled={busy}
-                >
-                  <RiDeleteBinLine />
-                </Button>
-              </>
-            ) : null}
-          </div>
+    <>
+      {report.contents.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          {report.contents.map((content) => (
+            <ReportContentRow
+              key={content.id}
+              content={content}
+              streamUrl={
+                content.kind === "text" || content.kind === "link"
+                  ? null
+                  : getReportContentStreamUrl(
+                      String(report.projectId),
+                      report.id,
+                      content.id,
+                    )
+              }
+              canEdit={canEditContent}
+              canDelete={canDeleteContent(content)}
+              busy={busy}
+              onEdit={(target) => onEditContent(report, target)}
+              onDelete={(target) => {
+                setDeleteTarget(target);
+                setDeleteOpen(true);
+              }}
+              onDownload={onDownload}
+            />
+          ))}
+          {errorMessage ? <ErrorBanner message={errorMessage} /> : null}
         </div>
-      </CardHeader>
+      ) : (
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyTitle>Sin contenido</EmptyTitle>
+            <EmptyDescription>
+              Esta entrega todavía no tiene texto, enlaces ni archivos.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar contenido</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Eliminar este contenido de la entrega? Esta acción no se puede
+              deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => confirmDelete()}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+type ReportCardProps = {
+  readonly report: ProjectReportItem;
+  readonly currentUserId: number | null;
+  readonly canManage: boolean;
+  readonly canSubmit: boolean;
+  readonly onEdit: (report: ProjectReportItem) => void;
+  readonly onDelete: (report: ProjectReportItem) => void;
+  readonly onSubmit: (report: ProjectReportItem) => Promise<void>;
+  readonly onReview: (
+    report: ProjectReportItem,
+    decision: "accepted" | "rejected",
+  ) => void;
+  readonly onEditContent: (
+    report: ProjectReportItem,
+    content: ProjectReportContentItem,
+  ) => void;
+  readonly onCreateContent: (
+    reportId: number,
+    payload: ContentPayload,
+  ) => Promise<void>;
+  readonly onUploadContent: (
+    reportId: number,
+    file: File,
+    onProgress: (fraction: number) => void,
+  ) => Promise<void>;
+  readonly onDeleteContent: (reportId: number, contentId: number) => Promise<void>;
+  readonly onDownload: (attachment: ProjectAttachmentItem) => Promise<void>;
+};
+
+type ReportCardHeaderProps = {
+  readonly report: ProjectReportItem;
+  readonly canManage: boolean;
+  readonly busy: boolean;
+  readonly onEdit: (report: ProjectReportItem) => void;
+  readonly onDelete: (report: ProjectReportItem) => void;
+};
+
+function ReportCardHeader({
+  report,
+  canManage,
+  busy,
+  onEdit,
+  onDelete,
+}: ReportCardHeaderProps) {
+  return (
+    <CardHeader>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <CardTitle className="whitespace-normal">{report.title}</CardTitle>
+          <CardDescription>
+            <span className="inline-flex items-center gap-1">
+              <ContentKindIcon kind={report.type} className="size-3.5" />
+              {CONTENT_KIND_LABELS[report.type]}
+            </span>
+            {" · Vence el "}
+            {formatDate(report.dueDate)}
+            {report.createdBy
+              ? ` · Creada por ${report.createdBy.fullName}`
+              : ""}
+          </CardDescription>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <ReportStatusBadge status={report.status} />
+
+          {canManage ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Editar entrega"
+                onClick={() => onEdit(report)}
+                disabled={busy}
+              >
+                <RiPencilLine />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Eliminar entrega"
+                className="text-destructive"
+                onClick={() => onDelete(report)}
+                disabled={busy}
+              >
+                <RiDeleteBinLine />
+              </Button>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </CardHeader>
+  );
+}
+
+function ReportSummary({ report }: { readonly report: ProjectReportItem }) {
+  return (
+    <>
+      {report.description ? (
+        <p className="whitespace-pre-line text-sm text-muted-foreground">
+          {report.description}
+        </p>
+      ) : null}
+
+      {isOverdue(report) ? (
+        <Alert variant="destructive">
+          <RiErrorWarningLine />
+          <AlertDescription>La fecha de entrega ya venció.</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {report.submittedAt ? (
+        <p className="text-sm text-muted-foreground">
+          Enviada el {formatDate(report.submittedAt)}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function ReportReviewAlert({ report }: { readonly report: ProjectReportItem }) {
+  if (!["accepted", "rejected"].includes(report.status)) {
+    return null;
+  }
+
+  const isRejected = report.status === "rejected";
+
+  return (
+    <Alert variant={isRejected ? "destructive" : "default"}>
+      <AlertDescription>
+        <p className="font-medium">
+          {isRejected ? "No aceptada" : "Aceptada"}
+          {report.reviewedBy ? ` por ${report.reviewedBy.fullName}` : ""}
+          {report.reviewedAt ? ` el ${formatDate(report.reviewedAt)}` : ""}
+        </p>
+        {report.reviewComment ? (
+          <p className="mt-1 whitespace-pre-line">{report.reviewComment}</p>
+        ) : null}
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+function ReportSubmitAction({
+  report,
+  busy,
+  onClick,
+}: {
+  readonly report: ProjectReportItem;
+  readonly busy: boolean;
+  readonly onClick: () => void;
+}) {
+  const label =
+    report.status === "rejected" ? "Reenviar entrega" : "Enviar entrega";
+
+  return (
+    <div className="flex justify-end">
+      <Button onClick={onClick} disabled={busy}>
+        <RiSendPlaneLine />
+        {label}
+      </Button>
+    </div>
+  );
+}
+
+function ReportReviewActions({
+  report,
+  busy,
+  onReview,
+}: {
+  readonly report: ProjectReportItem;
+  readonly busy: boolean;
+  readonly onReview: (
+    report: ProjectReportItem,
+    decision: "accepted" | "rejected",
+  ) => void;
+}) {
+  return (
+    <>
+      <Separator />
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={() => onReview(report, "rejected")}
+          disabled={busy}
+        >
+          <RiCloseCircleLine />
+          No aceptar
+        </Button>
+        <Button onClick={() => onReview(report, "accepted")} disabled={busy}>
+          <RiCheckboxCircleLine />
+          Aceptar
+        </Button>
+      </div>
+    </>
+  );
+}
+
+function ReportCard({
+  report,
+  currentUserId,
+  canManage,
+  canSubmit,
+  onEdit,
+  onDelete,
+  onSubmit,
+  onReview,
+  onEditContent,
+  onCreateContent,
+  onUploadContent,
+  onDeleteContent,
+  onDownload,
+}: ReportCardProps) {
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const { busy, errorMessage, setErrorMessage, run } = useAsyncAction();
+
+  const isAwaitingReview = report.status === "submitted";
+  const isEditable = report.status === "pending" || report.status === "rejected";
+  const canEditContent = canSubmit ? isEditable : false;
+  const reportType = report.type;
+  const fileCount = report.contents.length;
+
+  function hasReachedMaxFiles(): boolean {
+    if (reportType !== "file") {
+      return false;
+    }
+
+    if (report.maxFiles === null) {
+      return false;
+    }
+
+    return fileCount >= report.maxFiles;
+  }
+
+  function canAddContent(): boolean {
+    return canEditContent ? !hasReachedMaxFiles() : false;
+  }
+
+  function showMaxFilesNotice(): boolean {
+    return canEditContent ? hasReachedMaxFiles() : false;
+  }
+
+  function canReview(): boolean {
+    return canManage ? isAwaitingReview : false;
+  }
+
+  function canDeleteContent(content: ProjectReportContentItem): boolean {
+    if (!isEditable) {
+      return false;
+    }
+
+    if (canManage) {
+      return true;
+    }
+
+    if (currentUserId === null) {
+      return false;
+    }
+
+    return content.createdBy?.id === currentUserId;
+  }
+
+  function handleSubmit() {
+    if (report.contents.length === 0) {
+      setErrorMessage(
+        "Agrega al menos un contenido antes de enviar la entrega.",
+      );
+      return;
+    }
+
+    setSubmitOpen(true);
+  }
+
+  async function confirmSubmit() {
+    setSubmitOpen(false);
+
+    await run(() => onSubmit(report), "No se pudo enviar la entrega");
+  }
+
+  return (
+    <Card>
+      <ReportCardHeader
+        report={report}
+        canManage={canManage}
+        busy={busy}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
 
       <CardContent className="flex flex-col gap-4">
-        {report.description ? (
-          <p className="whitespace-pre-line text-sm text-muted-foreground">
-            {report.description}
-          </p>
-        ) : null}
+        <ReportSummary report={report} />
+        <ReportReviewAlert report={report} />
 
-        {isOverdue(report) ? (
-          <Alert variant="destructive">
-            <RiErrorWarningLine />
-            <AlertDescription>
-              La fecha de entrega ya venció.
-            </AlertDescription>
-          </Alert>
-        ) : null}
+        <ReportContents
+          report={report}
+          canEditContent={canEditContent}
+          canDeleteContent={canDeleteContent}
+          onEditContent={onEditContent}
+          onDeleteContent={onDeleteContent}
+          onDownload={onDownload}
+        />
 
-        {report.submittedAt ? (
-          <p className="text-sm text-muted-foreground">
-            Enviada el {formatDate(report.submittedAt)}
-          </p>
-        ) : null}
-
-        {report.status === "accepted" || report.status === "rejected" ? (
-          <Alert
-            variant={
-              report.status === "rejected" ? "destructive" : "default"
+        {canAddContent() ? (
+          <ReportContentComposer
+            reportType={reportType}
+            allowedMimeTypes={report.allowedMimeTypes}
+            fileCount={fileCount}
+            maxFiles={report.maxFiles}
+            onCreateContent={(payload) => onCreateContent(report.id, payload)}
+            onUploadContent={(file, onProgress) =>
+              onUploadContent(report.id, file, onProgress)
             }
-          >
-            <AlertDescription>
-              <p className="font-medium">
-                {report.status === "accepted" ? "Aceptada" : "No aceptada"}
-                {report.reviewedBy
-                  ? ` por ${report.reviewedBy.fullName}`
-                  : ""}
-                {report.reviewedAt
-                  ? ` el ${formatDate(report.reviewedAt)}`
-                  : ""}
-              </p>
-              {report.reviewComment ? (
-                <p className="mt-1 whitespace-pre-line">
-                  {report.reviewComment}
-                </p>
-              ) : null}
-            </AlertDescription>
-          </Alert>
+          />
         ) : null}
 
-        {report.contents.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {report.contents.map((content) => (
-              <ReportContentRow
-                key={content.id}
-                content={content}
-                streamUrl={
-                  content.kind === "text" || content.kind === "link"
-                    ? null
-                    : getReportContentStreamUrl(
-                        String(report.projectId),
-                        report.id,
-                        content.id,
-                      )
-                }
-                canEdit={canEditContent}
-                canDelete={canDeleteContent(content)}
-                busy={busy}
-                onEdit={(target) => onEditContent(report, target)}
-                onDelete={(target) => {
-                  setDeleteTarget(target);
-                  setDeleteOpen(true);
-                }}
-                onDownload={(attachment) => void onDownload(attachment)}
-              />
-            ))}
-          </div>
-        ) : (
-          <Empty className="border">
-            <EmptyHeader>
-              <EmptyTitle>Sin contenido</EmptyTitle>
-              <EmptyDescription>
-                Esta entrega todavía no tiene texto, enlaces ni archivos.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        )}
-
-        {canEditContent && !atMaxFiles ? (
-          <>
-            <Separator />
-            <form
-              onSubmit={handleComposerSubmit}
-              className="flex flex-col gap-3"
-            >
-              {reportType === "text" ? (
-                <Textarea
-                  value={textValue}
-                  onChange={(event) => setTextValue(event.target.value)}
-                  rows={4}
-                  maxLength={REPORT_TEXT_MAX_LENGTH}
-                  disabled={busy}
-                  placeholder="Escribe el contenido de la entrega"
-                />
-              ) : null}
-
-              {reportType === "link" ? (
-                <div className="flex flex-col gap-3">
-                  <Input
-                    type="url"
-                    value={urlValue}
-                    onChange={(event) => setUrlValue(event.target.value)}
-                    disabled={busy}
-                    placeholder="https://ejemplo.com/recurso"
-                  />
-                  <Input
-                    value={labelValue}
-                    onChange={(event) => setLabelValue(event.target.value)}
-                    disabled={busy}
-                    placeholder="Título del enlace (opcional)"
-                  />
-                </div>
-              ) : null}
-
-              {reportType === "file" ? (
-                <Input
-                  type="file"
-                  onChange={handleFileChange}
-                  disabled={busy}
-                  accept={report.allowedMimeTypes.join(",")}
-                />
-              ) : null}
-
-              {uploadProgress !== null ? (
-                <div className="flex items-center gap-2">
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full bg-utb-blue transition-[width]"
-                      style={{
-                        width: `${Math.round(uploadProgress * 100)}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="w-10 text-right text-xs text-muted-foreground">
-                    {Math.round(uploadProgress * 100)}%
-                  </span>
-                </div>
-              ) : null}
-
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">
-                  {reportType === "file" && report.maxFiles !== null
-                    ? `${fileCount} de ${report.maxFiles} archivos. `
-                    : ""}
-                  {getComposerHint(reportType, selectedFile)}
-                </span>
-                <Button type="submit" disabled={busy}>
-                  {busy ? "Guardando..." : "Agregar contenido"}
-                </Button>
-              </div>
-            </form>
-          </>
-        ) : null}
-
-        {canEditContent && atMaxFiles ? (
+        {showMaxFilesNotice() ? (
           <Alert>
             <AlertDescription>
               Alcanzaste el máximo de {report.maxFiles} archivo(s) para esta
@@ -935,36 +1135,20 @@ function ReportCard({
           </Alert>
         ) : null}
 
-        {canSubmit && isEditable ? (
-          <div className="flex justify-end">
-            <Button onClick={handleSubmit} disabled={busy}>
-              <RiSendPlaneLine />
-              {report.status === "rejected" ? "Reenviar entrega" : "Enviar entrega"}
-            </Button>
-          </div>
+        {canEditContent ? (
+          <ReportSubmitAction
+            report={report}
+            busy={busy}
+            onClick={handleSubmit}
+          />
         ) : null}
 
-        {canManage && isAwaitingReview ? (
-          <>
-            <Separator />
-            <div className="flex flex-wrap justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => onReview(report, "rejected")}
-                disabled={busy}
-              >
-                <RiCloseCircleLine />
-                No aceptar
-              </Button>
-              <Button
-                onClick={() => onReview(report, "accepted")}
-                disabled={busy}
-              >
-                <RiCheckboxCircleLine />
-                Aceptar
-              </Button>
-            </div>
-          </>
+        {canReview() ? (
+          <ReportReviewActions
+            report={report}
+            busy={busy}
+            onReview={onReview}
+          />
         ) : null}
 
         {errorMessage ? <ErrorBanner message={errorMessage} /> : null}
@@ -982,27 +1166,6 @@ function ReportCard({
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={() => void confirmSubmit()}>
               Enviar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar contenido</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Eliminar este contenido de la entrega? Esta acción no se puede
-              deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => confirmDeleteContent()}
-            >
-              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1034,8 +1197,8 @@ function ReportsAccessNotice({
   ready,
   isAuthenticated,
 }: {
-  ready: boolean;
-  isAuthenticated: boolean;
+  readonly ready: boolean;
+  readonly isAuthenticated: boolean;
 }) {
   if (!ready) {
     return (

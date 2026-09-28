@@ -3,7 +3,7 @@ import { RiStackLine } from "@remixicon/react";
 import { formatProjectSource } from "@/app/services/utils";
 
 type ProjectSourceBadgeProps = {
-  source?: string;
+  readonly source?: string;
 };
 
 export default function ProjectSourceBadge({ source }: ProjectSourceBadgeProps) {

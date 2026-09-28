@@ -36,9 +36,9 @@ type ProjectActorAssignment = {
 };
 
 type ProjectObservationsPanelProps = {
-  projectId: number;
-  observations: ProjectObservationItem[];
-  assignments: ProjectActorAssignment[];
+  readonly projectId: number;
+  readonly observations: ProjectObservationItem[];
+  readonly assignments: ProjectActorAssignment[];
 };
 
 function canCreateObservation(
