@@ -1,30 +1,40 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  confirmReportContentFile,
   createProjectReport,
-  deleteProjectAttachment,
+  createReportContent,
   deleteProjectReport,
+  deleteReportContent,
   downloadProjectAttachment,
+  getProjectReports,
+  getReportContentStreamUrl,
+  presignReportContentFile,
   reviewProjectReport,
   submitProjectReport,
   updateProjectReport,
-  uploadProjectAttachment,
+  updateReportContent,
+  uploadFileToStorage,
 } from "../../services/projects";
 import {
   ProjectAttachmentItem,
+  ProjectReportContentItem,
+  ProjectReportContentKind,
   ProjectReportItem,
   ProjectReportStatus,
 } from "../../services/schemas";
 import { useAuth } from "../../components/auth-provider";
 import {
-  ATTACHMENT_ACCEPT,
+  REPORT_TEXT_MAX_LENGTH,
   formatBytes,
   formatDate,
+  getReportContentAccept,
   toDateTimeLocal,
-  validateAttachmentFile,
+  validateReportContentFile,
+  validateReportLink,
 } from "../../services/utils";
 import FormActions from "@/app/components/form-actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -61,20 +71,16 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
-import {
-  Field,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import {
   RiAddLine,
@@ -82,12 +88,16 @@ import {
   RiCheckboxCircleLine,
   RiCloseCircleLine,
   RiDeleteBinLine,
-  RiDownloadLine,
   RiErrorWarningLine,
+  RiExternalLinkLine,
   RiEyeLine,
+  RiFileTextLine,
+  RiImageLine,
+  RiLinkM,
   RiPencilLine,
   RiSendPlaneLine,
   RiTimeLine,
+  RiVideoLine,
 } from "@remixicon/react";
 
 type ProjectReportsPanelProps = {
@@ -104,13 +114,65 @@ type ReportFormState = {
   title: string;
   description: string;
   dueDate: string;
+  type: ProjectReportContentKind;
 };
+
+type ContentFileKind = "image" | "video" | "file";
+
+type ContentPayload =
+  | { kind: "text"; textContent: string }
+  | { kind: "link"; url: string; label?: string | null };
 
 const emptyForm: ReportFormState = {
   title: "",
   description: "",
   dueDate: "",
+  type: "file",
 };
+
+const REPORT_TYPE_OPTIONS: {
+  value: ProjectReportContentKind;
+  label: string;
+}[] = [
+  { value: "text", label: "Texto" },
+  { value: "link", label: "Enlace" },
+  { value: "file", label: "Archivo" },
+  { value: "image", label: "Imagen" },
+  { value: "video", label: "Video" },
+];
+
+const CONTENT_KIND_LABELS: Record<ProjectReportContentKind, string> = {
+  text: "Texto",
+  link: "Enlace",
+  image: "Imagen",
+  video: "Video",
+  file: "Archivo",
+};
+
+function ContentKindIcon({
+  kind,
+  className,
+}: {
+  kind: ProjectReportContentKind;
+  className?: string;
+}) {
+  switch (kind) {
+    case "text":
+      return <RiFileTextLine className={className} />;
+    case "link":
+      return <RiLinkM className={className} />;
+    case "image":
+      return <RiImageLine className={className} />;
+    case "video":
+      return <RiVideoLine className={className} />;
+    default:
+      return <RiAttachmentLine className={className} />;
+  }
+}
+
+function isFileKind(kind: ProjectReportContentKind): kind is ContentFileKind {
+  return kind === "image" || kind === "video" || kind === "file";
+}
 
 function isOverdue(report: ProjectReportItem): boolean {
   if (report.status === "submitted" || report.status === "accepted") {
@@ -245,117 +307,226 @@ function ReportDialogForm({
   );
 }
 
-type ReportAttachmentRowProps = {
-  attachment: ProjectAttachmentItem;
+type ReportContentRowProps = {
+  content: ProjectReportContentItem;
+  streamUrl: string | null;
+  canEdit: boolean;
   canDelete: boolean;
   busy: boolean;
-  onDownload: (attachment: ProjectAttachmentItem) => Promise<void>;
-  onDelete: (attachment: ProjectAttachmentItem) => void;
+  onEdit: (content: ProjectReportContentItem) => void;
+  onDelete: (content: ProjectReportContentItem) => void;
+  onDownload: (attachment: ProjectAttachmentItem) => void;
 };
 
-function ReportAttachmentRow({
-  attachment,
+function ReportContentRow({
+  content,
+  streamUrl,
+  canEdit,
   canDelete,
   busy,
-  onDownload,
+  onEdit,
   onDelete,
-}: ReportAttachmentRowProps) {
+  onDownload,
+}: ReportContentRowProps) {
+  const attachment = content.attachment;
+  const canEditContent = canEdit && (content.kind === "text" || content.kind === "link");
+
   return (
-    <TableRow>
-      <TableCell className="whitespace-normal">
-        <div className="flex items-center gap-2">
-          <RiAttachmentLine className="size-4 shrink-0 text-muted-foreground" />
-          <div className="min-w-0">
-            <Button
-              type="button"
-              variant="link"
-              onClick={() => void onDownload(attachment)}
-              className="h-auto justify-start truncate p-0 font-medium"
-            >
-              {attachment.originalName}
-            </Button>
-            {attachment.uploadedBy ? (
-              <p className="truncate text-xs text-muted-foreground">
-                {attachment.uploadedBy.fullName}
-              </p>
-            ) : null}
-          </div>
+    <div className="flex flex-col gap-2 rounded-xl border p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <ContentKindIcon kind={content.kind} className="size-4 shrink-0" />
+          {CONTENT_KIND_LABELS[content.kind]}
+          {content.createdBy ? (
+            <span className="font-normal">
+              · {content.createdBy.fullName}
+            </span>
+          ) : null}
+          <span className="font-normal">· {formatDate(content.createdAt)}</span>
         </div>
-      </TableCell>
-      <TableCell className="w-28 text-muted-foreground">
-        {formatBytes(attachment.sizeBytes)}
-      </TableCell>
-      <TableCell className="w-44 text-muted-foreground">
-        {formatDate(attachment.createdAt)}
-      </TableCell>
-      <TableCell className="w-24 text-right">
+
         <div className="flex justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Descargar archivo"
-            onClick={() => void onDownload(attachment)}
-            disabled={busy}
-          >
-            <RiDownloadLine />
-          </Button>
+          {canEditContent ? (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Editar contenido"
+              onClick={() => onEdit(content)}
+              disabled={busy}
+            >
+              <RiPencilLine />
+            </Button>
+          ) : null}
           {canDelete ? (
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label="Eliminar archivo"
+              aria-label="Eliminar contenido"
               className="text-destructive"
-              onClick={() => void onDelete(attachment)}
+              onClick={() => onDelete(content)}
               disabled={busy}
             >
               <RiDeleteBinLine />
             </Button>
           ) : null}
         </div>
-      </TableCell>
-    </TableRow>
+      </div>
+
+      {content.kind === "text" ? (
+        <p className="whitespace-pre-line text-sm text-foreground">
+          {content.textContent}
+        </p>
+      ) : null}
+
+      {content.kind === "link" ? (
+        <div className="flex flex-col gap-1">
+          <a
+            href={content.url ?? "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 break-all text-sm font-medium text-utb-blue hover:underline"
+          >
+            <RiExternalLinkLine className="size-4 shrink-0" />
+            {content.label ?? content.url}
+          </a>
+          {content.label && content.url ? (
+            <p className="break-all text-xs text-muted-foreground">
+              {content.url}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {content.kind === "image" && attachment && streamUrl ? (
+        <div className="flex flex-col gap-1">
+          <a
+            href={streamUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-fit"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={streamUrl}
+              alt={attachment.originalName}
+              className="max-h-80 w-auto rounded-lg border"
+            />
+          </a>
+          <p className="text-xs text-muted-foreground">
+            {attachment.originalName} · {formatBytes(attachment.sizeBytes)}
+          </p>
+        </div>
+      ) : null}
+
+      {content.kind === "video" && attachment && streamUrl ? (
+        <div className="flex flex-col gap-1">
+          <video
+            controls
+            preload="metadata"
+            src={streamUrl}
+            className="w-full max-w-xl rounded-lg border"
+          />
+          <p className="text-xs text-muted-foreground">
+            {attachment.originalName} · {formatBytes(attachment.sizeBytes)}
+          </p>
+        </div>
+      ) : null}
+
+      {content.kind === "file" && attachment ? (
+        <div className="flex flex-col gap-1">
+          <Button
+            type="button"
+            variant="link"
+            onClick={() => onDownload(attachment)}
+            className="h-auto w-fit justify-start p-0 font-medium"
+          >
+            <RiAttachmentLine className="size-4 shrink-0" />
+            {attachment.originalName}
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            {formatBytes(attachment.sizeBytes)}
+          </p>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
 type ReportCardProps = {
   report: ProjectReportItem;
+  currentUserId: number | null;
   canManage: boolean;
   canSubmit: boolean;
   onEdit: (report: ProjectReportItem) => void;
   onDelete: (report: ProjectReportItem) => void;
-  onUpload: (reportId: number, file: File) => Promise<void>;
   onSubmit: (report: ProjectReportItem) => Promise<void>;
   onReview: (
     report: ProjectReportItem,
     decision: "accepted" | "rejected",
   ) => void;
-  onDeleteAttachment: (attachmentId: number) => Promise<void>;
+  onEditContent: (
+    report: ProjectReportItem,
+    content: ProjectReportContentItem,
+  ) => void;
+  onCreateContent: (
+    reportId: number,
+    payload: ContentPayload,
+  ) => Promise<void>;
+  onUploadContent: (
+    reportId: number,
+    kind: ContentFileKind,
+    file: File,
+    onProgress: (fraction: number) => void,
+  ) => Promise<void>;
+  onDeleteContent: (reportId: number, contentId: number) => Promise<void>;
   onDownload: (attachment: ProjectAttachmentItem) => Promise<void>;
 };
 
 function ReportCard({
   report,
+  currentUserId,
   canManage,
   canSubmit,
   onEdit,
   onDelete,
-  onUpload,
   onSubmit,
   onReview,
-  onDeleteAttachment,
+  onEditContent,
+  onCreateContent,
+  onUploadContent,
+  onDeleteContent,
   onDownload,
 }: ReportCardProps) {
+  const [textValue, setTextValue] = useState("");
+  const [urlValue, setUrlValue] = useState("");
+  const [labelValue, setLabelValue] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
-  const [attachmentDeleteTarget, setAttachmentDeleteTarget] =
-    useState<ProjectAttachmentItem | null>(null);
-  const [attachmentDeleteOpen, setAttachmentDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] =
+    useState<ProjectReportContentItem | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const isAwaitingReview = report.status === "submitted";
   const isEditable = report.status === "pending" || report.status === "rejected";
-  const canUploadFiles = canSubmit && isEditable;
+  const canEditContent = canSubmit && isEditable;
+  const reportType = report.type;
+
+  function canDeleteContent(content: ProjectReportContentItem): boolean {
+    if (!isEditable) {
+      return false;
+    }
+
+    if (canManage) {
+      return true;
+    }
+
+    return (
+      currentUserId !== null && content.createdBy?.id === currentUserId
+    );
+  }
 
   async function run(action: () => Promise<void>, fallbackError: string) {
     setErrorMessage(null);
@@ -372,16 +543,24 @@ function ReportCard({
     }
   }
 
+  function resetComposer(form?: HTMLFormElement) {
+    setTextValue("");
+    setUrlValue("");
+    setLabelValue("");
+    setSelectedFile(null);
+    form?.reset();
+  }
+
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     setErrorMessage(null);
     const file = event.target.files?.[0] ?? null;
 
-    if (!file) {
+    if (!file || !isFileKind(reportType)) {
       setSelectedFile(null);
       return;
     }
 
-    const validationError = validateAttachmentFile(file);
+    const validationError = validateReportContentFile(reportType, file);
 
     if (validationError) {
       setErrorMessage(validationError);
@@ -393,28 +572,78 @@ function ReportCard({
     setSelectedFile(file);
   }
 
-  async function handleUploadSubmit(
+  async function handleComposerSubmit(
     event: React.FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
+    const form = event.currentTarget;
+
+    if (reportType === "text") {
+      const text = textValue.trim();
+
+      if (!text) {
+        setErrorMessage("Escribe el texto de la entrega.");
+        return;
+      }
+
+      await run(async () => {
+        await onCreateContent(report.id, { kind: "text", textContent: text });
+        resetComposer(form);
+      }, "No se pudo agregar el texto");
+      return;
+    }
+
+    if (reportType === "link") {
+      const linkError = validateReportLink(urlValue);
+
+      if (linkError) {
+        setErrorMessage(linkError);
+        return;
+      }
+
+      await run(async () => {
+        await onCreateContent(report.id, {
+          kind: "link",
+          url: urlValue.trim(),
+          label: labelValue.trim() || null,
+        });
+        resetComposer(form);
+      }, "No se pudo agregar el enlace");
+      return;
+    }
 
     if (!selectedFile) {
       setErrorMessage("Selecciona un archivo antes de subirlo.");
       return;
     }
 
-    const form = event.currentTarget;
+    const file = selectedFile;
+    const kind = reportType;
 
-    await run(async () => {
-      await onUpload(report.id, selectedFile);
-      setSelectedFile(null);
-      form.reset();
-    }, "No se pudo subir el archivo");
+    setErrorMessage(null);
+    setBusy(true);
+    setUploadProgress(0);
+
+    try {
+      await onUploadContent(report.id, kind, file, (fraction) =>
+        setUploadProgress(fraction),
+      );
+      resetComposer(form);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "No se pudo subir el archivo",
+      );
+    } finally {
+      setBusy(false);
+      setUploadProgress(null);
+    }
   }
 
   function handleSubmit() {
-    if (report.attachments.length === 0) {
-      setErrorMessage("Adjunta al menos un archivo antes de enviar la entrega.");
+    if (report.contents.length === 0) {
+      setErrorMessage(
+        "Agrega al menos un contenido antes de enviar la entrega.",
+      );
       return;
     }
 
@@ -430,24 +659,19 @@ function ReportCard({
     );
   }
 
-  function handleDeleteAttachment(attachment: ProjectAttachmentItem) {
-    setAttachmentDeleteTarget(attachment);
-    setAttachmentDeleteOpen(true);
-  }
+  function confirmDeleteContent() {
+    const content = deleteTarget;
 
-  async function confirmDeleteAttachment() {
-    const attachment = attachmentDeleteTarget;
-
-    if (!attachment) {
+    if (!content) {
       return;
     }
 
-    setAttachmentDeleteOpen(false);
-    setAttachmentDeleteTarget(null);
+    setDeleteOpen(false);
+    setDeleteTarget(null);
 
-    await run(
-      () => onDeleteAttachment(attachment.id),
-      "No se pudo eliminar el archivo",
+    void run(
+      () => onDeleteContent(report.id, content.id),
+      "No se pudo eliminar el contenido",
     );
   }
 
@@ -458,7 +682,12 @@ function ReportCard({
           <div className="min-w-0">
             <CardTitle className="whitespace-normal">{report.title}</CardTitle>
             <CardDescription>
-              Vence el {formatDate(report.dueDate)}
+              <span className="inline-flex items-center gap-1">
+                <ContentKindIcon kind={report.type} className="size-3.5" />
+                {CONTENT_KIND_LABELS[report.type]}
+              </span>
+              {" · Vence el "}
+              {formatDate(report.dueDate)}
               {report.createdBy
                 ? ` · Creada por ${report.createdBy.fullName}`
                 : ""}
@@ -542,61 +771,111 @@ function ReportCard({
           </Alert>
         ) : null}
 
-        {report.attachments.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Archivo</TableHead>
-                <TableHead>Tamaño</TableHead>
-                <TableHead>Subido</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {report.attachments.map((attachment) => (
-                <ReportAttachmentRow
-                  key={attachment.id}
-                  attachment={attachment}
-                  canDelete={canUploadFiles}
-                  busy={busy}
-                  onDownload={onDownload}
-                  onDelete={handleDeleteAttachment}
-                />
-              ))}
-            </TableBody>
-          </Table>
+        {report.contents.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {report.contents.map((content) => (
+              <ReportContentRow
+                key={content.id}
+                content={content}
+                streamUrl={
+                  content.kind === "text" || content.kind === "link"
+                    ? null
+                    : getReportContentStreamUrl(
+                        String(report.projectId),
+                        report.id,
+                        content.id,
+                      )
+                }
+                canEdit={canEditContent}
+                canDelete={canDeleteContent(content)}
+                busy={busy}
+                onEdit={(target) => onEditContent(report, target)}
+                onDelete={(target) => {
+                  setDeleteTarget(target);
+                  setDeleteOpen(true);
+                }}
+                onDownload={(attachment) => void onDownload(attachment)}
+              />
+            ))}
+          </div>
         ) : (
           <Empty className="border">
             <EmptyHeader>
-              <EmptyTitle>Sin archivos</EmptyTitle>
+              <EmptyTitle>Sin contenido</EmptyTitle>
               <EmptyDescription>
-                Sin archivos adjuntos todavía.
+                Esta entrega todavía no tiene texto, enlaces ni archivos.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
         )}
 
-        {canUploadFiles ? (
+        {canEditContent ? (
           <>
             <Separator />
             <form
-              onSubmit={handleUploadSubmit}
+              onSubmit={handleComposerSubmit}
               className="flex flex-col gap-3"
             >
-              <Input
-                type="file"
-                onChange={handleFileChange}
-                disabled={busy}
-                accept={ATTACHMENT_ACCEPT}
-              />
+              {reportType === "text" ? (
+                <Textarea
+                  value={textValue}
+                  onChange={(event) => setTextValue(event.target.value)}
+                  rows={4}
+                  maxLength={REPORT_TEXT_MAX_LENGTH}
+                  disabled={busy}
+                  placeholder="Escribe el contenido de la entrega"
+                />
+              ) : null}
+
+              {reportType === "link" ? (
+                <div className="flex flex-col gap-3">
+                  <Input
+                    type="url"
+                    value={urlValue}
+                    onChange={(event) => setUrlValue(event.target.value)}
+                    disabled={busy}
+                    placeholder="https://ejemplo.com/recurso"
+                  />
+                  <Input
+                    value={labelValue}
+                    onChange={(event) => setLabelValue(event.target.value)}
+                    disabled={busy}
+                    placeholder="Título del enlace (opcional)"
+                  />
+                </div>
+              ) : null}
+
+              {isFileKind(reportType) ? (
+                <Input
+                  type="file"
+                  onChange={handleFileChange}
+                  disabled={busy}
+                  accept={getReportContentAccept(reportType)}
+                />
+              ) : null}
+
+              {uploadProgress !== null ? (
+                <div className="flex items-center gap-2">
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full bg-utb-blue transition-[width]"
+                      style={{
+                        width: `${Math.round(uploadProgress * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="w-10 text-right text-xs text-muted-foreground">
+                    {Math.round(uploadProgress * 100)}%
+                  </span>
+                </div>
+              ) : null}
+
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-sm text-muted-foreground">
-                  {selectedFile
-                    ? `${selectedFile.name} · ${formatBytes(selectedFile.size)}`
-                    : "Adjunta archivos a la entrega (PDF, Word, Excel, PNG o JPEG)."}
+                  {getComposerHint(reportType, selectedFile)}
                 </span>
-                <Button type="submit" disabled={busy || !selectedFile}>
-                  {busy ? "Subiendo..." : "Adjuntar archivo"}
+                <Button type="submit" disabled={busy}>
+                  {busy ? "Guardando..." : "Agregar contenido"}
                 </Button>
               </div>
             </form>
@@ -655,24 +934,20 @@ function ReportCard({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={attachmentDeleteOpen}
-        onOpenChange={setAttachmentDeleteOpen}
-      >
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar archivo</AlertDialogTitle>
+            <AlertDialogTitle>Eliminar contenido</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Eliminar el archivo &quot;
-              {attachmentDeleteTarget?.originalName}&quot;? Esta acción no se
-              puede deshacer.
+              ¿Eliminar este contenido de la entrega? Esta acción no se puede
+              deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              onClick={() => void confirmDeleteAttachment()}
+              onClick={() => confirmDeleteContent()}
             >
               Eliminar
             </AlertDialogAction>
@@ -683,13 +958,41 @@ function ReportCard({
   );
 }
 
+function getComposerHint(
+  kind: ProjectReportContentKind,
+  selectedFile: File | null,
+): string {
+  if (kind === "text") {
+    return "El texto se guarda como contenido de la entrega.";
+  }
+
+  if (kind === "link") {
+    return "Comparte una URL (sitio, video externo, repositorio).";
+  }
+
+  if (selectedFile) {
+    return `${selectedFile.name} · ${formatBytes(selectedFile.size)}`;
+  }
+
+  if (kind === "image") {
+    return "Imágenes PNG, JPEG, WebP o GIF. Máximo 10 MB.";
+  }
+
+  if (kind === "video") {
+    return "Videos MP4, WebM u OGG. Máximo 100 MB.";
+  }
+
+  return "Documentos PDF, Word o Excel. Máximo 10 MB.";
+}
+
 export default function ProjectReportsPanel({
   projectId,
-  reports,
+  reports: initialReports,
   actorAssignments,
 }: ProjectReportsPanelProps) {
   const router = useRouter();
   const { session, isAuthenticated, ready } = useAuth();
+  const [reports, setReports] = useState<ProjectReportItem[]>(initialReports);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingReport, setEditingReport] =
     useState<ProjectReportItem | null>(null);
@@ -707,6 +1010,21 @@ export default function ProjectReportsPanel({
   const [deleteTarget, setDeleteTarget] =
     useState<ProjectReportItem | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [contentEdit, setContentEdit] = useState<{
+    reportId: number;
+    content: ProjectReportContentItem;
+  } | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editUrl, setEditUrl] = useState("");
+  const [editLabel, setEditLabel] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isEditPending, startEditTransition] = useTransition();
+
+  useEffect(() => {
+    setReports(initialReports);
+  }, [initialReports]);
+
+  const currentUserId = session?.user.id ?? null;
 
   const canManage = useMemo(() => {
     if (!session) {
@@ -757,6 +1075,11 @@ export default function ProjectReportsPanel({
     [reports],
   );
 
+  async function reloadReports(): Promise<void> {
+    const nextReports = await getProjectReports(String(projectId));
+    setReports(nextReports);
+  }
+
   function openCreateDialog() {
     setEditingReport(null);
     setForm(emptyForm);
@@ -770,6 +1093,7 @@ export default function ProjectReportsPanel({
       title: report.title,
       description: report.description ?? "",
       dueDate: toDateTimeLocal(report.dueDate),
+      type: report.type,
     });
     setErrorMessage(null);
     setDialogOpen(true);
@@ -807,6 +1131,7 @@ export default function ProjectReportsPanel({
       title,
       description: form.description.trim() || null,
       dueDate: new Date(dueDate).toISOString(),
+      type: form.type,
     };
 
     runTransition(async () => {
@@ -816,6 +1141,7 @@ export default function ProjectReportsPanel({
         await createProjectReport(String(projectId), payload);
       }
       setDialogOpen(false);
+      await reloadReports();
       router.refresh();
     }, "No se pudo guardar la entrega");
   }
@@ -837,6 +1163,7 @@ export default function ProjectReportsPanel({
 
     runTransition(async () => {
       await deleteProjectReport(String(projectId), report.id);
+      await reloadReports();
       router.refresh();
     }, "No se pudo eliminar la entrega");
   }
@@ -870,6 +1197,7 @@ export default function ProjectReportsPanel({
         );
         setReviewOpen(false);
         setReviewTarget(null);
+        await reloadReports();
         router.refresh();
       } catch (error) {
         setReviewError(
@@ -881,23 +1209,54 @@ export default function ProjectReportsPanel({
     });
   }
 
-  async function handleUpload(reportId: number, file: File) {
-    await uploadProjectAttachment(String(projectId), file, reportId);
-    router.refresh();
+  async function handleCreateContent(
+    reportId: number,
+    payload: ContentPayload,
+  ): Promise<void> {
+    await createReportContent(String(projectId), reportId, payload);
+    await reloadReports();
+  }
+
+  async function handleUploadContent(
+    reportId: number,
+    kind: ContentFileKind,
+    file: File,
+    onProgress: (fraction: number) => void,
+  ): Promise<void> {
+    const metadata = {
+      kind,
+      fileName: file.name,
+      mimeType: file.type || "application/octet-stream",
+      sizeBytes: file.size,
+    };
+
+    const target = await presignReportContentFile(
+      String(projectId),
+      reportId,
+      metadata,
+    );
+
+    await uploadFileToStorage(target.uploadUrl, file, onProgress);
+
+    await confirmReportContentFile(String(projectId), reportId, {
+      ...metadata,
+      storageKey: target.storageKey,
+    });
+
+    await reloadReports();
+  }
+
+  async function handleDeleteContent(
+    reportId: number,
+    contentId: number,
+  ): Promise<void> {
+    await deleteReportContent(String(projectId), reportId, contentId);
+    await reloadReports();
   }
 
   async function handleSubmitReport(report: ProjectReportItem) {
-    await submitProjectReport(
-      String(projectId),
-      report.id,
-      report.attachments.map((attachment) => attachment.id),
-    );
-    router.refresh();
-  }
-
-  async function handleDeleteAttachment(attachmentId: number) {
-    await deleteProjectAttachment(String(projectId), attachmentId);
-    router.refresh();
+    await submitProjectReport(String(projectId), report.id);
+    await reloadReports();
   }
 
   async function handleDownload(attachment: ProjectAttachmentItem) {
@@ -908,9 +1267,70 @@ export default function ProjectReportsPanel({
     );
   }
 
+  function openContentEdit(
+    report: ProjectReportItem,
+    content: ProjectReportContentItem,
+  ) {
+    setContentEdit({ reportId: report.id, content });
+    setEditText(content.textContent ?? "");
+    setEditUrl(content.url ?? "");
+    setEditLabel(content.label ?? "");
+    setEditError(null);
+  }
+
+  function handleContentEditSubmit(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    if (!contentEdit) {
+      return;
+    }
+
+    const isText = contentEdit.content.kind === "text";
+    const textContent = editText.trim();
+    const url = editUrl.trim();
+    const label = editLabel.trim() || null;
+
+    if (isText && !textContent) {
+      setEditError("El texto no puede estar vacío.");
+      return;
+    }
+
+    if (!isText) {
+      const linkError = validateReportLink(url);
+
+      if (linkError) {
+        setEditError(linkError);
+        return;
+      }
+    }
+
+    setEditError(null);
+
+    startEditTransition(async () => {
+      try {
+        await updateReportContent(
+          String(projectId),
+          contentEdit.reportId,
+          contentEdit.content.id,
+          isText ? { textContent } : { url, label },
+        );
+        setContentEdit(null);
+        await reloadReports();
+        router.refresh();
+      } catch (error) {
+        setEditError(
+          error instanceof Error ? error.message : "No se pudo guardar",
+        );
+      }
+    });
+  }
+
   const reviewDecision = reviewTarget?.decision;
   const reviewDialogTitle =
     reviewDecision === "accepted" ? "Aceptar entrega" : "No aceptar entrega";
+  const editingTextContent = contentEdit?.content.kind === "text";
 
   return (
     <Card className="mt-6">
@@ -952,14 +1372,17 @@ export default function ProjectReportsPanel({
               <ReportCard
                 key={report.id}
                 report={report}
+                currentUserId={currentUserId}
                 canManage={canManage}
                 canSubmit={canSubmit}
                 onEdit={openEditDialog}
                 onDelete={handleDelete}
-                onUpload={handleUpload}
                 onSubmit={handleSubmitReport}
                 onReview={openReviewDialog}
-                onDeleteAttachment={handleDeleteAttachment}
+                onEditContent={openContentEdit}
+                onCreateContent={handleCreateContent}
+                onUploadContent={handleUploadContent}
+                onDeleteContent={handleDeleteContent}
                 onDownload={handleDownload}
               />
             ))}
@@ -1039,6 +1462,34 @@ export default function ProjectReportsPanel({
             disabled={isPending}
           />
         </FormField>
+
+        <FormField htmlFor="report-type" label="Tipo de entrega">
+          <Select
+            value={form.type}
+            onValueChange={(value) =>
+              setForm((prev) => ({
+                ...prev,
+                type: value as ProjectReportContentKind,
+              }))
+            }
+            disabled={isPending || Boolean(editingReport?.contents.length)}
+          >
+            <SelectTrigger id="report-type" className="w-full">
+              <SelectValue>
+                {REPORT_TYPE_OPTIONS.find(
+                  (option) => option.value === form.type,
+                )?.label ?? "Tipo"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {REPORT_TYPE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
       </ReportDialogForm>
 
       <ReportDialogForm
@@ -1067,6 +1518,59 @@ export default function ProjectReportsPanel({
             placeholder="Explica brevemente tu decisión"
           />
         </FormField>
+      </ReportDialogForm>
+
+      <ReportDialogForm
+        open={contentEdit !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setContentEdit(null);
+          }
+        }}
+        title="Editar contenido"
+        description={
+          editingTextContent
+            ? "Actualiza el texto de la entrega."
+            : "Actualiza el enlace de la entrega."
+        }
+        errorMessage={editError}
+        loading={isEditPending}
+        submitText="Guardar cambios"
+        onSubmit={handleContentEditSubmit}
+        onCancel={() => setContentEdit(null)}
+      >
+        {editingTextContent ? (
+          <FormField htmlFor="content-edit-text" label="Texto">
+            <Textarea
+              id="content-edit-text"
+              value={editText}
+              onChange={(event) => setEditText(event.target.value)}
+              rows={4}
+              maxLength={REPORT_TEXT_MAX_LENGTH}
+              disabled={isEditPending}
+            />
+          </FormField>
+        ) : (
+          <>
+            <FormField htmlFor="content-edit-url" label="URL">
+              <Input
+                id="content-edit-url"
+                type="url"
+                value={editUrl}
+                onChange={(event) => setEditUrl(event.target.value)}
+                disabled={isEditPending}
+              />
+            </FormField>
+            <FormField htmlFor="content-edit-label" label="Título (opcional)">
+              <Input
+                id="content-edit-label"
+                value={editLabel}
+                onChange={(event) => setEditLabel(event.target.value)}
+                disabled={isEditPending}
+              />
+            </FormField>
+          </>
+        )}
       </ReportDialogForm>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
