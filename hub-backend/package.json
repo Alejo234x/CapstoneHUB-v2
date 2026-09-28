@@ -23,6 +23,7 @@
     "seed:attachments": "ts-node --require ./prisma/register.cjs prisma/seed.ts --only=attachments",
     "seed:reports": "ts-node --require ./prisma/register.cjs prisma/seed.ts --only=reports",
     "seed:reset": "ts-node --require ./prisma/register.cjs prisma/seed.ts --reset",
+    "storage:gc": "ts-node --require ./prisma/register.cjs src/storage/gc-cli.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -32,6 +33,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1131.0",
+    "@aws-sdk/s3-request-presigner": "^3.1141.0",
     "@nestjs/class-transformer": "^0.4.0",
     "@nestjs/class-validator": "^0.13.4",
     "@nestjs/common": "^11.0.1",
