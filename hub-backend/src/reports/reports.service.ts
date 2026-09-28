@@ -881,12 +881,8 @@ export class ReportsService {
   } {
     const nextType = data.type ?? existing.type;
 
-    let nextAllowed =
-      data.allowedMimeTypes !== undefined
-        ? data.allowedMimeTypes
-        : existing.allowedMimeTypes;
-    let nextMax =
-      data.maxFiles !== undefined ? data.maxFiles : existing.maxFiles;
+    let nextAllowed = data.allowedMimeTypes ?? existing.allowedMimeTypes;
+    let nextMax = data.maxFiles ?? existing.maxFiles;
 
     if (data.type !== undefined && data.type !== existing.type) {
       if (!this.isFileReportType(nextType)) {
@@ -927,8 +923,8 @@ export class ReportsService {
       return false;
     }
 
-    const sortedLeft = [...left].sort();
-    const sortedRight = [...right].sort();
+    const sortedLeft = [...left].sort((a, b) => a.localeCompare(b));
+    const sortedRight = [...right].sort((a, b) => a.localeCompare(b));
 
     return sortedLeft.every((value, index) => value === sortedRight[index]);
   }
