@@ -82,6 +82,29 @@ export type ProjectReportStatus =
   | "accepted"
   | "rejected";
 
+export type ProjectReportContentKind =
+  | "text"
+  | "link"
+  | "image"
+  | "video"
+  | "file";
+
+export type ProjectReportContentItem = {
+  id: number;
+  reportId: number;
+  kind: ProjectReportContentKind;
+  textContent: string | null;
+  url: string | null;
+  label: string | null;
+  createdAt: string;
+  attachment: ProjectAttachmentItem | null;
+  createdBy: {
+    id: number;
+    fullName: string;
+    email: string;
+  } | null;
+};
+
 export type ProjectReportItem = {
   id: number;
   projectId: number;
@@ -94,6 +117,7 @@ export type ProjectReportItem = {
   title: string;
   description: string | null;
   dueDate: string;
+  type: ProjectReportContentKind;
   createdBy: {
     id: number;
     fullName: string;
@@ -104,7 +128,7 @@ export type ProjectReportItem = {
     fullName: string;
     email: string;
   } | null;
-  attachments: ProjectAttachmentItem[];
+  contents: ProjectReportContentItem[];
 };
 
 export type ProjectStatusHistoryItem = {
