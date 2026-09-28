@@ -24,7 +24,6 @@ import {
   UPLOAD_URL_TTL_SECONDS,
 } from '../attachments/attachments.constants';
 import {
-  FileRange,
   StorageService,
   StoredObject,
   buildStorageKey,
@@ -485,7 +484,7 @@ export class ReportsService {
     projectId: number;
     reportId: number;
     contentId: number;
-    range?: FileRange;
+    range?: string;
     user: AuthenticatedUser;
   }): Promise<ReportContentStream> {
     const { projectId, reportId, contentId, range, user } = params;

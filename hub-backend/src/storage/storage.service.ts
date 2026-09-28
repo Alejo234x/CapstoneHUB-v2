@@ -7,12 +7,6 @@ export type SaveFileInput = {
   contentType: string;
 };
 
-/**
- * Valor de la cabecera HTTP `Range` (`bytes=0-1023`, `bytes=500-`). Se
- * reenvía tal cual al proveedor de almacenamiento, que resuelve la porción.
- */
-export type FileRange = string;
-
 export type StoredObject = {
   stream: Readable;
   /** Tamaño del objeto o de la porción devuelta, si el proveedor lo informa. */
@@ -44,7 +38,12 @@ export type ListedObject = {
 
 export abstract class StorageService {
   abstract save(input: SaveFileInput): Promise<void>;
-  abstract read(key: string, range?: FileRange): Promise<StoredObject>;
+  /**
+   * Lee el objeto. `range` es el valor de la cabecera HTTP `Range`
+   * (`bytes=0-1023`, `bytes=500-`) y se reenvía tal cual al proveedor, que
+   * resuelve la porción.
+   */
+  abstract read(key: string, range?: string): Promise<StoredObject>;
   abstract delete(key: string): Promise<void>;
   /** URL prefirmada para que el navegador suba un objeto directamente. */
   abstract createUploadUrl(input: UploadUrlInput): Promise<PresignedUpload>;

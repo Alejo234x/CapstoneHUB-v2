@@ -14,7 +14,6 @@ import {
 } from '@nestjs/common';
 import { Readable } from 'node:stream';
 import {
-  FileRange,
   ListedObject,
   PresignedUpload,
   SaveFileInput,
@@ -90,7 +89,7 @@ export class S3StorageService extends StorageService {
     );
   }
 
-  async read(key: string, range?: FileRange): Promise<StoredObject> {
+  async read(key: string, range?: string): Promise<StoredObject> {
     const response = await this.client.send(
       new GetObjectCommand({
         Bucket: this.bucket,
