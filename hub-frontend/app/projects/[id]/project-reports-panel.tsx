@@ -28,12 +28,12 @@ import {
 } from "../../services/schemas";
 import { useAuth } from "../../components/auth-provider";
 import {
-  REPORT_MIME_OPTIONS,
+  REPORT_FILE_MIME_OPTIONS,
   REPORT_TEXT_MAX_LENGTH,
   formatBytes,
   formatDate,
   toDateTimeLocal,
-  validateReportContentFile,
+  validateReportFile,
   validateReportLink,
 } from "../../services/utils";
 import FormActions from "@/app/components/form-actions";
@@ -120,8 +120,6 @@ type ReportFormState = {
   maxFiles: string;
 };
 
-type ContentFileKind = "image" | "video" | "file";
-
 type ContentPayload =
   | { kind: "text"; textContent: string }
   | { kind: "link"; url: string; label?: string | null };
@@ -142,8 +140,6 @@ const REPORT_TYPE_OPTIONS: {
   { value: "text", label: "Texto" },
   { value: "link", label: "Enlace" },
   { value: "file", label: "Archivo" },
-  { value: "image", label: "Imagen" },
-  { value: "video", label: "Video" },
 ];
 
 const CONTENT_KIND_LABELS: Record<ProjectReportContentKind, string> = {
@@ -156,11 +152,25 @@ const CONTENT_KIND_LABELS: Record<ProjectReportContentKind, string> = {
 
 function ContentKindIcon({
   kind,
+  mimeType,
   className,
 }: {
   kind: ProjectReportContentKind;
+  mimeType?: string;
   className?: string;
 }) {
+  if (kind === "file" && mimeType) {
+    if (mimeType.startsWith("image/")) {
+      return <RiImageLine className={className} />;
+    }
+
+    if (mimeType.startsWith("video/")) {
+      return <RiVideoLine className={className} />;
+    }
+
+    return <RiAttachmentLine className={className} />;
+  }
+
   switch (kind) {
     case "text":
       return <RiFileTextLine className={className} />;
@@ -175,8 +185,23 @@ function ContentKindIcon({
   }
 }
 
-function isFileKind(kind: ProjectReportContentKind): kind is ContentFileKind {
-  return kind === "image" || kind === "video" || kind === "file";
+function contentMediaLabel(
+  kind: ProjectReportContentKind,
+  mimeType: string,
+): string {
+  if (kind === "file" && mimeType) {
+    if (mimeType.startsWith("image/")) {
+      return "Imagen";
+    }
+
+    if (mimeType.startsWith("video/")) {
+      return "Video";
+    }
+
+    return "Archivo";
+  }
+
+  return CONTENT_KIND_LABELS[kind];
 }
 
 function isOverdue(report: ProjectReportItem): boolean {
@@ -334,14 +359,22 @@ function ReportContentRow({
   onDownload,
 }: ReportContentRowProps) {
   const attachment = content.attachment;
-  const canEditContent = canEdit && (content.kind === "text" || content.kind === "link");
+  const mimeType = attachment?.mimeType ?? "";
+  const isImage = mimeType.startsWith("image/");
+  const isVideo = mimeType.startsWith("video/");
+  const canEditContent =
+    canEdit && (content.kind === "text" || content.kind === "link");
 
   return (
     <div className="flex flex-col gap-2 rounded-xl border p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <ContentKindIcon kind={content.kind} className="size-4 shrink-0" />
-          {CONTENT_KIND_LABELS[content.kind]}
+          <ContentKindIcon
+            kind={content.kind}
+            mimeType={mimeType}
+            className="size-4 shrink-0"
+          />
+          {contentMediaLabel(content.kind, mimeType)}
           {content.createdBy ? (
             <span className="font-normal">
               · {content.createdBy.fullName}
@@ -402,7 +435,7 @@ function ReportContentRow({
         </div>
       ) : null}
 
-      {content.kind === "image" && attachment && streamUrl ? (
+      {isImage && attachment && streamUrl ? (
         <div className="flex flex-col gap-1">
           <a
             href={streamUrl}
@@ -423,7 +456,7 @@ function ReportContentRow({
         </div>
       ) : null}
 
-      {content.kind === "video" && attachment && streamUrl ? (
+      {isVideo && attachment && streamUrl ? (
         <div className="flex flex-col gap-1">
           <video
             controls
@@ -437,7 +470,7 @@ function ReportContentRow({
         </div>
       ) : null}
 
-      {content.kind === "file" && attachment ? (
+      {content.kind === "file" && !isImage && !isVideo && attachment ? (
         <div className="flex flex-col gap-1">
           <Button
             type="button"
@@ -479,7 +512,6 @@ type ReportCardProps = {
   ) => Promise<void>;
   onUploadContent: (
     reportId: number,
-    kind: ContentFileKind,
     file: File,
     onProgress: (fraction: number) => void,
   ) => Promise<void>;
@@ -520,7 +552,7 @@ function ReportCard({
   const reportType = report.type;
   const fileCount = report.contents.length;
   const atMaxFiles =
-    isFileKind(reportType) &&
+    reportType === "file" &&
     report.maxFiles !== null &&
     fileCount >= report.maxFiles;
 
@@ -565,22 +597,15 @@ function ReportCard({
     setErrorMessage(null);
     const file = event.target.files?.[0] ?? null;
 
-    if (!file || !isFileKind(reportType)) {
+    if (!file || reportType !== "file") {
       setSelectedFile(null);
       return;
     }
 
-    const validationError = validateReportContentFile(reportType, file);
+    const validationError = validateReportFile(file, report.allowedMimeTypes);
 
     if (validationError) {
       setErrorMessage(validationError);
-      setSelectedFile(null);
-      event.target.value = "";
-      return;
-    }
-
-    if (file.type && !report.allowedMimeTypes.includes(file.type)) {
-      setErrorMessage("Tipo de archivo no permitido para esta entrega.");
       setSelectedFile(null);
       event.target.value = "";
       return;
@@ -635,14 +660,13 @@ function ReportCard({
     }
 
     const file = selectedFile;
-    const kind = reportType;
 
     setErrorMessage(null);
     setBusy(true);
     setUploadProgress(0);
 
     try {
-      await onUploadContent(report.id, kind, file, (fraction) =>
+      await onUploadContent(report.id, file, (fraction) =>
         setUploadProgress(fraction),
       );
       resetComposer(form);
@@ -862,7 +886,7 @@ function ReportCard({
                 </div>
               ) : null}
 
-              {isFileKind(reportType) ? (
+              {reportType === "file" ? (
                 <Input
                   type="file"
                   onChange={handleFileChange}
@@ -889,7 +913,7 @@ function ReportCard({
 
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-sm text-muted-foreground">
-                  {isFileKind(reportType) && report.maxFiles !== null
+                  {reportType === "file" && report.maxFiles !== null
                     ? `${fileCount} de ${report.maxFiles} archivos. `
                     : ""}
                   {getComposerHint(reportType, selectedFile)}
@@ -1003,15 +1027,7 @@ function getComposerHint(
     return `${selectedFile.name} · ${formatBytes(selectedFile.size)}`;
   }
 
-  if (kind === "image") {
-    return "Imágenes PNG, JPEG, WebP o GIF. Máximo 10 MB.";
-  }
-
-  if (kind === "video") {
-    return "Videos MP4, WebM u OGG. Máximo 100 MB.";
-  }
-
-  return "Documentos PDF, Word o Excel. Máximo 10 MB.";
+  return "Documentos, imágenes o videos. Máximo 100 MB.";
 }
 
 export default function ProjectReportsPanel({
@@ -1158,7 +1174,7 @@ export default function ProjectReportsPanel({
       return;
     }
 
-    const isFile = isFileKind(form.type);
+    const isFile = form.type === "file";
     const maxFiles = Number(form.maxFiles);
 
     if (isFile) {
@@ -1268,12 +1284,10 @@ export default function ProjectReportsPanel({
 
   async function handleUploadContent(
     reportId: number,
-    kind: ContentFileKind,
     file: File,
     onProgress: (fraction: number) => void,
   ): Promise<void> {
     const metadata = {
-      kind,
       fileName: file.name,
       mimeType: file.type || "application/octet-stream",
       sizeBytes: file.size,
@@ -1543,7 +1557,7 @@ export default function ProjectReportsPanel({
           </Select>
         </FormField>
 
-        {isFileKind(form.type) ? (
+        {form.type === "file" ? (
           <>
             <FormField
               htmlFor="report-mime-types"
@@ -1551,7 +1565,7 @@ export default function ProjectReportsPanel({
             >
               <div className="flex flex-col gap-2">
                 <div className="flex flex-wrap gap-x-4 gap-y-2">
-                  {REPORT_MIME_OPTIONS[form.type].map((option) => (
+                  {REPORT_FILE_MIME_OPTIONS.map((option) => (
                     <label
                       key={option.label}
                       htmlFor={`mime-${option.label}`}
@@ -1593,9 +1607,9 @@ export default function ProjectReportsPanel({
                   onClick={() =>
                     setForm((prev) => ({
                       ...prev,
-                      allowedMimeTypes: REPORT_MIME_OPTIONS[
-                        prev.type as ContentFileKind
-                      ].flatMap((option) => option.values),
+                      allowedMimeTypes: REPORT_FILE_MIME_OPTIONS.flatMap(
+                        (option) => option.values,
+                      ),
                     }))
                   }
                 >

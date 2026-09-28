@@ -127,24 +127,20 @@ describe('ReportsService', () => {
     };
   }
 
-  function defaultMimeFor(type: string): string[] {
-    switch (type) {
-      case 'image':
-        return ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
-      case 'video':
-        return ['video/mp4', 'video/webm', 'video/ogg'];
-      case 'file':
-        return [
-          'application/pdf',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'application/vnd.ms-excel',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ];
-      default:
-        return [];
-    }
-  }
+  const FILE_MIME_TYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+    'image/gif',
+    'video/mp4',
+    'video/webm',
+    'video/ogg',
+  ];
 
   function pendingReport(overrides: Record<string, unknown> = {}) {
     const type = (overrides.type as string | undefined) ?? 'file';
@@ -153,8 +149,8 @@ describe('ReportsService', () => {
       id: 3,
       status: 'pending',
       type,
-      allowedMimeTypes: defaultMimeFor(type),
-      maxFiles: type === 'text' || type === 'link' ? null : 3,
+      allowedMimeTypes: type === 'file' ? FILE_MIME_TYPES : [],
+      maxFiles: type === 'file' ? 3 : null,
       ...overrides,
     };
   }
@@ -163,7 +159,7 @@ describe('ReportsService', () => {
     const { service, prisma, authorization } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.create.mockResolvedValue(
-      selectedReport({ type: 'video' }),
+      selectedReport({ type: 'file' }),
     );
 
     const result = await service.createReport({
@@ -173,8 +169,8 @@ describe('ReportsService', () => {
         title: ' Plan ',
         description: ' Details ',
         dueDate,
-        type: ReportContentKind.video,
-        allowedMimeTypes: ['video/mp4'],
+        type: ReportContentKind.file,
+        allowedMimeTypes: ['application/pdf', 'video/mp4'],
         maxFiles: 2,
       },
     });
@@ -186,7 +182,7 @@ describe('ReportsService', () => {
       title: 'Plan',
       description: 'Details',
       dueDate,
-      type: ReportContentKind.video,
+      type: ReportContentKind.file,
     });
     expect(authorization.assertCanManageMilestone).toHaveBeenCalledWith(
       user,
@@ -208,8 +204,8 @@ describe('ReportsService', () => {
       title: 'Plan',
       description: 'Details',
       dueDate,
-      type: ReportContentKind.video,
-      allowedMimeTypes: ['video/mp4'],
+      type: ReportContentKind.file,
+      allowedMimeTypes: ['application/pdf', 'video/mp4'],
       maxFiles: 2,
     });
   });
@@ -241,7 +237,7 @@ describe('ReportsService', () => {
       service.createReport({
         projectId: 10,
         user,
-        data: { title: 'Entrega', dueDate, type: ReportContentKind.video },
+        data: { title: 'Entrega', dueDate, type: ReportContentKind.file },
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
@@ -257,8 +253,8 @@ describe('ReportsService', () => {
         data: {
           title: 'Entrega',
           dueDate,
-          type: ReportContentKind.image,
-          allowedMimeTypes: ['application/pdf'],
+          type: ReportContentKind.file,
+          allowedMimeTypes: ['text/plain'],
           maxFiles: 1,
         },
       }),
@@ -418,7 +414,7 @@ describe('ReportsService', () => {
     const { service, prisma, storage } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'image' }),
+      pendingReport({ type: 'file' }),
     );
     storage.createUploadUrl.mockResolvedValue({
       url: 'http://localhost:9000/capstonehub/projects/10/foto.png?X-Amz',
@@ -431,7 +427,6 @@ describe('ReportsService', () => {
       reportId: 3,
       user,
       data: {
-        kind: 'image',
         fileName: 'foto.png',
         mimeType: 'image/png',
         sizeBytes: 1024,
@@ -451,7 +446,7 @@ describe('ReportsService', () => {
     const { service, prisma, storage } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'image', allowedMimeTypes: ['image/png'] }),
+      pendingReport({ type: 'file', allowedMimeTypes: ['image/png'] }),
     );
 
     await expect(
@@ -460,7 +455,6 @@ describe('ReportsService', () => {
         reportId: 3,
         user,
         data: {
-          kind: 'image',
           fileName: 'foto.gif',
           mimeType: 'image/gif',
           sizeBytes: 10,
@@ -474,7 +468,7 @@ describe('ReportsService', () => {
     const { service, prisma, storage } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'image', maxFiles: 1 }),
+      pendingReport({ type: 'file', maxFiles: 1 }),
     );
     prisma.projectReportContent.count.mockResolvedValue(1);
 
@@ -484,7 +478,6 @@ describe('ReportsService', () => {
         reportId: 3,
         user,
         data: {
-          kind: 'image',
           fileName: 'foto.png',
           mimeType: 'image/png',
           sizeBytes: 10,
@@ -494,11 +487,11 @@ describe('ReportsService', () => {
     expect(storage.createUploadUrl).not.toHaveBeenCalled();
   });
 
-  it('rejects presigning a file whose type does not match the kind', async () => {
+  it('rejects presigning an unsupported file type', async () => {
     const { service, prisma, storage } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'image' }),
+      pendingReport({ type: 'file', allowedMimeTypes: ['application/zip'] }),
     );
 
     await expect(
@@ -507,9 +500,8 @@ describe('ReportsService', () => {
         reportId: 3,
         user,
         data: {
-          kind: 'image',
-          fileName: 'doc.pdf',
-          mimeType: 'application/pdf',
+          fileName: 'archivo.zip',
+          mimeType: 'application/zip',
           sizeBytes: 1024,
         },
       }),
@@ -517,11 +509,11 @@ describe('ReportsService', () => {
     expect(storage.createUploadUrl).not.toHaveBeenCalled();
   });
 
-  it('rejects presigning a video over the size limit', async () => {
+  it('rejects presigning a file over the size limit', async () => {
     const { service, prisma } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'video' }),
+      pendingReport({ type: 'file' }),
     );
 
     await expect(
@@ -530,7 +522,6 @@ describe('ReportsService', () => {
         reportId: 3,
         user,
         data: {
-          kind: 'video',
           fileName: 'clip.mp4',
           mimeType: 'video/mp4',
           sizeBytes: 200 * 1024 * 1024,
@@ -543,7 +534,7 @@ describe('ReportsService', () => {
     const { service, prisma, storage } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'image' }),
+      pendingReport({ type: 'file' }),
     );
     storage.stat.mockResolvedValue({
       sizeBytes: 1234,
@@ -552,7 +543,7 @@ describe('ReportsService', () => {
     prisma.projectAttachment.create.mockResolvedValue({ id: 55 });
     prisma.projectReportContent.create.mockResolvedValue(
       selectedContent({
-        kind: 'image',
+        kind: 'file',
         textContent: null,
         attachment: { id: 55 },
       }),
@@ -563,7 +554,6 @@ describe('ReportsService', () => {
       reportId: 3,
       user,
       data: {
-        kind: 'image',
         storageKey: 'projects/10/foto.png',
         fileName: 'foto.png',
         mimeType: 'image/png',
@@ -571,7 +561,7 @@ describe('ReportsService', () => {
       },
     });
 
-    expect(result.kind).toBe('image');
+    expect(result.kind).toBe('file');
     expect(storage.stat).toHaveBeenCalledWith('projects/10/foto.png');
     expect(prisma.projectAttachment.create).toHaveBeenCalledWith({
       data: {
@@ -591,7 +581,7 @@ describe('ReportsService', () => {
     const { service, prisma, storage } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'image' }),
+      pendingReport({ type: 'file' }),
     );
 
     await expect(
@@ -600,7 +590,6 @@ describe('ReportsService', () => {
         reportId: 3,
         user,
         data: {
-          kind: 'image',
           storageKey: 'projects/99/foto.png',
           fileName: 'foto.png',
           mimeType: 'image/png',
@@ -615,7 +604,7 @@ describe('ReportsService', () => {
     const { service, prisma, storage } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'image' }),
+      pendingReport({ type: 'file' }),
     );
     storage.stat.mockResolvedValue(null);
 
@@ -625,7 +614,6 @@ describe('ReportsService', () => {
         reportId: 3,
         user,
         data: {
-          kind: 'image',
           storageKey: 'projects/10/foto.png',
           fileName: 'foto.png',
           mimeType: 'image/png',
@@ -639,7 +627,7 @@ describe('ReportsService', () => {
     const { service, prisma, storage } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'video' }),
+      pendingReport({ type: 'file' }),
     );
     storage.stat.mockResolvedValue({
       sizeBytes: 200 * 1024 * 1024,
@@ -652,7 +640,6 @@ describe('ReportsService', () => {
         reportId: 3,
         user,
         data: {
-          kind: 'video',
           storageKey: 'projects/10/clip.mp4',
           fileName: 'clip.mp4',
           mimeType: 'video/mp4',
@@ -827,7 +814,7 @@ describe('ReportsService', () => {
     );
     prisma.projectReportContent.count.mockResolvedValue(0);
     prisma.projectReport.update.mockResolvedValue(
-      selectedReport({ type: 'video' }),
+      selectedReport({ type: 'file' }),
     );
 
     const result = await service.updateReport({
@@ -835,19 +822,19 @@ describe('ReportsService', () => {
       reportId: 3,
       user,
       data: {
-        type: ReportContentKind.video,
-        allowedMimeTypes: ['video/mp4'],
-        maxFiles: 1,
+        type: ReportContentKind.file,
+        allowedMimeTypes: ['application/pdf', 'video/mp4'],
+        maxFiles: 4,
       },
     });
 
-    expect(result.type).toBe('video');
+    expect(result.type).toBe('file');
     expect(prisma.projectReport.update).toHaveBeenCalledWith({
       where: { id: 3 },
       data: {
-        type: ReportContentKind.video,
-        allowedMimeTypes: ['video/mp4'],
-        maxFiles: 1,
+        type: ReportContentKind.file,
+        allowedMimeTypes: ['application/pdf', 'video/mp4'],
+        maxFiles: 4,
       },
       select: expect.any(Object) as object,
     });
@@ -857,7 +844,7 @@ describe('ReportsService', () => {
     const { service, prisma } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'video' }),
+      pendingReport({ type: 'file' }),
     );
     prisma.projectReportContent.count.mockResolvedValue(1);
 

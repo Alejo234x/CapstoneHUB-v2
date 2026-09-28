@@ -146,9 +146,9 @@ Límite de 10 MB por archivo, y se permite PDF, Word, Excel, PNG y JPEG
 
 # Contenido de entregas
 
-Cada entrega tiene un **tipo** fijo (`text`, `link`, `image`, `video` o `file`)
-definido al crearla y, para los tipos con archivo, los **MIME permitidos** y el
-**máximo de archivos**; el estudiante solo aporta contenido que cumpla esa
+Cada entrega tiene un **tipo** fijo (`text`, `link` o `file`) definido al crearla
+y, para el tipo Archivo, los **MIME permitidos** (documentos, imágenes y videos)
+y el **máximo de archivos**; el estudiante solo aporta contenido que cumpla esa
 configuración. Los binarios se guardan en el mismo bucket con **subida directa
 desde el navegador** (URL prefirmada), de modo que el archivo no pasa por Nest ni
 por el BFF:
@@ -163,12 +163,12 @@ DELETE /projects/:projectId/reports/:reportId/contents/:id
 GET    /projects/:projectId/reports/:reportId/contents/:id/stream      (inline, soporta Range)
 ```
 
-El flujo es: `presign` valida tipo/tamaño y devuelve una URL `PUT`; el navegador
-sube el binario; `confirm` verifica el objeto con `HeadObject` y crea el
-`ProjectAttachment` + `ProjectReportContent`. Imágenes y documentos hasta 10 MB;
-videos hasta `MAX_VIDEO_SIZE_BYTES` (100 MB por defecto). Si el objeto real
-excede el límite, se borra y se rechaza. Los archivos de una entrega no se
-listan en Anexos.
+El flujo es: `presign` valida tipo/MIME/tamaño y devuelve una URL `PUT`; el
+navegador sube el binario; `confirm` verifica el objeto con `HeadObject` y crea
+el `ProjectAttachment` + `ProjectReportContent`. Todos los archivos de una
+entrega pueden pesar hasta `MAX_REPORT_FILE_SIZE_BYTES` (100 MB por defecto). Si
+el objeto real excede el límite, se borra y se rechaza. Los archivos de una
+entrega no se listan en Anexos.
 
 Requisitos de configuración para que funcione:
 

@@ -618,7 +618,11 @@ export type UpdateReportContentPayload = {
   label?: string | null;
 };
 
-export type ReportFileContentKind = "image" | "video" | "file";
+export type ReportContentFileMetadata = {
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+};
 
 async function parseBackendMessage(
   response: Response,
@@ -694,13 +698,6 @@ export async function createReportContent(
 
   return (await response.json()) as ProjectReportContentItem;
 }
-
-export type ReportContentFileMetadata = {
-  kind: ReportFileContentKind;
-  fileName: string;
-  mimeType: string;
-  sizeBytes: number;
-};
 
 export type ReportFileUploadTarget = {
   storageKey: string;

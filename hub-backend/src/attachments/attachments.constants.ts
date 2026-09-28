@@ -1,9 +1,14 @@
 export const MAX_ATTACHMENT_SIZE_BYTES =
   Number(process.env.MAX_FILE_SIZE_BYTES) || 10 * 1024 * 1024;
 
-/** Los videos pesan mucho más que un documento, así que tienen su propio tope. */
-export const MAX_VIDEO_SIZE_BYTES =
-  Number(process.env.MAX_VIDEO_SIZE_BYTES) || 100 * 1024 * 1024;
+/**
+ * Tope único para los archivos de una entrega (documentos, imágenes y videos).
+ * Se mantiene `MAX_VIDEO_SIZE_BYTES` como fallback por compatibilidad.
+ */
+export const MAX_REPORT_FILE_SIZE_BYTES =
+  Number(process.env.MAX_REPORT_FILE_SIZE_BYTES) ||
+  Number(process.env.MAX_VIDEO_SIZE_BYTES) ||
+  100 * 1024 * 1024;
 
 export const ALLOWED_ATTACHMENT_MIME_TYPES: ReadonlySet<string> = new Set([
   'application/pdf',
@@ -37,6 +42,13 @@ export const REPORT_VIDEO_MIME_TYPES: ReadonlySet<string> = new Set([
   'video/mp4',
   'video/webm',
   'video/ogg',
+]);
+
+/** Unión admitida para el tipo de entrega `file` (documentos, imágenes y videos). */
+export const REPORT_FILE_MIME_TYPES: ReadonlySet<string> = new Set([
+  ...REPORT_DOCUMENT_MIME_TYPES,
+  ...REPORT_IMAGE_MIME_TYPES,
+  ...REPORT_VIDEO_MIME_TYPES,
 ]);
 
 /** Vigencia de la URL prefirmada de subida (1 hora por defecto). */

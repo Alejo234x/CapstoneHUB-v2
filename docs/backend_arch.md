@@ -182,32 +182,31 @@ listado de Anexos y se sirven desde la pestaña Entregas.
 
 ## Entregas
 
-Una entrega (`ProjectReport`) tiene un **tipo** fijo (`type`: `text`, `link`,
-`image`, `video` o `file`) definido por el asesor/evaluador/coordinador al
-crearla; solo se puede cambiar mientras esté `pending` y no tenga contenido.
-Para los tipos con archivo (`image`, `video`, `file`) también se eligen los MIME
-permitidos (`allowedMimeTypes`) y el máximo de archivos (`maxFiles`), obligatorios
-al crear. El estudiante agrega **contenido** (`ProjectReportContent`) que debe
-coincidir con ese `type` (el backend rechaza con `400` cualquier `kind` distinto).
-Los textos y enlaces se guardan en la propia fila (`textContent`, `url`, `label`);
-las imágenes, videos y archivos reutilizan `ProjectAttachment` (`attachmentId`) y
+Una entrega (`ProjectReport`) tiene un **tipo** fijo (`type`: `text`, `link` o
+`file`) definido por el asesor/evaluador/coordinador al crearla; solo se puede
+cambiar mientras esté `pending` y no tenga contenido. Para el tipo Archivo
+(`file`) también se eligen los MIME permitidos (`allowedMimeTypes`) y el máximo
+de archivos (`maxFiles`), obligatorios al crear. El estudiante agrega
+**contenido** (`ProjectReportContent`) que debe coincidir con ese `type` (el
+backend rechaza con `400` cualquier `kind` distinto). Los textos y enlaces se
+guardan en la propia fila (`textContent`, `url`, `label`); los archivos
+(documentos, imágenes y videos) reutilizan `ProjectAttachment` (`attachmentId`) y
 por tanto el mismo almacenamiento S3. El contenido solo se puede modificar
 mientras la entrega esté `pending` o `rejected`; al enviarla se valida que tenga
 al menos una pieza.
 
-`POST .../contents/files/presign` acepta imágenes (PNG, JPEG, WebP, GIF;
-10 MB), videos (MP4, WebM, OGG; `MAX_VIDEO_SIZE_BYTES`, 100 MB por defecto) y
-documentos (PDF, Word, Excel; 10 MB); valida que el MIME esté entre los
-`allowedMimeTypes` de la entrega, que el `kind` corresponda al `type` y que no se
-haya superado `maxFiles` (si no, `409`), y devuelve una URL `PUT` prefirmada con
-`S3_PUBLIC_ENDPOINT`. El navegador sube el binario directamente a MinIO/S3 y
-luego `POST .../contents/files/confirm` verifica el objeto con `HeadObject`
-(tamaño real, existencia) y crea `ProjectAttachment` + `ProjectReportContent`.
-Si el objeto excede el límite, se borra y se responde `400`. `GET
-.../contents/:cid/stream` sirve el archivo inline y reenvía la cabecera `Range` a
-S3 para responder `206 Partial Content`, lo que permite reproducir y buscar
-dentro de un video. Los objetos subidos pero nunca confirmados se limpian con
-`npm run storage:gc`.
+`POST .../contents/files/presign` acepta documentos (PDF, Word, Excel), imágenes
+(PNG, JPEG, WebP, GIF) y videos (MP4, WebM, OGG) hasta
+`MAX_REPORT_FILE_SIZE_BYTES` (100 MB por defecto); valida que el MIME esté entre
+los `allowedMimeTypes` de la entrega y que no se haya superado `maxFiles` (si no,
+`409`), y devuelve una URL `PUT` prefirmada con `S3_PUBLIC_ENDPOINT`. El navegador
+sube el binario directamente a MinIO/S3 y luego `POST .../contents/files/confirm`
+verifica el objeto con `HeadObject` (tamaño real, existencia) y crea
+`ProjectAttachment` + `ProjectReportContent`. Si el objeto excede el límite, se
+borra y se responde `400`. `GET .../contents/:cid/stream` sirve el archivo inline
+y reenvía la cabecera `Range` a S3 para responder `206 Partial Content`, lo que
+permite reproducir y buscar dentro de un video. Los objetos subidos pero nunca
+confirmados se limpian con `npm run storage:gc`.
 
 ## Manejo de errores
 
@@ -230,8 +229,8 @@ siguen una forma consistente (`statusCode`, `message`, `error`):
 | `DATABASE_URL` | Cadena de conexión a PostgreSQL. |
 | `AUTH_SECRET` | Clave de firma HMAC (mínimo 32 caracteres). |
 | `INITIAL_ADMIN_*` | Email, contraseña y nombre del admin inicial. |
-| `MAX_FILE_SIZE_BYTES` | Límite de tamaño de anexos e imágenes (por defecto 10 MB). |
-| `MAX_VIDEO_SIZE_BYTES` | Límite de tamaño de videos de una entrega (por defecto 100 MB). |
+| `MAX_FILE_SIZE_BYTES` | Límite de tamaño de anexos (por defecto 10 MB). |
+| `MAX_REPORT_FILE_SIZE_BYTES` | Límite de tamaño de archivos de una entrega (100 MB por defecto). |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | Almacenamiento de archivos. |
 | `S3_REGION`, `S3_FORCE_PATH_STYLE` | Ajustes del cliente S3 (`true` para MinIO). |
 | `S3_PUBLIC_ENDPOINT` | Host de S3/MinIO que alcanza el navegador; usado para firmar las subidas directas. |

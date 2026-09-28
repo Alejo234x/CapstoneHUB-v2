@@ -20,8 +20,6 @@ export const MAX_REPORT_TEXT_LENGTH = 20_000;
 export const REPORT_TYPES = [
   ReportContentKind.text,
   ReportContentKind.link,
-  ReportContentKind.image,
-  ReportContentKind.video,
   ReportContentKind.file,
 ];
 
@@ -156,21 +154,6 @@ export class CreateReportContentDto {
 }
 
 export class PresignReportFileContentDto {
-  @ApiProperty({
-    description: 'File content type',
-    enum: [
-      ReportContentKind.image,
-      ReportContentKind.video,
-      ReportContentKind.file,
-    ],
-  })
-  @IsIn([
-    ReportContentKind.image,
-    ReportContentKind.video,
-    ReportContentKind.file,
-  ])
-  kind!: Extract<ReportContentKind, 'image' | 'video' | 'file'>;
-
   @ApiProperty({ description: 'Original file name' })
   @IsString()
   @IsNotEmpty()

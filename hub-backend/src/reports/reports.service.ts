@@ -19,11 +19,8 @@ import {
   assertReportBelongsToProject,
 } from '../common/lookups';
 import {
-  MAX_ATTACHMENT_SIZE_BYTES,
-  MAX_VIDEO_SIZE_BYTES,
-  REPORT_DOCUMENT_MIME_TYPES,
-  REPORT_IMAGE_MIME_TYPES,
-  REPORT_VIDEO_MIME_TYPES,
+  MAX_REPORT_FILE_SIZE_BYTES,
+  REPORT_FILE_MIME_TYPES,
   UPLOAD_URL_TTL_SECONDS,
 } from '../attachments/attachments.constants';
 import {
@@ -52,7 +49,6 @@ import {
 } from './reports.dto';
 
 export type { ProjectReportResponse } from './reports.select';
-export type ReportFileContentKind = 'image' | 'video' | 'file';
 
 export type ReportContentStream = {
   content: ProjectReportContentResponse;
@@ -71,7 +67,6 @@ export type ReportFileUploadTarget = {
 };
 
 export type ReportFileMetadata = {
-  kind: ReportFileContentKind;
   fileName: string;
   mimeType: string;
   sizeBytes: number;
@@ -323,11 +318,10 @@ export class ReportsService {
       reportId,
       user,
     );
-    this.assertKindMatchesReportType(data.kind, report.type);
+    this.assertReportAcceptsFiles(report.type);
     this.assertMimeAllowed(data.mimeType, report.allowedMimeTypes);
     await this.assertWithinMaxFiles(reportId, report.type, report.maxFiles);
     this.assertFileMatchesKind({
-      kind: data.kind,
       mimeType: data.mimeType,
       sizeBytes: data.sizeBytes,
     });
@@ -358,7 +352,7 @@ export class ReportsService {
       reportId,
       user,
     );
-    this.assertKindMatchesReportType(data.kind, report.type);
+    this.assertReportAcceptsFiles(report.type);
     this.assertMimeAllowed(data.mimeType, report.allowedMimeTypes);
     await this.assertWithinMaxFiles(reportId, report.type, report.maxFiles);
 
@@ -369,7 +363,6 @@ export class ReportsService {
     }
 
     this.assertFileMatchesKind({
-      kind: data.kind,
       mimeType: data.mimeType,
       sizeBytes: data.sizeBytes,
     });
@@ -380,12 +373,10 @@ export class ReportsService {
       throw new BadRequestException('Uploaded file was not found in storage');
     }
 
-    const limit = this.fileLimitBytes(data.kind);
-
-    if (stored.sizeBytes > limit) {
+    if (stored.sizeBytes > MAX_REPORT_FILE_SIZE_BYTES) {
       await this.safeDelete(data.storageKey);
       throw new BadRequestException(
-        `File exceeds the ${this.megabytes(limit)} MB limit`,
+        `File exceeds the ${this.megabytes(MAX_REPORT_FILE_SIZE_BYTES)} MB limit`,
       );
     }
 
@@ -407,7 +398,7 @@ export class ReportsService {
         data: {
           reportId,
           createdByUserId: user.id,
-          kind: data.kind,
+          kind: report.type,
           attachmentId: attachment.id,
         },
         select: reportContentSelect,
@@ -691,52 +682,39 @@ export class ReportsService {
     return parsed.toString();
   }
 
-  private assertFileMatchesKind(
-    metadata: Omit<ReportFileMetadata, 'fileName'>,
-  ): void {
-    const { kind, mimeType, sizeBytes } = metadata;
-    const allowed = this.allowedMimeTypesForKind(kind);
-
-    if (!allowed.has(mimeType)) {
-      throw new BadRequestException(
-        `Unsupported ${kind} file type: ${mimeType}`,
-      );
-    }
-
-    this.assertStoredSizeWithinLimit(kind, sizeBytes);
-  }
-
-  private assertStoredSizeWithinLimit(
-    kind: ReportFileContentKind,
-    sizeBytes: number,
-  ): void {
-    const limit = this.fileLimitBytes(kind);
-
-    if (sizeBytes > limit) {
-      throw new BadRequestException(
-        `File exceeds the ${this.megabytes(limit)} MB limit`,
-      );
+  private assertReportAcceptsFiles(type: ReportContentKind): void {
+    if (type !== ReportContentKind.file) {
+      throw new BadRequestException('This report does not accept files');
     }
   }
 
-  private allowedMimeTypesForKind(
-    kind: ReportFileContentKind,
+  private assertFileMatchesKind(metadata: {
+    mimeType: string;
+    sizeBytes: number;
+  }): void {
+    if (!REPORT_FILE_MIME_TYPES.has(metadata.mimeType)) {
+      throw new BadRequestException(
+        `Unsupported file type: ${metadata.mimeType}`,
+      );
+    }
+
+    this.assertStoredSizeWithinLimit(metadata.sizeBytes);
+  }
+
+  private assertStoredSizeWithinLimit(sizeBytes: number): void {
+    if (sizeBytes > MAX_REPORT_FILE_SIZE_BYTES) {
+      throw new BadRequestException(
+        `File exceeds the ${this.megabytes(MAX_REPORT_FILE_SIZE_BYTES)} MB limit`,
+      );
+    }
+  }
+
+  private allowedMimeTypesForReportType(
+    type: ReportContentKind,
   ): ReadonlySet<string> {
-    if (kind === ReportContentKind.video) {
-      return REPORT_VIDEO_MIME_TYPES;
-    }
-
-    if (kind === ReportContentKind.image) {
-      return REPORT_IMAGE_MIME_TYPES;
-    }
-
-    return REPORT_DOCUMENT_MIME_TYPES;
-  }
-
-  private fileLimitBytes(kind: ReportFileContentKind): number {
-    return kind === ReportContentKind.video
-      ? MAX_VIDEO_SIZE_BYTES
-      : MAX_ATTACHMENT_SIZE_BYTES;
+    return type === ReportContentKind.file
+      ? REPORT_FILE_MIME_TYPES
+      : new Set<string>();
   }
 
   private megabytes(bytes: number): number {
@@ -839,6 +817,8 @@ export class ReportsService {
     allowedMimeTypes: string[] | undefined,
     maxFiles: number | null | undefined,
   ): { allowedMimeTypes: string[]; maxFiles: number | null } {
+    this.assertValidReportType(type);
+
     if (!this.isFileReportType(type)) {
       if ((allowedMimeTypes?.length ?? 0) > 0) {
         throw new BadRequestException(
@@ -855,7 +835,7 @@ export class ReportsService {
       return { allowedMimeTypes: [], maxFiles: null };
     }
 
-    const allowed = this.allowedMimeTypesForKind(type);
+    const allowed = this.allowedMimeTypesForReportType(type);
     const unique = [...new Set(allowedMimeTypes ?? [])];
 
     if (unique.length === 0) {
@@ -928,14 +908,18 @@ export class ReportsService {
     return { type: nextType, ...config };
   }
 
-  private isFileReportType(
-    type: ReportContentKind,
-  ): type is ReportFileContentKind {
-    return (
-      type === ReportContentKind.image ||
-      type === ReportContentKind.video ||
-      type === ReportContentKind.file
-    );
+  private isFileReportType(type: ReportContentKind): boolean {
+    return type === ReportContentKind.file;
+  }
+
+  private assertValidReportType(type: ReportContentKind): void {
+    if (
+      type !== ReportContentKind.text &&
+      type !== ReportContentKind.link &&
+      type !== ReportContentKind.file
+    ) {
+      throw new BadRequestException(`Unsupported report type: ${type}`);
+    }
   }
 
   private sameStringSet(left: string[], right: string[]): boolean {
