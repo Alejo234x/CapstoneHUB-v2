@@ -295,7 +295,7 @@ type ReportDialogFormProps = {
   errorMessage: string | null;
   loading: boolean;
   submitText: string;
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: React.SyntheticEvent<HTMLFormElement>) => void;
   onCancel: () => void;
   children: React.ReactNode;
 };
@@ -615,7 +615,7 @@ function ReportCard({
   }
 
   async function handleComposerSubmit(
-    event: React.FormEvent<HTMLFormElement>,
+    event: React.SyntheticEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -1030,6 +1030,40 @@ function getComposerHint(
   return "Documentos, imágenes o videos. Máximo 100 MB.";
 }
 
+function ReportsAccessNotice({
+  ready,
+  isAuthenticated,
+}: {
+  ready: boolean;
+  isAuthenticated: boolean;
+}) {
+  if (!ready) {
+    return (
+      <Alert>
+        <AlertDescription>Cargando acceso...</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Alert>
+        <AlertDescription>
+          Inicia sesión para enviar entregas.
+          <div className="mt-3">
+            <Button
+              nativeButton={false}
+              render={<Link href="/login">Iniciar sesión</Link>}
+            />
+          </div>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  return null;
+}
+
 export default function ProjectReportsPanel({
   projectId,
   reports: initialReports,
@@ -1158,7 +1192,7 @@ export default function ProjectReportsPanel({
     });
   }
 
-  function handleFormSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleFormSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const title = form.title.trim();
@@ -1243,7 +1277,7 @@ export default function ProjectReportsPanel({
     setReviewOpen(true);
   }
 
-  function handleReviewSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleReviewSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!reviewTarget) {
@@ -1342,7 +1376,7 @@ export default function ProjectReportsPanel({
   }
 
   function handleContentEditSubmit(
-    event: React.FormEvent<HTMLFormElement>,
+    event: React.SyntheticEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
 
@@ -1453,23 +1487,10 @@ export default function ProjectReportsPanel({
           </div>
         )}
 
-        {!ready ? (
-          <Alert>
-            <AlertDescription>Cargando acceso...</AlertDescription>
-          </Alert>
-        ) : !isAuthenticated ? (
-          <Alert>
-            <AlertDescription>
-              Inicia sesión para enviar entregas.
-              <div className="mt-3">
-                <Button
-                  nativeButton={false}
-                  render={<Link href="/login">Iniciar sesión</Link>}
-                />
-              </div>
-            </AlertDescription>
-          </Alert>
-        ) : null}
+        <ReportsAccessNotice
+          ready={ready}
+          isAuthenticated={isAuthenticated}
+        />
       </CardContent>
 
       <ReportDialogForm

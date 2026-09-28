@@ -82,15 +82,3 @@ leen el token al hacer peticiones. No hay cookies ni sesión en el servidor.
 - `NEXT_PUBLIC_SITE_URL` como base de la API cuando se llama desde el cliente.
 - Build Docker multi-etapa con salida *standalone*, expuesto en el puerto
   `3000`.
-
-## Diagrama
-
-```mermaid
-flowchart TD
-    Browser[Navegador] --> Pages[Páginas App Router]
-    Pages -->|Server Components| Services[app/services]
-    Pages -->|Client Components| Services
-    Services -->|fetch /api/*| BFF[Route handlers / BFF]
-    BFF -->|BACKEND_URL| Backend[API NestJS]
-    Services -. token en localStorage .-> BFF
-```
