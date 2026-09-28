@@ -104,10 +104,12 @@ archivo pertenece a una entrega y se muestra en su pestaña, no en Anexos.
 
 Entrega creada por un asesor, evaluador o coordinador: `title`, `description`
 opcional, `dueDate`, `type` (el tipo de contenido que debe aportar el estudiante,
-uno de `text`, `link`, `image`, `video` o `file`), `status` (`pending`,
-`submitted`, `accepted`, `rejected`), fechas de envío/revisión y `reviewComment`.
-El `type` se define al crear la entrega y solo puede cambiarse mientras esté
-`pending` y sin contenido.
+uno de `text`, `link`, `image`, `video` o `file`), `allowedMimeTypes` y
+`maxFiles` (MIME permitidos y máximo de archivos, obligatorios para tipos con
+archivo), `status` (`pending`, `submitted`, `accepted`, `rejected`), fechas de
+envío/revisión y `reviewComment`. La configuración (tipo, MIME y máximo) se define
+al crear la entrega y solo puede cambiarse mientras esté `pending` y sin
+contenido.
 
 ### ProjectReportContent
 
@@ -240,6 +242,8 @@ classDiagram
         +String description
         +DateTime dueDate
         +ReportContentKind type
+        +String[] allowedMimeTypes
+        +Int maxFiles
         +ReportStatus status
         +DateTime submittedAt
         +DateTime reviewedAt

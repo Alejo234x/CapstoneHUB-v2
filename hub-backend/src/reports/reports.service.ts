@@ -108,6 +108,12 @@ export class ReportsService {
     const { projectId, data, user } = params;
     await this.assertCanManageReports(projectId, user);
 
+    const config = this.validateReportConfig(
+      data.type,
+      data.allowedMimeTypes,
+      data.maxFiles,
+    );
+
     const report = await this.prisma.projectReport.create({
       data: {
         projectId,
@@ -116,6 +122,8 @@ export class ReportsService {
         description: data.description?.trim() || null,
         dueDate: data.dueDate,
         type: data.type,
+        allowedMimeTypes: config.allowedMimeTypes,
+        maxFiles: config.maxFiles,
       },
       select: reportSelect,
     });
@@ -150,9 +158,24 @@ export class ReportsService {
       updateData.dueDate = data.dueDate;
     }
 
-    if (data.type !== undefined && data.type !== existing.type) {
-      await this.assertReportTypeIsChangeable(reportId, existing.status);
-      updateData.type = data.type;
+    const hasConfigInput =
+      data.type !== undefined ||
+      data.allowedMimeTypes !== undefined ||
+      data.maxFiles !== undefined;
+
+    if (hasConfigInput) {
+      const config = this.resolveReportConfigUpdate(existing, data);
+      const configChanged =
+        config.type !== existing.type ||
+        config.maxFiles !== existing.maxFiles ||
+        !this.sameStringSet(config.allowedMimeTypes, existing.allowedMimeTypes);
+
+      if (configChanged) {
+        await this.assertReportConfigIsChangeable(reportId, existing.status);
+        updateData.type = config.type;
+        updateData.allowedMimeTypes = config.allowedMimeTypes;
+        updateData.maxFiles = config.maxFiles;
+      }
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -301,6 +324,8 @@ export class ReportsService {
       user,
     );
     this.assertKindMatchesReportType(data.kind, report.type);
+    this.assertMimeAllowed(data.mimeType, report.allowedMimeTypes);
+    await this.assertWithinMaxFiles(reportId, report.type, report.maxFiles);
     this.assertFileMatchesKind({
       kind: data.kind,
       mimeType: data.mimeType,
@@ -334,6 +359,8 @@ export class ReportsService {
       user,
     );
     this.assertKindMatchesReportType(data.kind, report.type);
+    this.assertMimeAllowed(data.mimeType, report.allowedMimeTypes);
+    await this.assertWithinMaxFiles(reportId, report.type, report.maxFiles);
 
     if (!data.storageKey.startsWith(projectStoragePrefix(projectId))) {
       throw new BadRequestException(
@@ -720,7 +747,13 @@ export class ReportsService {
     projectId: number,
     reportId: number,
     user: AuthenticatedUser,
-  ): Promise<{ id: number; status: ReportStatus; type: ReportContentKind }> {
+  ): Promise<{
+    id: number;
+    status: ReportStatus;
+    type: ReportContentKind;
+    allowedMimeTypes: string[];
+    maxFiles: number | null;
+  }> {
     await this.assertProjectAccess(projectId, user);
     const report = await assertReportBelongsToProject(
       this.prisma,
@@ -749,12 +782,45 @@ export class ReportsService {
     }
   }
 
-  private async assertReportTypeIsChangeable(
+  private assertMimeAllowed(
+    mimeType: string,
+    allowedMimeTypes: string[],
+  ): void {
+    if (!allowedMimeTypes.includes(mimeType)) {
+      throw new BadRequestException(
+        `MIME type not allowed for this report: ${mimeType}`,
+      );
+    }
+  }
+
+  private async assertWithinMaxFiles(
+    reportId: number,
+    type: ReportContentKind,
+    maxFiles: number | null,
+  ): Promise<void> {
+    if (maxFiles === null) {
+      return;
+    }
+
+    const fileCount = await this.prisma.projectReportContent.count({
+      where: { reportId, kind: type },
+    });
+
+    if (fileCount >= maxFiles) {
+      throw new ConflictException(
+        `This report already has the maximum of ${maxFiles} file(s)`,
+      );
+    }
+  }
+
+  private async assertReportConfigIsChangeable(
     reportId: number,
     status: ReportStatus,
   ): Promise<void> {
     if (status !== ReportStatus.pending) {
-      throw new ConflictException('Only pending reports can change their type');
+      throw new ConflictException(
+        'Only pending reports can change their configuration',
+      );
     }
 
     const contentCount = await this.prisma.projectReportContent.count({
@@ -763,9 +829,124 @@ export class ReportsService {
 
     if (contentCount > 0) {
       throw new ConflictException(
-        'Cannot change the type of a report that already has content',
+        'Cannot change the configuration of a report that already has content',
       );
     }
+  }
+
+  private validateReportConfig(
+    type: ReportContentKind,
+    allowedMimeTypes: string[] | undefined,
+    maxFiles: number | null | undefined,
+  ): { allowedMimeTypes: string[]; maxFiles: number | null } {
+    if (!this.isFileReportType(type)) {
+      if ((allowedMimeTypes?.length ?? 0) > 0) {
+        throw new BadRequestException(
+          'Text and link reports do not accept allowed MIME types',
+        );
+      }
+
+      if (maxFiles !== undefined && maxFiles !== null) {
+        throw new BadRequestException(
+          'Text and link reports do not accept a maximum number of files',
+        );
+      }
+
+      return { allowedMimeTypes: [], maxFiles: null };
+    }
+
+    const allowed = this.allowedMimeTypesForKind(type);
+    const unique = [...new Set(allowedMimeTypes ?? [])];
+
+    if (unique.length === 0) {
+      throw new BadRequestException(
+        'Select at least one allowed MIME type for this report',
+      );
+    }
+
+    const invalid = unique.filter((mime) => !allowed.has(mime));
+
+    if (invalid.length > 0) {
+      throw new BadRequestException(
+        `Unsupported MIME types for ${type}: ${invalid.join(', ')}`,
+      );
+    }
+
+    if (maxFiles === undefined || maxFiles === null) {
+      throw new BadRequestException(
+        'A maximum number of files is required for this report',
+      );
+    }
+
+    if (!Number.isInteger(maxFiles) || maxFiles < 1) {
+      throw new BadRequestException(
+        'The maximum number of files must be a positive integer',
+      );
+    }
+
+    return { allowedMimeTypes: unique, maxFiles };
+  }
+
+  private resolveReportConfigUpdate(
+    existing: {
+      type: ReportContentKind;
+      allowedMimeTypes: string[];
+      maxFiles: number | null;
+    },
+    data: UpdateReportDto,
+  ): {
+    type: ReportContentKind;
+    allowedMimeTypes: string[];
+    maxFiles: number | null;
+  } {
+    const nextType = data.type ?? existing.type;
+
+    let nextAllowed =
+      data.allowedMimeTypes !== undefined
+        ? data.allowedMimeTypes
+        : existing.allowedMimeTypes;
+    let nextMax =
+      data.maxFiles !== undefined ? data.maxFiles : existing.maxFiles;
+
+    if (data.type !== undefined && data.type !== existing.type) {
+      if (!this.isFileReportType(nextType)) {
+        if (data.allowedMimeTypes === undefined) {
+          nextAllowed = [];
+        }
+
+        if (data.maxFiles === undefined) {
+          nextMax = null;
+        }
+      } else if (!this.isFileReportType(existing.type)) {
+        nextAllowed = data.allowedMimeTypes ?? [];
+        nextMax = data.maxFiles ?? null;
+      }
+    }
+
+    const config = this.validateReportConfig(nextType, nextAllowed, nextMax);
+
+    return { type: nextType, ...config };
+  }
+
+  private isFileReportType(
+    type: ReportContentKind,
+  ): type is ReportFileContentKind {
+    return (
+      type === ReportContentKind.image ||
+      type === ReportContentKind.video ||
+      type === ReportContentKind.file
+    );
+  }
+
+  private sameStringSet(left: string[], right: string[]): boolean {
+    if (left.length !== right.length) {
+      return false;
+    }
+
+    const sortedLeft = [...left].sort();
+    const sortedRight = [...right].sort();
+
+    return sortedLeft.every((value, index) => value === sortedRight[index]);
   }
 
   private async assertProjectAccess(
@@ -788,7 +969,13 @@ export class ReportsService {
     projectId: number,
     reportId: number,
     user: AuthenticatedUser,
-  ): Promise<{ id: number; status: ReportStatus; type: ReportContentKind }> {
+  ): Promise<{
+    id: number;
+    status: ReportStatus;
+    type: ReportContentKind;
+    allowedMimeTypes: string[];
+    maxFiles: number | null;
+  }> {
     await this.assertCanManageReports(projectId, user);
 
     return assertReportBelongsToProject(this.prisma, projectId, reportId);

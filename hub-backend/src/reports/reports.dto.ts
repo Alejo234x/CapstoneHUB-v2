@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsDate,
   IsIn,
   IsInt,
@@ -50,6 +51,25 @@ export class CreateReportDto {
   })
   @IsIn(REPORT_TYPES)
   type!: ReportContentKind;
+
+  @ApiPropertyOptional({
+    description:
+      'Allowed MIME types for file content (required for image/video/file)',
+    type: [String],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  allowedMimeTypes?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Maximum number of file contents (required for image/video/file)',
+  })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  maxFiles?: number;
 }
 
 export class UpdateReportDto {
@@ -81,6 +101,25 @@ export class UpdateReportDto {
   @IsIn(REPORT_TYPES)
   @IsOptional()
   type?: ReportContentKind;
+
+  @ApiPropertyOptional({
+    description:
+      'Allowed MIME types for file content (required for image/video/file)',
+    type: [String],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  allowedMimeTypes?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Maximum number of file contents (required for image/video/file)',
+  })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  maxFiles?: number;
 }
 
 export class CreateReportContentDto {

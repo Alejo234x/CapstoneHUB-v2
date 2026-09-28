@@ -87,6 +87,8 @@ export interface ReportFixture {
   description?: string;
   dueDate: string;
   type?: ReportContentKind;
+  allowedMimeTypes?: string[];
+  maxFiles?: number;
   status?: 'pending' | 'submitted' | 'accepted' | 'rejected';
   submittedAt?: string | null;
   reviewComment?: string | null;

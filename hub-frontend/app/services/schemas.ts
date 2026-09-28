@@ -118,6 +118,8 @@ export type ProjectReportItem = {
   description: string | null;
   dueDate: string;
   type: ProjectReportContentKind;
+  allowedMimeTypes: string[];
+  maxFiles: number | null;
   createdBy: {
     id: number;
     fullName: string;

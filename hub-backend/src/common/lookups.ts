@@ -20,10 +20,22 @@ export async function assertReportBelongsToProject(
   prisma: PrismaService,
   projectId: number,
   reportId: number,
-): Promise<{ id: number; status: ReportStatus; type: ReportContentKind }> {
+): Promise<{
+  id: number;
+  status: ReportStatus;
+  type: ReportContentKind;
+  allowedMimeTypes: string[];
+  maxFiles: number | null;
+}> {
   const report = await prisma.projectReport.findFirst({
     where: { id: reportId, projectId },
-    select: { id: true, status: true, type: true },
+    select: {
+      id: true,
+      status: true,
+      type: true,
+      allowedMimeTypes: true,
+      maxFiles: true,
+    },
   });
 
   if (!report) {

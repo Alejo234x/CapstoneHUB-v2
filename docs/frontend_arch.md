@@ -55,7 +55,8 @@ proxy `stream`, que reenvía `Range`.
 - `auth.ts` — sesión en `localStorage` (`capstonehub.auth.session`) y funciones
   de login/usuarios.
 - `projects.ts` — proyectos, hitos, observaciones, anexos y contenido de las
-  entregas (texto, enlaces, imágenes, videos y archivos).
+  entregas (texto, enlaces, imágenes, videos y archivos), incluida la
+  configuración de tipo, MIME permitidos y máximo de archivos.
 - `schemas.ts` — tipos TypeScript compartidos (`ProjectDetails`, etc.).
 - `utils.ts` — helpers de formato (estados, fechas).
 

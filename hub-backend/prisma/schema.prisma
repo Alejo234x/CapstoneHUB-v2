@@ -274,6 +274,8 @@ model ProjectReport {
   description      String?      @db.Text
   dueDate          DateTime     @map("due_date")
   type             ReportContentKind @default(file)
+  allowedMimeTypes String[]     @default([]) @map("allowed_mime_types")
+  maxFiles         Int?         @map("max_files")
   status           ReportStatus @default(pending)
   submittedAt      DateTime?    @map("submitted_at")
   reviewedAt       DateTime?    @map("reviewed_at")

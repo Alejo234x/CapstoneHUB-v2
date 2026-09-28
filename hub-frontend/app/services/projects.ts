@@ -480,6 +480,8 @@ export type CreateProjectReportPayload = {
   description?: string | null;
   dueDate: string;
   type: ProjectReportContentKind;
+  allowedMimeTypes?: string[];
+  maxFiles?: number;
 };
 
 export type UpdateProjectReportPayload = Partial<CreateProjectReportPayload>;

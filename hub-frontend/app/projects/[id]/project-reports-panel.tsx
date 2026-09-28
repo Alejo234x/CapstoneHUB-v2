@@ -28,10 +28,10 @@ import {
 } from "../../services/schemas";
 import { useAuth } from "../../components/auth-provider";
 import {
+  REPORT_MIME_OPTIONS,
   REPORT_TEXT_MAX_LENGTH,
   formatBytes,
   formatDate,
-  getReportContentAccept,
   toDateTimeLocal,
   validateReportContentFile,
   validateReportLink,
@@ -58,6 +58,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -115,6 +116,8 @@ type ReportFormState = {
   description: string;
   dueDate: string;
   type: ProjectReportContentKind;
+  allowedMimeTypes: string[];
+  maxFiles: string;
 };
 
 type ContentFileKind = "image" | "video" | "file";
@@ -128,6 +131,8 @@ const emptyForm: ReportFormState = {
   description: "",
   dueDate: "",
   type: "file",
+  allowedMimeTypes: [],
+  maxFiles: "",
 };
 
 const REPORT_TYPE_OPTIONS: {
@@ -513,6 +518,11 @@ function ReportCard({
   const isEditable = report.status === "pending" || report.status === "rejected";
   const canEditContent = canSubmit && isEditable;
   const reportType = report.type;
+  const fileCount = report.contents.length;
+  const atMaxFiles =
+    isFileKind(reportType) &&
+    report.maxFiles !== null &&
+    fileCount >= report.maxFiles;
 
   function canDeleteContent(content: ProjectReportContentItem): boolean {
     if (!isEditable) {
@@ -564,6 +574,13 @@ function ReportCard({
 
     if (validationError) {
       setErrorMessage(validationError);
+      setSelectedFile(null);
+      event.target.value = "";
+      return;
+    }
+
+    if (file.type && !report.allowedMimeTypes.includes(file.type)) {
+      setErrorMessage("Tipo de archivo no permitido para esta entrega.");
       setSelectedFile(null);
       event.target.value = "";
       return;
@@ -809,7 +826,7 @@ function ReportCard({
           </Empty>
         )}
 
-        {canEditContent ? (
+        {canEditContent && !atMaxFiles ? (
           <>
             <Separator />
             <form
@@ -850,7 +867,7 @@ function ReportCard({
                   type="file"
                   onChange={handleFileChange}
                   disabled={busy}
-                  accept={getReportContentAccept(reportType)}
+                  accept={report.allowedMimeTypes.join(",")}
                 />
               ) : null}
 
@@ -872,6 +889,9 @@ function ReportCard({
 
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-sm text-muted-foreground">
+                  {isFileKind(reportType) && report.maxFiles !== null
+                    ? `${fileCount} de ${report.maxFiles} archivos. `
+                    : ""}
                   {getComposerHint(reportType, selectedFile)}
                 </span>
                 <Button type="submit" disabled={busy}>
@@ -880,6 +900,15 @@ function ReportCard({
               </div>
             </form>
           </>
+        ) : null}
+
+        {canEditContent && atMaxFiles ? (
+          <Alert>
+            <AlertDescription>
+              Alcanzaste el máximo de {report.maxFiles} archivo(s) para esta
+              entrega.
+            </AlertDescription>
+          </Alert>
         ) : null}
 
         {canSubmit && isEditable ? (
@@ -1094,6 +1123,8 @@ export default function ProjectReportsPanel({
       description: report.description ?? "",
       dueDate: toDateTimeLocal(report.dueDate),
       type: report.type,
+      allowedMimeTypes: report.allowedMimeTypes,
+      maxFiles: report.maxFiles !== null ? String(report.maxFiles) : "",
     });
     setErrorMessage(null);
     setDialogOpen(true);
@@ -1127,11 +1158,29 @@ export default function ProjectReportsPanel({
       return;
     }
 
+    const isFile = isFileKind(form.type);
+    const maxFiles = Number(form.maxFiles);
+
+    if (isFile) {
+      if (form.allowedMimeTypes.length === 0) {
+        setErrorMessage("Selecciona al menos un tipo de archivo permitido.");
+        return;
+      }
+
+      if (!Number.isInteger(maxFiles) || maxFiles < 1) {
+        setErrorMessage("El máximo de archivos debe ser un número mayor a 0.");
+        return;
+      }
+    }
+
     const payload = {
       title,
       description: form.description.trim() || null,
       dueDate: new Date(dueDate).toISOString(),
       type: form.type,
+      ...(isFile
+        ? { allowedMimeTypes: form.allowedMimeTypes, maxFiles }
+        : {}),
     };
 
     runTransition(async () => {
@@ -1331,6 +1380,7 @@ export default function ProjectReportsPanel({
   const reviewDialogTitle =
     reviewDecision === "accepted" ? "Aceptar entrega" : "No aceptar entrega";
   const editingTextContent = contentEdit?.content.kind === "text";
+  const configLocked = isPending || Boolean(editingReport?.contents.length);
 
   return (
     <Card className="mt-6">
@@ -1470,9 +1520,11 @@ export default function ProjectReportsPanel({
               setForm((prev) => ({
                 ...prev,
                 type: value as ProjectReportContentKind,
+                allowedMimeTypes: [],
+                maxFiles: "",
               }))
             }
-            disabled={isPending || Boolean(editingReport?.contents.length)}
+            disabled={configLocked}
           >
             <SelectTrigger id="report-type" className="w-full">
               <SelectValue>
@@ -1490,6 +1542,83 @@ export default function ProjectReportsPanel({
             </SelectContent>
           </Select>
         </FormField>
+
+        {isFileKind(form.type) ? (
+          <>
+            <FormField
+              htmlFor="report-mime-types"
+              label="Tipos de archivo permitidos"
+            >
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                  {REPORT_MIME_OPTIONS[form.type].map((option) => (
+                    <label
+                      key={option.label}
+                      htmlFor={`mime-${option.label}`}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <Checkbox
+                        id={`mime-${option.label}`}
+                        checked={option.values.some((value) =>
+                          form.allowedMimeTypes.includes(value),
+                        )}
+                        onCheckedChange={(checked) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            allowedMimeTypes:
+                              checked === true
+                                ? [
+                                    ...new Set([
+                                      ...prev.allowedMimeTypes,
+                                      ...option.values,
+                                    ]),
+                                  ]
+                                : prev.allowedMimeTypes.filter(
+                                    (value) => !option.values.includes(value),
+                                  ),
+                          }))
+                        }
+                        disabled={configLocked}
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-fit"
+                  disabled={configLocked}
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      allowedMimeTypes: REPORT_MIME_OPTIONS[
+                        prev.type as ContentFileKind
+                      ].flatMap((option) => option.values),
+                    }))
+                  }
+                >
+                  Seleccionar todos
+                </Button>
+              </div>
+            </FormField>
+
+            <FormField htmlFor="report-max-files" label="Máximo de archivos">
+              <Input
+                id="report-max-files"
+                type="number"
+                min={1}
+                value={form.maxFiles}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, maxFiles: event.target.value }))
+                }
+                disabled={configLocked}
+                placeholder="1"
+              />
+            </FormField>
+          </>
+        ) : null}
       </ReportDialogForm>
 
       <ReportDialogForm

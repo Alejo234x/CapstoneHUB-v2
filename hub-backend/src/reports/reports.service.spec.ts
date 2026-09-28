@@ -24,6 +24,8 @@ describe('ReportsService', () => {
       description: 'Details',
       dueDate,
       type: 'file',
+      allowedMimeTypes: ['application/pdf'],
+      maxFiles: 3,
       status: 'pending',
       submittedAt: null,
       reviewedAt: null,
@@ -78,6 +80,8 @@ describe('ReportsService', () => {
                 description: string | null;
                 dueDate: Date;
                 type: ReportContentKind;
+                allowedMimeTypes: string[];
+                maxFiles: number | null;
               };
               select: unknown;
             },
@@ -123,8 +127,36 @@ describe('ReportsService', () => {
     };
   }
 
+  function defaultMimeFor(type: string): string[] {
+    switch (type) {
+      case 'image':
+        return ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+      case 'video':
+        return ['video/mp4', 'video/webm', 'video/ogg'];
+      case 'file':
+        return [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
+      default:
+        return [];
+    }
+  }
+
   function pendingReport(overrides: Record<string, unknown> = {}) {
-    return { id: 3, status: 'pending', type: 'file', ...overrides };
+    const type = (overrides.type as string | undefined) ?? 'file';
+
+    return {
+      id: 3,
+      status: 'pending',
+      type,
+      allowedMimeTypes: defaultMimeFor(type),
+      maxFiles: type === 'text' || type === 'link' ? null : 3,
+      ...overrides,
+    };
   }
 
   it('creates a standalone report for an authorized project manager', async () => {
@@ -142,6 +174,8 @@ describe('ReportsService', () => {
         description: ' Details ',
         dueDate,
         type: ReportContentKind.video,
+        allowedMimeTypes: ['video/mp4'],
+        maxFiles: 2,
       },
     });
 
@@ -165,6 +199,8 @@ describe('ReportsService', () => {
         description: string | null;
         dueDate: Date;
         type: ReportContentKind;
+        allowedMimeTypes: string[];
+        maxFiles: number | null;
       };
     };
     expect(createArgs.data).toMatchObject({
@@ -173,6 +209,8 @@ describe('ReportsService', () => {
       description: 'Details',
       dueDate,
       type: ReportContentKind.video,
+      allowedMimeTypes: ['video/mp4'],
+      maxFiles: 2,
     });
   });
 
@@ -184,7 +222,45 @@ describe('ReportsService', () => {
       service.createReport({
         projectId: 10,
         user,
-        data: { title: '   ', dueDate, type: ReportContentKind.file },
+        data: {
+          title: '   ',
+          dueDate,
+          type: ReportContentKind.file,
+          allowedMimeTypes: ['application/pdf'],
+          maxFiles: 1,
+        },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('requires file configuration when the type has files', async () => {
+    const { service, prisma } = createService();
+    prisma.project.findUnique.mockResolvedValue({ id: 10 });
+
+    await expect(
+      service.createReport({
+        projectId: 10,
+        user,
+        data: { title: 'Entrega', dueDate, type: ReportContentKind.video },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects MIME types outside the report type', async () => {
+    const { service, prisma } = createService();
+    prisma.project.findUnique.mockResolvedValue({ id: 10 });
+
+    await expect(
+      service.createReport({
+        projectId: 10,
+        user,
+        data: {
+          title: 'Entrega',
+          dueDate,
+          type: ReportContentKind.image,
+          allowedMimeTypes: ['application/pdf'],
+          maxFiles: 1,
+        },
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
@@ -369,6 +445,53 @@ describe('ReportsService', () => {
       key: result.storageKey,
       expiresInSeconds: 3600,
     });
+  });
+
+  it('rejects presigning a MIME type not allowed by the report', async () => {
+    const { service, prisma, storage } = createService();
+    prisma.project.findUnique.mockResolvedValue({ id: 10 });
+    prisma.projectReport.findFirst.mockResolvedValue(
+      pendingReport({ type: 'image', allowedMimeTypes: ['image/png'] }),
+    );
+
+    await expect(
+      service.presignFileContent({
+        projectId: 10,
+        reportId: 3,
+        user,
+        data: {
+          kind: 'image',
+          fileName: 'foto.gif',
+          mimeType: 'image/gif',
+          sizeBytes: 10,
+        },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(storage.createUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it('rejects presigning when the report reached its max files', async () => {
+    const { service, prisma, storage } = createService();
+    prisma.project.findUnique.mockResolvedValue({ id: 10 });
+    prisma.projectReport.findFirst.mockResolvedValue(
+      pendingReport({ type: 'image', maxFiles: 1 }),
+    );
+    prisma.projectReportContent.count.mockResolvedValue(1);
+
+    await expect(
+      service.presignFileContent({
+        projectId: 10,
+        reportId: 3,
+        user,
+        data: {
+          kind: 'image',
+          fileName: 'foto.png',
+          mimeType: 'image/png',
+          sizeBytes: 10,
+        },
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(storage.createUploadUrl).not.toHaveBeenCalled();
   });
 
   it('rejects presigning a file whose type does not match the kind', async () => {
@@ -696,10 +819,12 @@ describe('ReportsService', () => {
     expect(prisma.projectReportContent.create).not.toHaveBeenCalled();
   });
 
-  it('changes the report type while pending and empty', async () => {
+  it('changes the report config while pending and empty', async () => {
     const { service, prisma } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
-    prisma.projectReport.findFirst.mockResolvedValue(pendingReport());
+    prisma.projectReport.findFirst.mockResolvedValue(
+      pendingReport({ type: 'text' }),
+    );
     prisma.projectReportContent.count.mockResolvedValue(0);
     prisma.projectReport.update.mockResolvedValue(
       selectedReport({ type: 'video' }),
@@ -709,21 +834,31 @@ describe('ReportsService', () => {
       projectId: 10,
       reportId: 3,
       user,
-      data: { type: ReportContentKind.video },
+      data: {
+        type: ReportContentKind.video,
+        allowedMimeTypes: ['video/mp4'],
+        maxFiles: 1,
+      },
     });
 
     expect(result.type).toBe('video');
     expect(prisma.projectReport.update).toHaveBeenCalledWith({
       where: { id: 3 },
-      data: { type: ReportContentKind.video },
+      data: {
+        type: ReportContentKind.video,
+        allowedMimeTypes: ['video/mp4'],
+        maxFiles: 1,
+      },
       select: expect.any(Object) as object,
     });
   });
 
-  it('refuses to change the report type when it already has content', async () => {
+  it('refuses to change the report config when it already has content', async () => {
     const { service, prisma } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
-    prisma.projectReport.findFirst.mockResolvedValue(pendingReport());
+    prisma.projectReport.findFirst.mockResolvedValue(
+      pendingReport({ type: 'video' }),
+    );
     prisma.projectReportContent.count.mockResolvedValue(1);
 
     await expect(
@@ -731,18 +866,20 @@ describe('ReportsService', () => {
         projectId: 10,
         reportId: 3,
         user,
-        data: { type: ReportContentKind.video },
+        data: { maxFiles: 2 },
       }),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('refuses to change the report type when it is not pending', async () => {
+  it('refuses to change the report config when it is not pending', async () => {
     const { service, prisma } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue({
       id: 3,
       status: 'submitted',
       type: 'file',
+      allowedMimeTypes: ['application/pdf'],
+      maxFiles: 3,
     });
 
     await expect(
@@ -750,7 +887,7 @@ describe('ReportsService', () => {
         projectId: 10,
         reportId: 3,
         user,
-        data: { type: ReportContentKind.video },
+        data: { maxFiles: 5 },
       }),
     ).rejects.toBeInstanceOf(ConflictException);
   });

@@ -146,6 +146,40 @@ export const REPORT_VIDEO_MIME_TYPES: ReadonlySet<string> = new Set([
 
 export type ReportFileContentKind = "image" | "video" | "file";
 
+export const REPORT_MIME_OPTIONS: Record<
+  ReportFileContentKind,
+  { label: string; values: string[] }[]
+> = {
+  image: [
+    { label: "PNG", values: ["image/png"] },
+    { label: "JPEG", values: ["image/jpeg"] },
+    { label: "WebP", values: ["image/webp"] },
+    { label: "GIF", values: ["image/gif"] },
+  ],
+  video: [
+    { label: "MP4", values: ["video/mp4"] },
+    { label: "WebM", values: ["video/webm"] },
+    { label: "OGG", values: ["video/ogg"] },
+  ],
+  file: [
+    { label: "PDF", values: ["application/pdf"] },
+    {
+      label: "Word",
+      values: [
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ],
+    },
+    {
+      label: "Excel",
+      values: [
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ],
+    },
+  ],
+};
+
 export function getReportContentAccept(kind: ReportFileContentKind): string {
   if (kind === "image") {
     return REPORT_IMAGE_ACCEPT;

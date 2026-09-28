@@ -147,9 +147,11 @@ Límite de 10 MB por archivo, y se permite PDF, Word, Excel, PNG y JPEG
 # Contenido de entregas
 
 Cada entrega tiene un **tipo** fijo (`text`, `link`, `image`, `video` o `file`)
-definido al crearla; el estudiante solo aporta contenido de ese tipo. Los
-binarios se guardan en el mismo bucket con **subida directa desde el navegador**
-(URL prefirmada), de modo que el archivo no pasa por Nest ni por el BFF:
+definido al crearla y, para los tipos con archivo, los **MIME permitidos** y el
+**máximo de archivos**; el estudiante solo aporta contenido que cumpla esa
+configuración. Los binarios se guardan en el mismo bucket con **subida directa
+desde el navegador** (URL prefirmada), de modo que el archivo no pasa por Nest ni
+por el BFF:
 
 ```
 POST   /projects/:projectId/reports/:reportId/contents                 (JSON: texto o enlace)

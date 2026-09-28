@@ -70,6 +70,8 @@ export const reportSelect = {
   description: true,
   dueDate: true,
   type: true,
+  allowedMimeTypes: true,
+  maxFiles: true,
   status: true,
   submittedAt: true,
   reviewedAt: true,
@@ -95,6 +97,8 @@ export type ProjectReportResponse = {
   description: string | null;
   dueDate: Date;
   type: ReportContentKind;
+  allowedMimeTypes: string[];
+  maxFiles: number | null;
   status: ReportStatus;
   submittedAt: Date | null;
   reviewedAt: Date | null;
@@ -114,6 +118,8 @@ export function mapReport(report: SelectedReport): ProjectReportResponse {
     description: report.description,
     dueDate: report.dueDate,
     type: report.type,
+    allowedMimeTypes: report.allowedMimeTypes,
+    maxFiles: report.maxFiles,
     status: report.status,
     submittedAt: report.submittedAt,
     reviewedAt: report.reviewedAt,
