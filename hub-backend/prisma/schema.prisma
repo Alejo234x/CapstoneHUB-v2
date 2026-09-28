@@ -42,6 +42,14 @@ enum ReportStatus {
   rejected
 }
 
+enum ReportContentKind {
+  text
+  link
+  image
+  video
+  file
+}
+
 enum ProjectSource {
   external_entity
   research
@@ -67,6 +75,7 @@ model User {
   uploadedAttachments    ProjectAttachment[]
   createdReports         ProjectReport[]          @relation("ReportCreatedBy")
   reviewedReports        ProjectReport[]          @relation("ReportReviewedBy")
+  reportContents         ProjectReportContent[]   @relation("ReportContentCreatedBy")
   proposedProjects       Project[]                @relation("ProjectProposedBy")
 
   @@index([fullName], map: "idx_user_full_name")
@@ -247,6 +256,8 @@ model ProjectAttachment {
   report     ProjectReport? @relation(fields: [reportId], references: [id], onDelete: SetNull)
   uploadedBy User?          @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
 
+  reportContent ProjectReportContent?
+
   @@index([projectId], map: "idx_project_attachment_project_id")
   @@index([reportId], map: "idx_project_attachment_report_id")
   @@index([uploadedByUserId], map: "idx_project_attachment_uploaded_by_user_id")
@@ -262,6 +273,7 @@ model ProjectReport {
   title            String       @db.VarChar(255)
   description      String?      @db.Text
   dueDate          DateTime     @map("due_date")
+  type             ReportContentKind @default(file)
   status           ReportStatus @default(pending)
   submittedAt      DateTime?    @map("submitted_at")
   reviewedAt       DateTime?    @map("reviewed_at")
@@ -273,6 +285,7 @@ model ProjectReport {
   createdBy   User?               @relation("ReportCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   reviewedBy  User?               @relation("ReportReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
   attachments ProjectAttachment[]
+  contents    ProjectReportContent[]
 
   @@index([projectId], map: "idx_project_report_project_id")
   @@index([dueDate], map: "idx_project_report_due_date")
@@ -280,4 +293,25 @@ model ProjectReport {
   @@index([createdByUserId], map: "idx_project_report_created_by_user_id")
   @@index([reviewedByUserId], map: "idx_project_report_reviewed_by_user_id")
   @@map("project_report")
+}
+
+model ProjectReportContent {
+  id              Int               @id @default(autoincrement())
+  reportId        Int               @map("report_id")
+  attachmentId    Int?              @unique(map: "uk_project_report_content_attachment") @map("attachment_id")
+  createdByUserId Int?              @map("created_by_user_id")
+  kind            ReportContentKind
+  textContent     String?           @map("text_content") @db.Text
+  url             String?           @db.VarChar(2048)
+  label           String?           @db.VarChar(255)
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  report     ProjectReport      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  attachment ProjectAttachment? @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  createdBy  User?              @relation("ReportContentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([reportId], map: "idx_project_report_content_report_id")
+  @@index([kind], map: "idx_project_report_content_kind")
+  @@index([createdByUserId], map: "idx_project_report_content_created_by_user_id")
+  @@map("project_report_content")
 }

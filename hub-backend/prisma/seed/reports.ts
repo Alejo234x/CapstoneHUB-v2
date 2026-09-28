@@ -36,6 +36,7 @@ export async function seedReports({
       const data = {
         description: report.description ?? null,
         dueDate: new Date(report.dueDate),
+        type: report.type ?? 'file',
         status,
         submittedAt,
         reviewedAt,
