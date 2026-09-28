@@ -97,7 +97,25 @@ flag `completed`.
 ### ProjectAttachment
 
 Metadatos de un archivo subido. El binario se almacena en S3/MinIO;
-`storageKey` es único y apunta al objeto.
+`storageKey` es único y apunta al objeto. Cuando `reportId` está presente el
+archivo pertenece a una entrega y se muestra en su pestaña, no en Anexos.
+
+### ProjectReport
+
+Entrega creada por un asesor, evaluador o coordinador: `title`, `description`
+opcional, `dueDate`, `type` (el tipo de contenido que debe aportar el estudiante,
+uno de `text`, `link`, `image`, `video` o `file`), `status` (`pending`,
+`submitted`, `accepted`, `rejected`), fechas de envío/revisión y `reviewComment`.
+El `type` se define al crear la entrega y solo puede cambiarse mientras esté
+`pending` y sin contenido.
+
+### ProjectReportContent
+
+Aporte dentro de una entrega. `kind` distingue `text`, `link`, `image`, `video`
+y `file` y debe coincidir con el `type` de su entrega. Los tipos de texto y
+enlace usan `textContent`/`url`/`label`; los de archivo referencian un
+`ProjectAttachment` (`attachmentId`, único) y el binario vive en S3/MinIO. Cada
+fila guarda su autor y su fecha de creación.
 
 ## Diagrama de clases UML
 
@@ -213,6 +231,35 @@ classDiagram
         +DateTime createdAt
     }
 
+    class ProjectReport {
+        +Int id
+        +Int projectId
+        +Int createdByUserId
+        +Int reviewedByUserId
+        +String title
+        +String description
+        +DateTime dueDate
+        +ReportContentKind type
+        +ReportStatus status
+        +DateTime submittedAt
+        +DateTime reviewedAt
+        +String reviewComment
+        +DateTime createdAt
+        +DateTime updatedAt
+    }
+
+    class ProjectReportContent {
+        +Int id
+        +Int reportId
+        +Int attachmentId
+        +Int createdByUserId
+        +ReportContentKind kind
+        +String textContent
+        +String url
+        +String label
+        +DateTime createdAt
+    }
+
     class ProjectStatus {
         <<enumeration>>
         proposed
@@ -241,11 +288,30 @@ classDiagram
         evaluator
     }
 
+    class ReportStatus {
+        <<enumeration>>
+        pending
+        submitted
+        accepted
+        rejected
+    }
+
+    class ReportContentKind {
+        <<enumeration>>
+        text
+        link
+        image
+        video
+        file
+    }
+
     User "1" --> "0..*" UserRoleAssignment : roleAssignments
     User "1" --> "0..*" ProjectActorAssignment : projectAssignments
     User "0..1" --> "0..*" ProjectObservation : authoredObservations
     User "0..1" --> "0..*" ProjectStatusHistory : projectStatusHistories
     User "0..1" --> "0..*" ProjectAttachment : uploadedAttachments
+    User "0..1" --> "0..*" ProjectReport : createdReports
+    User "0..1" --> "0..*" ProjectReportContent : reportContents
     User "0..1" --> "0..*" Project : proposedProjects
 
     Project "1" *-- "0..*" ProjectSchool : schools
@@ -256,20 +322,30 @@ classDiagram
     Project "1" *-- "0..*" ProjectStatusHistory : statusHistory
     Project "1" *-- "0..*" ProjectMilestones : milestones
     Project "1" *-- "0..*" ProjectAttachment : attachments
+    Project "1" *-- "0..*" ProjectReport : reports
+    ProjectReport "1" *-- "0..*" ProjectReportContent : contents
+    ProjectReportContent "0..1" --> "0..1" ProjectAttachment : attachment
 
     UserRoleAssignment ..> UserRole
     ProjectActorAssignment ..> ActorRole
     Project ..> ProjectStatus
     ProjectStatusHistory ..> ProjectStatus
+    ProjectReport ..> ReportStatus
+    ProjectReportContent ..> ReportContentKind
 ```
 
 ## Notas
 
 - Todas las tablas propiedad de un proyecto usan cascada al borrar el
-  proyecto, de modo que eliminarlo limpia sus filas dependientes.
+  proyecto, de modo que eliminarlo limpia sus filas dependientes. El contenido
+  de una entrega también cae en cascada al eliminar su `ProjectReport` y, si
+  referencia un archivo, al eliminar el `ProjectAttachment`.
 - Las referencias a `User` usan `SetNull` cuando el registro debe sobrevivir al
-  usuario (observaciones, historial de estado, anexos) y `Cascade` cuando no
-  (asignaciones de rol y de actor).
+  usuario (observaciones, historial de estado, anexos, autores de contenido) y
+  `Cascade` cuando no (asignaciones de rol y de actor).
+- Las entregas solo admiten contenido mientras están `pending` o `rejected`; al
+  enviarse no se pueden editar. `ProjectAttachment` con `reportId` no nulo se
+  lista en la pestaña Entregas y se excluye de Anexos.
 - Hay índices declarados para los filtros comunes: `status`, `startDate` y
   `createdAt` del proyecto, además de claves foráneas y fechas usadas en los
   listados.

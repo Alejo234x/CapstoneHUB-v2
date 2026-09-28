@@ -29,7 +29,7 @@ Ver también: [Arquitectura del backend](./backend_arch.md),
 | `/` | Inicio. |
 | `/login` | Inicio de sesión. |
 | `/projects` | Lista de proyectos. |
-| `/projects/[id]` | Detalle por pestañas (general, equipo, hitos, anexos, historial). |
+| `/projects/[id]` | Detalle por pestañas (general, equipo, hitos, entregas, anexos, historial). |
 | `/submit`, `/submit/natural` | Propuesta de proyecto. |
 | `/admin/users` | Administración de usuarios y roles. |
 
@@ -40,6 +40,12 @@ recibe la petición, reenvía el header `Authorization` y hace `fetch` a
 `BACKEND_URL` (por defecto `http://localhost:3001`), devolviendo la respuesta
 tal cual. Esto evita CORS y oculta la URL del backend.
 
+La excepción son los binarios de las entregas: el frontend pide una URL
+prefirmada (`.../contents/files/presign`), sube el archivo **directo a
+MinIO/S3** con `XMLHttpRequest` (para mostrar progreso) y confirma
+(`.../contents/files/confirm`). La descarga/reproducción sigue pasando por el
+proxy `stream`, que reenvía `Range`.
+
 `app/api/auth/proxy.ts` es un helper reutilizable para login y usuarios.
 
 ## Capa de servicios
@@ -48,7 +54,8 @@ tal cual. Esto evita CORS y oculta la URL del backend.
 
 - `auth.ts` — sesión en `localStorage` (`capstonehub.auth.session`) y funciones
   de login/usuarios.
-- `projects.ts` — proyectos, hitos, observaciones y anexos.
+- `projects.ts` — proyectos, hitos, observaciones, anexos y contenido de las
+  entregas (texto, enlaces, imágenes, videos y archivos).
 - `schemas.ts` — tipos TypeScript compartidos (`ProjectDetails`, etc.).
 - `utils.ts` — helpers de formato (estados, fechas).
 

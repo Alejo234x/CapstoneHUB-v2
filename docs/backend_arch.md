@@ -177,6 +177,35 @@ Word, Excel, PNG, JPEG). El service sube el archivo a S3 y, si falla el
 registro en la base de datos, lo elimina para no dejar huérfanos. Las descargas
 se envían como stream con el nombre original en el header `Content-Disposition`.
 
+Los archivos vinculados a una entrega (`reportId` no nulo) se excluyen del
+listado de Anexos y se sirven desde la pestaña Entregas.
+
+## Entregas
+
+Una entrega (`ProjectReport`) tiene un **tipo** fijo (`type`: `text`, `link`,
+`image`, `video` o `file`) definido por el asesor/evaluador/coordinador al
+crearla; solo se puede cambiar mientras esté `pending` y no tenga contenido. El
+estudiante agrega **contenido** (`ProjectReportContent`) que debe coincidir con
+ese `type` (el backend rechaza con `400` cualquier `kind` distinto). Los textos
+y enlaces se guardan en la propia fila (`textContent`, `url`, `label`); las
+imágenes, videos y archivos reutilizan `ProjectAttachment` (`attachmentId`) y por
+tanto el mismo almacenamiento S3. El contenido solo se puede modificar mientras
+la entrega esté `pending` o `rejected`; al enviarla se valida que tenga al menos
+una pieza.
+
+`POST .../contents/files/presign` acepta imágenes (PNG, JPEG, WebP, GIF;
+10 MB), videos (MP4, WebM, OGG; `MAX_VIDEO_SIZE_BYTES`, 100 MB por defecto) y
+documentos (PDF, Word, Excel; 10 MB), valida que el MIME corresponda al `kind` (y
+que el `kind` corresponda al `type` de la entrega) y devuelve una URL `PUT`
+prefirmada con `S3_PUBLIC_ENDPOINT`. El navegador sube el binario directamente a
+MinIO/S3 y luego `POST .../contents/files/confirm` verifica el objeto con
+`HeadObject` (tamaño real, existencia) y crea `ProjectAttachment` +
+`ProjectReportContent`. Si el objeto excede el límite, se borra y se responde
+`400`. `GET .../contents/:cid/stream` sirve el archivo inline y reenvía la
+cabecera `Range` a S3 para responder `206 Partial Content`, lo que permite
+reproducir y buscar dentro de un video. Los objetos subidos pero nunca
+confirmados se limpian con `npm run storage:gc`.
+
 ## Manejo de errores
 
 Se usan las excepciones HTTP integradas de Nest, por lo que las respuestas
@@ -198,9 +227,12 @@ siguen una forma consistente (`statusCode`, `message`, `error`):
 | `DATABASE_URL` | Cadena de conexión a PostgreSQL. |
 | `AUTH_SECRET` | Clave de firma HMAC (mínimo 32 caracteres). |
 | `INITIAL_ADMIN_*` | Email, contraseña y nombre del admin inicial. |
-| `MAX_FILE_SIZE_BYTES` | Límite de tamaño de anexos (por defecto 10 MB). |
+| `MAX_FILE_SIZE_BYTES` | Límite de tamaño de anexos e imágenes (por defecto 10 MB). |
+| `MAX_VIDEO_SIZE_BYTES` | Límite de tamaño de videos de una entrega (por defecto 100 MB). |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | Almacenamiento de archivos. |
 | `S3_REGION`, `S3_FORCE_PATH_STYLE` | Ajustes del cliente S3 (`true` para MinIO). |
+| `S3_PUBLIC_ENDPOINT` | Host de S3/MinIO que alcanza el navegador; usado para firmar las subidas directas. |
+| `S3_UPLOAD_URL_TTL_SECONDS` | Vigencia de la URL prefirmada de subida (3600 s por defecto). |
 
 ## Semillas y migraciones
 
@@ -212,6 +244,13 @@ En `prisma/`:
 
 Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 `seed:users`, `seed:projects`, etc.).
+
+## Mantenimiento
+
+- `npm run storage:gc` — borra de MinIO/S3 los objetos sin `ProjectAttachment`
+  (subidas que nunca se confirmaron). Flags: `--dry-run` y
+  `--max-age-hours=N` (24 h por defecto). Entrada en
+  `src/storage/gc-cli.ts`; lógica en `src/storage/storage-gc.service.ts`.
 
 ## Pruebas
 
@@ -237,6 +276,13 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 | `GET/POST/PATCH/DELETE` | `/projects/:id/milestones` | Gestionar hitos. |
 | `GET/POST/DELETE` | `/projects/:id/attachments` | Gestionar anexos. |
 | `GET` | `/projects/:id/attachments/:aid/download` | Descargar un anexo. |
+| `GET/POST/PATCH/DELETE` | `/projects/:id/reports` | Gestionar entregas y su contenido. |
+| `POST` | `/projects/:id/reports/:rid/submit` | Enviar una entrega con contenido. |
+| `POST` | `/projects/:id/reports/:rid/review` | Aceptar o rechazar una entrega. |
+| `POST/PATCH/DELETE` | `/projects/:id/reports/:rid/contents[/:cid]` | Añadir, editar o borrar contenido de la entrega. |
+| `POST` | `/projects/:id/reports/:rid/contents/files/presign` | Firma y devuelve la URL para subir el archivo directamente. |
+| `POST` | `/projects/:id/reports/:rid/contents/files/confirm` | Verifica el objeto subido y registra el contenido. |
+| `GET` | `/projects/:id/reports/:rid/contents/:cid/stream` | Ver o reproducir el archivo inline, con `Range`. |
 
 La autenticación es **global** (`AuthGuard` como `APP_GUARD`): todas las rutas
 requieren token salvo las marcadas con `@Public()` (`/auth/login`, `GET /projects`
