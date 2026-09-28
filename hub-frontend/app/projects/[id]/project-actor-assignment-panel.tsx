@@ -217,7 +217,7 @@ function AssignmentForm({
     setSearch(value);
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     onErrorChange(null);
 

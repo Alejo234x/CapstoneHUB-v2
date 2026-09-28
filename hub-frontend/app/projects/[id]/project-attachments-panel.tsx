@@ -86,7 +86,7 @@ type AttachmentUploadCardProps = {
   selectedFile: File | null;
   errorMessage: string | null;
   onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: React.SyntheticEvent<HTMLFormElement>) => void;
 };
 
 function AttachmentUploadCard({
@@ -608,7 +608,7 @@ export default function ProjectAttachmentsPanel({
     setSelectedFile(file);
   }
 
-  function handleUpload(event: React.FormEvent<HTMLFormElement>) {
+  function handleUpload(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
 

@@ -73,7 +73,7 @@ export default function ProjectObservationsPanel({
     currentUser !== undefined &&
     canCreateObservation(currentUser.id, assignments);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
 

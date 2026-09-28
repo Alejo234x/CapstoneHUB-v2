@@ -116,7 +116,7 @@ export default function SubmitProjectForm() {
     }));
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus("saving");
     setErrorMessage(null);

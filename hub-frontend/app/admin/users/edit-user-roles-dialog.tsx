@@ -59,7 +59,7 @@ export default function EditUserRolesDialog({
     );
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (selectedRoles.length === 0) {
