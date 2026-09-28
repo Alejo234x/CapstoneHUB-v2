@@ -215,6 +215,3 @@ export class ReviewReportDto {
   @IsOptional()
   comment?: string;
 }
-
-// Se mantiene para la firma del endpoint de envío aunque ya no reciba datos.
-export class SubmitReportDto {}
