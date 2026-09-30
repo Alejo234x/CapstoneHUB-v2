@@ -10,6 +10,17 @@ export type ApiErrorOptions = {
   conflictMessage?: string;
 };
 
+// Mensaje que se muestra cuando el servicio no responde.
+export const SERVICE_UNAVAILABLE_MESSAGE =
+  "El servicio no está disponible en este momento. Intenta de nuevo en unos minutos.";
+
+// Estados que indican que el backend o la base de datos no responden.
+export function isServiceUnavailableStatus(
+  status: number | undefined,
+): boolean {
+  return status === 502 || status === 503 || status === 504;
+}
+
 export async function readBackendMessage(
   response: Response,
   fallback = `Backend responded with status ${response.status}`,
@@ -33,6 +44,16 @@ export async function readBackendMessage(
   return fallback;
 }
 
+// Devuelve el mensaje de error de una respuesta. Los estados de servicio no
+// disponible se traducen a un texto amigable en español.
+export async function apiErrorMessage(response: Response): Promise<string> {
+  if (isServiceUnavailableStatus(response.status)) {
+    return SERVICE_UNAVAILABLE_MESSAGE;
+  }
+
+  return readBackendMessage(response);
+}
+
 export async function apiRequestError(
   response: Response,
   { action, conflictMessage }: ApiErrorOptions,
@@ -49,7 +70,7 @@ export async function apiRequestError(
     return new Error(conflictMessage);
   }
 
-  return new Error(await readBackendMessage(response));
+  return new Error(await apiErrorMessage(response));
 }
 
 export async function ensureOk(

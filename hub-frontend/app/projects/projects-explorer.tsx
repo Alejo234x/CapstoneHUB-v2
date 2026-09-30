@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getProjects } from "../services/projects";
 import { ProjectItem } from "../services/schemas";
 import ProjectsTable from "./projects-table";
+import ServiceUnavailable from "../components/service-unavailable";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,12 +16,14 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isServiceUnavailableStatus } from "@/lib/http";
 
 export default function ProjectsExplorer() {
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<number | undefined>(undefined);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -55,7 +58,7 @@ export default function ProjectsExplorer() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [reloadKey]);
 
   if (loading) {
     return (
@@ -63,6 +66,16 @@ export default function ProjectsExplorer() {
         <Skeleton className="h-16 w-full rounded-2xl" />
         <Skeleton className="h-64 w-full rounded-2xl" />
       </div>
+    );
+  }
+
+  if (isServiceUnavailableStatus(status)) {
+    return (
+      <ServiceUnavailable
+        className="mb-6"
+        message={error}
+        onRetry={() => setReloadKey((key) => key + 1)}
+      />
     );
   }
 

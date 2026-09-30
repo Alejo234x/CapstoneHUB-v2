@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { backendUnavailableResponse } from "@/app/api/proxy";
 
 const backendUrl = process.env.BACKEND_URL?.replace(/\/$/, "");
 
@@ -26,16 +27,22 @@ export async function GET(request: Request, { params }: { params: Params }) {
     request.headers.get("authorization") ?? (token ? `Bearer ${token}` : null);
   const range = request.headers.get("range");
 
-  const upstream = await fetch(
-    `${backendUrl}/projects/${id}/reports/${reportId}/contents/${contentId}/stream`,
-    {
-      headers: {
-        ...(authorization ? { Authorization: authorization } : {}),
-        ...(range ? { Range: range } : {}),
+  let upstream: Response;
+
+  try {
+    upstream = await fetch(
+      `${backendUrl}/projects/${id}/reports/${reportId}/contents/${contentId}/stream`,
+      {
+        headers: {
+          ...(authorization ? { Authorization: authorization } : {}),
+          ...(range ? { Range: range } : {}),
+        },
+        cache: "no-store",
       },
-      cache: "no-store",
-    },
-  );
+    );
+  } catch {
+    return backendUnavailableResponse();
+  }
 
   const headers = new Headers();
 

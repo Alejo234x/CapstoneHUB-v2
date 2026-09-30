@@ -13,8 +13,10 @@ import { visibleProjectTabs } from "./project-tabs-config";
 import { useCanEditProject } from "./use-can-edit-project";
 import { useIsProjectMember } from "./use-is-project-member";
 import { useProjectDetails } from "./use-project-details";
+import ServiceUnavailable from "../../components/service-unavailable";
 import { Card, CardContent } from "@/components/ui/card";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isServiceUnavailableStatus } from "@/lib/http";
 
 function ProjectTabsList({ isMember }: { readonly isMember: boolean }) {
   return (
@@ -30,7 +32,7 @@ function ProjectTabsList({ isMember }: { readonly isMember: boolean }) {
 }
 
 export default function ProjectDetailsView({ id }: { readonly id: string }) {
-  const { project, loading, status } = useProjectDetails(id);
+  const { project, loading, status, error, reload } = useProjectDetails(id);
   const isMember = useIsProjectMember(project);
   const canEdit = useCanEditProject(project);
 
@@ -39,6 +41,16 @@ export default function ProjectDetailsView({ id }: { readonly id: string }) {
   }
 
   if (!project) {
+    if (isServiceUnavailableStatus(status)) {
+      return (
+        <main className="flex-1 text-foreground">
+          <section className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            <ServiceUnavailable message={error} onRetry={reload} />
+          </section>
+        </main>
+      );
+    }
+
     return <ProjectMissingState status={status} />;
   }
 

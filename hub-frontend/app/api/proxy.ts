@@ -9,6 +9,22 @@ export type ProxyOptions = {
   cache?: RequestCache;
 };
 
+/**
+ * Respuesta uniforme cuando el backend no responde (proceso caído o red
+ * inaccesible). Mantiene la misma forma JSON que el backend para que el
+ * frontend pueda mostrar un mensaje consistente.
+ */
+export function backendUnavailableResponse(): NextResponse {
+  return NextResponse.json(
+    {
+      statusCode: 503,
+      error: "Service Unavailable",
+      message: "Backend is unavailable",
+    },
+    { status: 503 },
+  );
+}
+
 export async function proxyToBackend(
   request: Request,
   path: string,
@@ -23,15 +39,21 @@ export async function proxyToBackend(
 
   const authorization = request.headers.get("authorization");
 
-  const response = await fetch(`${backendUrl}${path}`, {
-    method: options.method,
-    body: options.body,
-    cache: options.cache,
-    headers: {
-      ...options.headers,
-      ...(authorization ? { Authorization: authorization } : {}),
-    },
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${backendUrl}${path}`, {
+      method: options.method,
+      body: options.body,
+      cache: options.cache,
+      headers: {
+        ...options.headers,
+        ...(authorization ? { Authorization: authorization } : {}),
+      },
+    });
+  } catch {
+    return backendUnavailableResponse();
+  }
 
   const contentType =
     response.headers.get("content-type") ?? "application/json";

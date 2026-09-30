@@ -235,6 +235,14 @@ siguen una forma consistente (`statusCode`, `message`, `error`):
 | `404` | Proyecto, usuario, hito o anexo no encontrado. |
 | `409` | Valor único duplicado (por ejemplo email o asignación de actor). |
 | `500` | Configuración requerida faltante (S3, secreto de auth). |
+| `503` | La base de datos no está disponible (conexión rechazada o agotada). |
+
+Los errores de conexión a PostgreSQL (`P1001`, `P1002`, `P1008`, `P1017` y
+códigos del driver como `ECONNREFUSED`) se traducen a `503 Service Unavailable`
+con la misma forma JSON mediante `DatabaseExceptionFilter`. El resto de errores
+mantiene el manejo por defecto de Nest. El servicio arranca aunque la base de
+datos esté caída: omite la creación del admin inicial y responde `503` en las
+rutas que la necesitan.
 
 ## Configuración
 
@@ -278,6 +286,7 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
+| `GET` | `/health` | Sonda pública: `200` si la base de datos responde, `503` si no. |
 | `POST` | `/auth/register` | Registro público de un proponente; crea la cuenta con rol `proposer` y devuelve usuario + token (público). |
 | `POST` | `/auth/login` | Iniciar sesión y recibir un token de acceso (público). |
 | `GET/POST` | `/auth/users` | Listar / crear usuarios (admin). |
@@ -303,7 +312,7 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 | `GET` | `/projects/:id/reports/:rid/contents/:cid/stream` | Ver o reproducir el archivo inline, con `Range`. |
 
 La autenticación es **global** (`AuthGuard` como `APP_GUARD`): todas las rutas
-requieren token salvo las marcadas con `@Public()` (`/auth/register`,
+requieren token salvo las marcadas con `@Public()` (`/health`, `/auth/register`,
 `/auth/login`, `GET /projects` y `GET /projects/:id`). En las rutas públicas el
 token es opcional: si llega, se resuelve el usuario y se adaptan los datos
 mostrados, y si es inválido se responde `401` en lugar de degradar a anónimo.

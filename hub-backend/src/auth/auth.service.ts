@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
   OnModuleInit,
 } from '@nestjs/common';
@@ -51,12 +52,26 @@ type UserSummary = {
 
 @Injectable()
 export class AuthService implements OnModuleInit {
+  private readonly logger = new Logger(AuthService.name);
   private readonly tokenSecret = this.getTokenSecret();
 
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit(): Promise<void> {
-    const userCount = await this.prisma.user.count();
+    let userCount: number;
+
+    try {
+      userCount = await this.prisma.user.count();
+    } catch (error) {
+      // Si la base de datos está caída al arrancar, el servicio debe levantarse
+      // igualmente y responder 503 en las rutas que dependen de ella.
+      this.logger.warn(
+        'No se pudo verificar la base de datos al iniciar; se omite la creación del admin inicial',
+        error instanceof Error ? error.message : String(error),
+      );
+      return;
+    }
+
     const initialEmail = process.env.INITIAL_ADMIN_EMAIL?.trim();
     const initialPassword = process.env.INITIAL_ADMIN_PASSWORD;
     const initialName = process.env.INITIAL_ADMIN_NAME?.trim();

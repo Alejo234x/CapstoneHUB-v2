@@ -7,7 +7,9 @@ import { MilestonesModule } from './milestones/milestones.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { ReportsModule } from './reports/reports.module';
 import { AuthModule } from './auth/auth.module';
+import { HealthModule } from './health/health.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
+import { DatabaseExceptionFilter } from './common/filters/database-exception.filter';
 import { ProjectsController } from './projects/projects.controller';
 import { ObservationsController } from './observations/observations.controller';
 import { MilestonesController } from './milestones/milestones.controller';
@@ -15,6 +17,7 @@ import { AttachmentsController } from './attachments/attachments.controller';
 import { ReportsController } from './reports/reports.controller';
 import { AuthController } from './auth/auth.controller';
 import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -24,10 +27,15 @@ import { ConfigModule } from '@nestjs/config';
     AttachmentsModule,
     ReportsModule,
     AuthModule,
+    HealthModule,
     ConfigModule.forRoot(),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Convierte los errores de conexión a la base de datos en un 503 estable.
+    { provide: APP_FILTER, useClass: DatabaseExceptionFilter },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
