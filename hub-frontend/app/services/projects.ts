@@ -13,7 +13,7 @@ import {
   UpdateProjectPayload,
 } from "./schemas";
 import { getAuthToken } from "./auth";
-import { ensureOk, readBackendMessage } from "@/lib/http";
+import { apiErrorMessage, ensureOk } from "@/lib/http";
 
 const PROJECT_EDIT_CONFLICT_MESSAGE =
   "El proyecto está cerrado o rechazado y ya no se puede editar.";
@@ -75,7 +75,7 @@ export async function getProjects(): Promise<{
       return {
         projects: [],
         status: response.status,
-        error: await readBackendMessage(response),
+        error: await apiErrorMessage(response),
       };
     }
 
@@ -104,7 +104,7 @@ export async function getMyProjects(): Promise<{
     if (!response.ok) {
       return {
         projects: [],
-        error: await readBackendMessage(response),
+        error: await apiErrorMessage(response),
       };
     }
 
@@ -135,7 +135,7 @@ export async function getProjectById(id: string): Promise<{
     if (!response.ok) {
       return {
         status: response.status,
-        error: await readBackendMessage(response),
+        error: await apiErrorMessage(response),
       };
     }
 
@@ -319,7 +319,7 @@ export async function getAssignableUsers(
     if (!response.ok) {
       return {
         users: [],
-        error: await readBackendMessage(response),
+        error: await apiErrorMessage(response),
       };
     }
 

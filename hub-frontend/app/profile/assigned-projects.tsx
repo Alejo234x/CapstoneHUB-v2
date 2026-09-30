@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getMyProjects } from "../services/projects";
 import { MyProject } from "../services/schemas";
 import { formatRole, formatStatus } from "../services/utils";
+import ServiceUnavailable from "../components/service-unavailable";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SERVICE_UNAVAILABLE_MESSAGE } from "@/lib/http";
 
 function formatDate(value: string | null): string {
   if (!value) {
@@ -45,6 +47,7 @@ export default function AssignedProjects() {
   const [projects, setProjects] = useState<MyProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -75,7 +78,7 @@ export default function AssignedProjects() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [reloadKey]);
 
   return (
     <Card>
@@ -98,9 +101,16 @@ export default function AssignedProjects() {
             <Skeleton className="h-10 w-full" />
           </div>
         ) : error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          error === SERVICE_UNAVAILABLE_MESSAGE ? (
+            <ServiceUnavailable
+              message={error}
+              onRetry={() => setReloadKey((key) => key + 1)}
+            />
+          ) : (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )
         ) : projects.length === 0 ? (
           <Empty className="border">
             <EmptyHeader>

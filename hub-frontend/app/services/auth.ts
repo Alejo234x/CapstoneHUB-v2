@@ -1,4 +1,4 @@
-import { readBackendMessage } from "@/lib/http";
+import { apiErrorMessage } from "@/lib/http";
 
 export type AuthUser = {
   id: number;
@@ -78,7 +78,7 @@ async function requestAuthSession(
   });
 
   if (!response.ok) {
-    throw new Error(await readBackendMessage(response));
+    throw new Error(await apiErrorMessage(response));
   }
 
   return (await response.json()) as AuthSession;
@@ -111,7 +111,7 @@ export async function getUsers(): Promise<AuthUser[]> {
   });
 
   if (!response.ok) {
-    throw new Error(await readBackendMessage(response));
+    throw new Error(await apiErrorMessage(response));
   }
 
   return (await response.json()) as AuthUser[];
@@ -135,7 +135,7 @@ export async function createUser(payload: {
   });
 
   if (!response.ok) {
-    throw new Error(await readBackendMessage(response));
+    throw new Error(await apiErrorMessage(response));
   }
 
   return (await response.json()) as AuthUser;
@@ -157,7 +157,7 @@ export async function updateUserRoles(
   });
 
   if (!response.ok) {
-    throw new Error(await readBackendMessage(response));
+    throw new Error(await apiErrorMessage(response));
   }
 
   return (await response.json()) as AuthUser;
