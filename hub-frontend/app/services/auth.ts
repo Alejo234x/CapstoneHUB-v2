@@ -65,6 +65,16 @@ export function getAuthToken(): string | null {
   return loadAuthSession()?.accessToken ?? null;
 }
 
+async function readErrorMessage(response: Response): Promise<string> {
+  const errorBody = (await response.json().catch(() => null)) as
+    | { message?: string }
+    | null;
+
+  return (
+    errorBody?.message ?? `Backend responded with status ${response.status}`
+  );
+}
+
 async function requestAuthSession(
   path: string,
   payload: unknown,
@@ -76,13 +86,7 @@ async function requestAuthSession(
   });
 
   if (!response.ok) {
-    const errorBody = (await response.json().catch(() => null)) as
-      | { message?: string }
-      | null;
-
-    throw new Error(
-      errorBody?.message ?? `Backend responded with status ${response.status}`,
-    );
+    throw new Error(await readErrorMessage(response));
   }
 
   return (await response.json()) as AuthSession;
@@ -115,13 +119,7 @@ export async function getUsers(): Promise<AuthUser[]> {
   });
 
   if (!response.ok) {
-    const errorBody = (await response.json().catch(() => null)) as
-      | { message?: string }
-      | null;
-
-    throw new Error(
-      errorBody?.message ?? `Backend responded with status ${response.status}`,
-    );
+    throw new Error(await readErrorMessage(response));
   }
 
   return (await response.json()) as AuthUser[];
@@ -145,13 +143,7 @@ export async function createUser(payload: {
   });
 
   if (!response.ok) {
-    const errorBody = (await response.json().catch(() => null)) as
-      | { message?: string }
-      | null;
-
-    throw new Error(
-      errorBody?.message ?? `Backend responded with status ${response.status}`,
-    );
+    throw new Error(await readErrorMessage(response));
   }
 
   return (await response.json()) as AuthUser;
@@ -173,13 +165,7 @@ export async function updateUserRoles(
   });
 
   if (!response.ok) {
-    const errorBody = (await response.json().catch(() => null)) as
-      | { message?: string }
-      | null;
-
-    throw new Error(
-      errorBody?.message ?? `Backend responded with status ${response.status}`,
-    );
+    throw new Error(await readErrorMessage(response));
   }
 
   return (await response.json()) as AuthUser;
