@@ -45,7 +45,7 @@ export function useProjectDetails(id: string): UseProjectDetailsResult {
       }
     }
 
-    loadProject();
+    void loadProject();
 
     return () => {
       active = false;

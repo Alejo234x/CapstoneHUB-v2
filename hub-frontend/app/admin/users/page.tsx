@@ -70,7 +70,7 @@ export default function AdminUsersPage() {
       }
     }
 
-    loadUsers();
+    void loadUsers();
   }, [ready, isAuthenticated, session, router]);
 
   if (!ready || loading) {

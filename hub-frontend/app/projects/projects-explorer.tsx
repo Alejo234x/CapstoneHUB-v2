@@ -50,7 +50,7 @@ export default function ProjectsExplorer() {
       }
     }
 
-    loadProjects();
+    void loadProjects();
 
     return () => {
       active = false;

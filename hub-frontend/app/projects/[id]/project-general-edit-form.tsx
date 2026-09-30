@@ -52,6 +52,11 @@ const projectSources: ReadonlyArray<{
   { value: "social_impact", label: "Impacto social" },
 ];
 
+type DeliverableField = {
+  id: string;
+  value: string;
+};
+
 type FormState = {
   name: string;
   source: ProjectSource;
@@ -64,17 +69,36 @@ type FormState = {
   facultyAdvisor: string;
   teamRequirements: string;
   expectedOutcomes: string;
-  deliverables: string[];
+  deliverables: DeliverableField[];
   requiresLegalization: boolean;
   isPrivate: boolean;
 };
+
+/**
+ * Identificador estable para cada fila de entregables, de modo que React (y
+ * Sonar) no dependan del índice del arreglo como `key`.
+ */
+let deliverableIdSeed = 0;
+
+function createDeliverableField(value: string): DeliverableField {
+  deliverableIdSeed += 1;
+  return { id: `deliverable-${deliverableIdSeed}`, value };
+}
 
 function toDateInput(value: string | null | undefined): string {
   return value ? value.slice(0, 10) : "";
 }
 
+/** Serializa el formulario ignorando los ids internos de los entregables. */
+function serializeForm(form: FormState): string {
+  return JSON.stringify({
+    ...form,
+    deliverables: form.deliverables.map((deliverable) => deliverable.value),
+  });
+}
+
 function createInitialForm(project: ProjectDetails): FormState {
-  const deliverables = (project.deliverables ?? []).map(
+  const deliverableValues = (project.deliverables ?? []).map(
     (deliverable) => deliverable.description,
   );
 
@@ -90,7 +114,10 @@ function createInitialForm(project: ProjectDetails): FormState {
     facultyAdvisor: project.facultyAdvisor ?? "",
     teamRequirements: project.teamRequirements ?? "",
     expectedOutcomes: project.expectedOutcomes ?? "",
-    deliverables: deliverables.length > 0 ? deliverables : [""],
+    deliverables: (deliverableValues.length > 0
+      ? deliverableValues
+      : [""]
+    ).map((value) => createDeliverableField(value)),
     requiresLegalization: Boolean(project.requiresLegalization),
     isPrivate: Boolean(project.isPrivate),
   };
@@ -116,7 +143,7 @@ export default function ProjectGeneralEditForm({
 
   const isPrivateChanged = form.isPrivate !== Boolean(project.isPrivate);
   const isPublishing = Boolean(project.isPrivate) && !form.isPrivate;
-  const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm);
+  const isDirty = serializeForm(form) !== serializeForm(initialForm);
 
   function handleChange(
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -128,7 +155,7 @@ export default function ProjectGeneralEditForm({
   function handleDeliverableChange(index: number, value: string) {
     setForm((previous) => {
       const deliverables = [...previous.deliverables];
-      deliverables[index] = value;
+      deliverables[index] = { ...deliverables[index], value };
       return { ...previous, deliverables };
     });
   }
@@ -136,7 +163,7 @@ export default function ProjectGeneralEditForm({
   function addDeliverable() {
     setForm((previous) => ({
       ...previous,
-      deliverables: [...previous.deliverables, ""],
+      deliverables: [...previous.deliverables, createDeliverableField("")],
     }));
   }
 
@@ -194,7 +221,7 @@ export default function ProjectGeneralEditForm({
       teamRequirements: form.teamRequirements.trim() || null,
       expectedOutcomes: form.expectedOutcomes.trim() || null,
       deliverables: form.deliverables
-        .map((deliverable) => deliverable.trim())
+        .map((deliverable) => deliverable.value.trim())
         .filter(Boolean),
     };
 
@@ -387,9 +414,9 @@ export default function ProjectGeneralEditForm({
               <FieldLabel>Entregables</FieldLabel>
               <div className="flex flex-col gap-2">
                 {form.deliverables.map((deliverable, index) => (
-                  <div key={index} className="flex items-center gap-2">
+                  <div key={deliverable.id} className="flex items-center gap-2">
                     <Input
-                      value={deliverable}
+                      value={deliverable.value}
                       onChange={(event) =>
                         handleDeliverableChange(index, event.target.value)
                       }

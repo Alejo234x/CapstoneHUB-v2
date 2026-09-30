@@ -887,10 +887,7 @@ export class ProjectsService {
         fields.expectedOutcomes !== undefined
           ? fields.expectedOutcomes
           : current.expectedOutcomes,
-      deliverables:
-        fields.deliverables !== undefined
-          ? fields.deliverables
-          : current.deliverables,
+      deliverables: fields.deliverables ?? current.deliverables,
     };
   }
 
