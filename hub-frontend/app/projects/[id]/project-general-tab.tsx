@@ -1,10 +1,7 @@
-"use client";
-
-import { useState } from "react";
+import Link from "next/link";
 import { RiEditLine } from "@remixicon/react";
 import { ProjectDetails } from "../../services/schemas";
 import { formatProjectSource } from "@/app/services/utils";
-import ProjectGeneralEditForm from "./project-general-edit-form";
 import { formatCurrency, formatDate } from "./project-formatters";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,9 +14,8 @@ import {
 
 type ProjectGeneralTabProps = {
   readonly project: ProjectDetails;
-  /** Solo administradores y evaluadores pueden editar los datos. */
+  /** Solo administradores y evaluadores ven el acceso a la edición. */
   readonly canEdit?: boolean;
-  readonly onSaved?: (project: ProjectDetails) => void;
 };
 
 /** Tarjeta de texto simple, para las secciones descriptivas del proyecto. */
@@ -164,10 +160,7 @@ function DatesAndCostCard({ project }: { readonly project: ProjectDetails }) {
 export default function ProjectGeneralTab({
   project,
   canEdit = false,
-  onSaved,
 }: ProjectGeneralTabProps) {
-  const [isEditing, setIsEditing] = useState(false);
-
   const hasDeliverables = Boolean(
     project.deliverables && project.deliverables.length > 0,
   );
@@ -178,32 +171,21 @@ export default function ProjectGeneralTab({
       project.estimatedCost,
   );
 
-  if (isEditing && onSaved) {
-    return (
-      <ProjectGeneralEditForm
-        project={project}
-        onSaved={(updated) => {
-          onSaved(updated);
-          setIsEditing(false);
-        }}
-        onCancel={() => setIsEditing(false)}
-      />
-    );
-  }
-
   return (
     <div className="flex flex-col gap-6">
       {canEdit ? (
         <div className="flex justify-end">
           <Button
-            type="button"
             variant="outline"
             size="sm"
-            onClick={() => setIsEditing(true)}
-          >
-            <RiEditLine data-icon="inline-start" />
-            Editar proyecto
-          </Button>
+            nativeButton={false}
+            render={
+              <Link href={`/projects/${project.id}/edit`}>
+                <RiEditLine data-icon="inline-start" />
+                Editar proyecto
+              </Link>
+            }
+          />
         </div>
       ) : null}
 

@@ -30,7 +30,7 @@ function ProjectTabsList({ isMember }: { readonly isMember: boolean }) {
 }
 
 export default function ProjectDetailsView({ id }: { readonly id: string }) {
-  const { project, loading, status, setProject } = useProjectDetails(id);
+  const { project, loading, status } = useProjectDetails(id);
   const isMember = useIsProjectMember(project);
   const canEdit = useCanEditProject(project);
 
@@ -61,11 +61,7 @@ export default function ProjectDetailsView({ id }: { readonly id: string }) {
               <ProjectTabsList isMember={isMember} />
 
               <TabsContent value="general" className="mt-6 flex flex-col gap-6">
-                <ProjectGeneralTab
-                  project={project}
-                  canEdit={canEdit}
-                  onSaved={setProject}
-                />
+                <ProjectGeneralTab project={project} canEdit={canEdit} />
               </TabsContent>
 
               <TabsContent value="categorias" className="mt-6">
