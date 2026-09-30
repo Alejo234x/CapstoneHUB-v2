@@ -1,60 +1,17 @@
-import { NextResponse } from "next/server";
+import { proxyJson, proxyToBackend } from "@/app/api/proxy";
 
-const backendUrl = process.env.BACKEND_URL?.replace(/\/$/, "");
+type Params = Promise<{ id: string }>;
 
-async function proxy(
-  request: Request,
-  url: string,
-  init: RequestInit = {},
-): Promise<NextResponse> {
-  if (!backendUrl) {
-    return NextResponse.json(
-      { error: "BACKEND_URL is not set" },
-      { status: 500 },
-    );
-  }
-
-  const response = await fetch(`${backendUrl}${url}`, {
-    ...init,
-    headers: {
-      ...init.headers,
-      ...(request.headers.get("authorization")
-        ? { Authorization: request.headers.get("authorization")! }
-        : {}),
-    },
-  });
-
-  const contentType =
-    response.headers.get("content-type") ?? "application/json";
-  const body = await response.text();
-
-  return new NextResponse(body, {
-    status: response.status,
-    headers: { "Content-Type": contentType },
-  });
-}
-
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(request: Request, { params }: { params: Params }) {
   const { id } = await params;
 
-  return proxy(request, `/projects/${id}/milestones`, {
+  return proxyToBackend(request, `/projects/${id}/milestones`, {
     cache: "no-store",
   });
 }
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(request: Request, { params }: { params: Params }) {
   const { id } = await params;
-  const payload = await request.json();
 
-  return proxy(request, `/projects/${id}/milestones`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  return proxyJson(request, `/projects/${id}/milestones`, "POST");
 }

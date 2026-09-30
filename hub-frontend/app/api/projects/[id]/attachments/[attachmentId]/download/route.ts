@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { backendUnavailableResponse } from "@/app/api/proxy";
 
 const backendUrl = process.env.BACKEND_URL?.replace(/\/$/, "");
 
@@ -16,15 +17,22 @@ export async function GET(
   }
 
   const authorization = request.headers.get("authorization");
-  const response = await fetch(
-    `${backendUrl}/projects/${id}/attachments/${attachmentId}/download`,
-    {
-      headers: {
-        ...(authorization ? { Authorization: authorization } : {}),
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${backendUrl}/projects/${id}/attachments/${attachmentId}/download`,
+      {
+        headers: {
+          ...(authorization ? { Authorization: authorization } : {}),
+        },
+        cache: "no-store",
       },
-      cache: "no-store",
-    },
-  );
+    );
+  } catch {
+    return backendUnavailableResponse();
+  }
 
   const headers = new Headers();
   const contentType = response.headers.get("content-type");

@@ -1,33 +1,11 @@
-import { NextResponse } from "next/server";
+import { proxyToBackend } from "@/app/api/proxy";
 
-const backendUrl = process.env.BACKEND_URL?.replace(/\/$/, "");
+type Params = Promise<{ id: string }>;
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(request: Request, { params }: { params: Params }) {
   const { id } = await params;
 
-  if (!backendUrl) {
-    return NextResponse.json(
-      { error: "BACKEND_URL is not set" },
-      { status: 500 },
-    );
-  }
-
-  const authorization = request.headers.get("authorization");
-  const response = await fetch(`${backendUrl}/projects/${id}/assignable-users`, {
-    method: "GET",
-    headers: {
-      ...(authorization ? { Authorization: authorization } : {}),
-    },
+  return proxyToBackend(request, `/projects/${id}/assignable-users`, {
     cache: "no-store",
-  });
-  const contentType = response.headers.get("content-type") ?? "application/json";
-  const body = await response.text();
-
-  return new NextResponse(body, {
-    status: response.status,
-    headers: { "Content-Type": contentType },
   });
 }
