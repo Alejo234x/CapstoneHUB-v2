@@ -2,6 +2,7 @@ import {
   ActorRole,
   ProjectSource,
   ProjectStatus,
+  ReportContentKind,
   UserRole,
 } from '../../src/generated/prisma/client';
 import { loadFixture } from './common';
@@ -85,6 +86,9 @@ export interface ReportFixture {
   title: string;
   description?: string;
   dueDate: string;
+  type?: ReportContentKind;
+  allowedMimeTypes?: string[];
+  maxFiles?: number;
   status?: 'pending' | 'submitted' | 'accepted' | 'rejected';
   submittedAt?: string | null;
   reviewComment?: string | null;

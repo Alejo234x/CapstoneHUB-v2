@@ -4,6 +4,9 @@
       "title": "Desarrollo del backend e ingesta",
       "description": "API de ingesta de lecturas y tablero de visualización.",
       "dueDate": "2026-05-10",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+      "maxFiles": 2,
       "status": "accepted",
       "submittedAt": "2026-05-08T17:30:00.000Z",
       "reviewComment": "Entregable completo y bien documentado."
@@ -12,6 +15,9 @@
       "title": "Pruebas de campo",
       "description": "Despliegue piloto en dos fincas durante cuatro semanas.",
       "dueDate": "2026-07-01",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf"],
+      "maxFiles": 1,
       "status": "pending"
     }
   ],
@@ -20,6 +26,9 @@
       "title": "Validación con personal médico",
       "description": "Piloto de teleconsulta en dos centros de salud.",
       "dueDate": "2026-04-20",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "image/png", "image/jpeg"],
+      "maxFiles": 3,
       "status": "submitted",
       "submittedAt": "2026-04-18T15:00:00.000Z"
     }

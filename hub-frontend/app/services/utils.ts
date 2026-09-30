@@ -114,3 +114,73 @@ export function validateAttachmentFile(file: File): string | null {
 
   return null;
 }
+
+export const MAX_REPORT_FILE_SIZE_BYTES = 100 * 1024 * 1024;
+
+export const REPORT_TEXT_MAX_LENGTH = 20_000;
+
+/** Opciones de MIME permitidos para el tipo de entrega Archivo. */
+export const REPORT_FILE_MIME_OPTIONS: {
+  label: string;
+  values: string[];
+}[] = [
+  { label: "PDF", values: ["application/pdf"] },
+  {
+    label: "Word",
+    values: [
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ],
+  },
+  {
+    label: "Excel",
+    values: [
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ],
+  },
+  { label: "PNG", values: ["image/png"] },
+  { label: "JPEG", values: ["image/jpeg"] },
+  { label: "WebP", values: ["image/webp"] },
+  { label: "GIF", values: ["image/gif"] },
+  { label: "MP4", values: ["video/mp4"] },
+  { label: "WebM", values: ["video/webm"] },
+  { label: "OGG", values: ["video/ogg"] },
+];
+
+export function validateReportFile(
+  file: File,
+  allowedMimeTypes: string[],
+): string | null {
+  if (file.type && !allowedMimeTypes.includes(file.type)) {
+    return "Tipo de archivo no permitido para esta entrega.";
+  }
+
+  if (file.size > MAX_REPORT_FILE_SIZE_BYTES) {
+    return "El archivo supera el límite de 100 MB.";
+  }
+
+  return null;
+}
+
+export function validateReportLink(url: string): string | null {
+  const trimmed = url.trim();
+
+  if (!trimmed) {
+    return "Ingresa una URL.";
+  }
+
+  let parsed: URL;
+
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return "La URL no es válida.";
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return "La URL debe comenzar por http:// o https://.";
+  }
+
+  return null;
+}

@@ -8,8 +8,20 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
+  MaxLength,
+  Min,
+  ValidateIf,
 } from '@nestjs/class-validator';
-import { ReportStatus } from '../generated/prisma/client';
+import { ReportContentKind, ReportStatus } from '../generated/prisma/client';
+
+export const MAX_REPORT_TEXT_LENGTH = 20_000;
+
+export const REPORT_TYPES = [
+  ReportContentKind.text,
+  ReportContentKind.link,
+  ReportContentKind.file,
+];
 
 export class CreateReportDto {
   @ApiProperty({ description: 'Report title' })
@@ -30,6 +42,32 @@ export class CreateReportDto {
   @Type(() => Date)
   @IsDate()
   dueDate!: Date;
+
+  @ApiProperty({
+    description: 'Delivery type; defines what the student must provide',
+    enum: REPORT_TYPES,
+  })
+  @IsIn(REPORT_TYPES)
+  type!: ReportContentKind;
+
+  @ApiPropertyOptional({
+    description:
+      'Allowed MIME types for file content (required for image/video/file)',
+    type: [String],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  allowedMimeTypes?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Maximum number of file contents (required for image/video/file)',
+  })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  maxFiles?: number;
 }
 
 export class UpdateReportDto {
@@ -53,18 +91,115 @@ export class UpdateReportDto {
   @IsDate()
   @IsOptional()
   dueDate?: Date;
-}
 
-export class SubmitReportDto {
   @ApiPropertyOptional({
-    description: 'Attachment ids to link to the report on submission',
-    type: [Number],
+    description: 'Delivery type; only changeable while the report is empty',
+    enum: REPORT_TYPES,
+  })
+  @IsIn(REPORT_TYPES)
+  @IsOptional()
+  type?: ReportContentKind;
+
+  @ApiPropertyOptional({
+    description:
+      'Allowed MIME types for file content (required for image/video/file)',
+    type: [String],
   })
   @IsArray()
-  @IsInt({ each: true })
-  @Type(() => Number)
+  @IsString({ each: true })
   @IsOptional()
-  attachmentIds?: number[];
+  allowedMimeTypes?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Maximum number of file contents (required for image/video/file)',
+  })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  maxFiles?: number;
+}
+
+export class CreateReportContentDto {
+  @ApiProperty({
+    description: 'Content type',
+    enum: [ReportContentKind.text, ReportContentKind.link],
+  })
+  @IsIn([ReportContentKind.text, ReportContentKind.link])
+  kind!: Extract<ReportContentKind, 'text' | 'link'>;
+
+  @ApiPropertyOptional({ description: 'Body of a text content' })
+  @ValidateIf(
+    (dto: CreateReportContentDto) => dto.kind === ReportContentKind.text,
+  )
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(MAX_REPORT_TEXT_LENGTH)
+  textContent?: string;
+
+  @ApiPropertyOptional({ description: 'URL of a link content' })
+  @ValidateIf(
+    (dto: CreateReportContentDto) => dto.kind === ReportContentKind.link,
+  )
+  @IsString()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  @MaxLength(2048)
+  url?: string;
+
+  @ApiPropertyOptional({ description: 'Optional label for a link content' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  label?: string;
+}
+
+export class PresignReportFileContentDto {
+  @ApiProperty({ description: 'Original file name' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  fileName!: string;
+
+  @ApiProperty({ description: 'Declared MIME type' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(127)
+  mimeType!: string;
+
+  @ApiProperty({ description: 'Declared file size in bytes' })
+  @IsInt()
+  @Min(1)
+  sizeBytes!: number;
+}
+
+export class ConfirmReportFileContentDto extends PresignReportFileContentDto {
+  @ApiProperty({ description: 'Storage key returned by the presign endpoint' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(512)
+  storageKey!: string;
+}
+
+export class UpdateReportContentDto {
+  @ApiPropertyOptional({ description: 'Body of a text content' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(MAX_REPORT_TEXT_LENGTH)
+  @IsOptional()
+  textContent?: string;
+
+  @ApiPropertyOptional({ description: 'URL of a link content' })
+  @IsString()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  @MaxLength(2048)
+  @IsOptional()
+  url?: string;
+
+  @ApiPropertyOptional({ description: 'Optional label for a link content' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  label?: string;
 }
 
 export class ReviewReportDto {

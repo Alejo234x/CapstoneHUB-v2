@@ -60,6 +60,8 @@ services:
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+      # Orígenes permitidos para las subidas directas desde el navegador.
+      MINIO_API_CORS_ALLOW_ORIGIN: ${S3_CORS_ORIGINS:-*}
     ports:
       - "9000:9000"
       - "9001:9001"

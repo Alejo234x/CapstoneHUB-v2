@@ -1,5 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
-import { ReportStatus } from '../generated/prisma/client';
+import { ReportContentKind, ReportStatus } from '../generated/prisma/client';
 import { PrismaService } from '../prisma.service';
 
 export async function assertProjectExists(
@@ -20,10 +20,22 @@ export async function assertReportBelongsToProject(
   prisma: PrismaService,
   projectId: number,
   reportId: number,
-): Promise<{ id: number; status: ReportStatus }> {
+): Promise<{
+  id: number;
+  status: ReportStatus;
+  type: ReportContentKind;
+  allowedMimeTypes: string[];
+  maxFiles: number | null;
+}> {
   const report = await prisma.projectReport.findFirst({
     where: { id: reportId, projectId },
-    select: { id: true, status: true },
+    select: {
+      id: true,
+      status: true,
+      type: true,
+      allowedMimeTypes: true,
+      maxFiles: true,
+    },
   });
 
   if (!report) {

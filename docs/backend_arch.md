@@ -177,6 +177,37 @@ Word, Excel, PNG, JPEG). El service sube el archivo a S3 y, si falla el
 registro en la base de datos, lo elimina para no dejar huérfanos. Las descargas
 se envían como stream con el nombre original en el header `Content-Disposition`.
 
+Los archivos vinculados a una entrega (`reportId` no nulo) se excluyen del
+listado de Anexos y se sirven desde la pestaña Entregas.
+
+## Entregas
+
+Una entrega (`ProjectReport`) tiene un **tipo** fijo (`type`: `text`, `link` o
+`file`) definido por el asesor/evaluador/coordinador al crearla; solo se puede
+cambiar mientras esté `pending` y no tenga contenido. Para el tipo Archivo
+(`file`) también se eligen los MIME permitidos (`allowedMimeTypes`) y el máximo
+de archivos (`maxFiles`), obligatorios al crear. El estudiante agrega
+**contenido** (`ProjectReportContent`) que debe coincidir con ese `type` (el
+backend rechaza con `400` cualquier `kind` distinto). Los textos y enlaces se
+guardan en la propia fila (`textContent`, `url`, `label`); los archivos
+(documentos, imágenes y videos) reutilizan `ProjectAttachment` (`attachmentId`) y
+por tanto el mismo almacenamiento S3. El contenido solo se puede modificar
+mientras la entrega esté `pending` o `rejected`; al enviarla se valida que tenga
+al menos una pieza.
+
+`POST .../contents/files/presign` acepta documentos (PDF, Word, Excel), imágenes
+(PNG, JPEG, WebP, GIF) y videos (MP4, WebM, OGG) hasta
+`MAX_REPORT_FILE_SIZE_BYTES` (100 MB por defecto); valida que el MIME esté entre
+los `allowedMimeTypes` de la entrega y que no se haya superado `maxFiles` (si no,
+`409`), y devuelve una URL `PUT` prefirmada con `S3_PUBLIC_ENDPOINT`. El navegador
+sube el binario directamente a MinIO/S3 y luego `POST .../contents/files/confirm`
+verifica el objeto con `HeadObject` (tamaño real, existencia) y crea
+`ProjectAttachment` + `ProjectReportContent`. Si el objeto excede el límite, se
+borra y se responde `400`. `GET .../contents/:cid/stream` sirve el archivo inline
+y reenvía la cabecera `Range` a S3 para responder `206 Partial Content`, lo que
+permite reproducir y buscar dentro de un video. Los objetos subidos pero nunca
+confirmados se limpian con `npm run storage:gc`.
+
 ## Manejo de errores
 
 Se usan las excepciones HTTP integradas de Nest, por lo que las respuestas
@@ -199,8 +230,11 @@ siguen una forma consistente (`statusCode`, `message`, `error`):
 | `AUTH_SECRET` | Clave de firma HMAC (mínimo 32 caracteres). |
 | `INITIAL_ADMIN_*` | Email, contraseña y nombre del admin inicial. |
 | `MAX_FILE_SIZE_BYTES` | Límite de tamaño de anexos (por defecto 10 MB). |
+| `MAX_REPORT_FILE_SIZE_BYTES` | Límite de tamaño de archivos de una entrega (100 MB por defecto). |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | Almacenamiento de archivos. |
 | `S3_REGION`, `S3_FORCE_PATH_STYLE` | Ajustes del cliente S3 (`true` para MinIO). |
+| `S3_PUBLIC_ENDPOINT` | Host de S3/MinIO que alcanza el navegador; usado para firmar las subidas directas. |
+| `S3_UPLOAD_URL_TTL_SECONDS` | Vigencia de la URL prefirmada de subida (3600 s por defecto). |
 
 ## Semillas y migraciones
 
@@ -212,6 +246,13 @@ En `prisma/`:
 
 Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 `seed:users`, `seed:projects`, etc.).
+
+## Mantenimiento
+
+- `npm run storage:gc` — borra de MinIO/S3 los objetos sin `ProjectAttachment`
+  (subidas que nunca se confirmaron). Flags: `--dry-run` y
+  `--max-age-hours=N` (24 h por defecto). Entrada en
+  `src/storage/gc-cli.ts`; lógica en `src/storage/storage-gc.service.ts`.
 
 ## Pruebas
 
@@ -237,6 +278,13 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 | `GET/POST/PATCH/DELETE` | `/projects/:id/milestones` | Gestionar hitos. |
 | `GET/POST/DELETE` | `/projects/:id/attachments` | Gestionar anexos. |
 | `GET` | `/projects/:id/attachments/:aid/download` | Descargar un anexo. |
+| `GET/POST/PATCH/DELETE` | `/projects/:id/reports` | Gestionar entregas y su contenido. |
+| `POST` | `/projects/:id/reports/:rid/submit` | Enviar una entrega con contenido. |
+| `POST` | `/projects/:id/reports/:rid/review` | Aceptar o rechazar una entrega. |
+| `POST/PATCH/DELETE` | `/projects/:id/reports/:rid/contents[/:cid]` | Añadir, editar o borrar contenido de la entrega. |
+| `POST` | `/projects/:id/reports/:rid/contents/files/presign` | Firma y devuelve la URL para subir el archivo directamente. |
+| `POST` | `/projects/:id/reports/:rid/contents/files/confirm` | Verifica el objeto subido y registra el contenido. |
+| `GET` | `/projects/:id/reports/:rid/contents/:cid/stream` | Ver o reproducir el archivo inline, con `Range`. |
 
 La autenticación es **global** (`AuthGuard` como `APP_GUARD`): todas las rutas
 requieren token salvo las marcadas con `@Public()` (`/auth/login`, `GET /projects`
@@ -255,82 +303,3 @@ responde `401` en lugar de degradar a anónimo.
 - `assertProjectMember` (usado por observaciones, hitos, anexos y entregas)
   permite el acceso al proponente, a los actores asignados y a los roles
   revisores, o cuando el proyecto es público.
-
-## Diagrama
-
-```mermaid
-flowchart TD
-    Client[Cliente HTTP]:::client -->|REST + Bearer| Controllers[Controllers]:::guard
-    subgraph NestJS
-      Controllers --> Guards[AuthGuard / AdminGuard]:::guard
-      Guards --> Services[Services]:::service
-      Services --> Authorization[AuthorizationService]:::service
-      Services --> Prisma[PrismaService]:::data
-      Services --> Storage[StorageService]:::data
-    end
-    Prisma --> DB[(PostgreSQL)]:::ext
-    Storage --> MinIO[(MinIO / S3)]:::ext
-
-    classDef client fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
-    classDef guard fill:#fef9c3,stroke:#ca8a04,color:#713f12
-    classDef service fill:#dcfce7,stroke:#16a34a,color:#14532d
-    classDef data fill:#fae8ff,stroke:#a21caf,color:#581c87
-    classDef ext fill:#ffe4e6,stroke:#e11d48,color:#881337
-```
-
-## Resumen para presentación
-
-**AuthModule** es la puerta de identidad: su `AuthService` verifica las
-contraseñas con scrypt, emite el token y crea el admin inicial, mientras
-`AuthGuard` y `AdminGuard` protegen las rutas y `AuthorizationService`
-concentra las reglas de permisos combinando el rol global con el del proyecto.
-
-**ProjectsModule** es el núcleo del dominio. Su `ProjectsService` maneja el CRUD
-de proyectos, la asignación de actores y la máquina de estados, registrando cada
-cambio en el historial dentro de una transacción.
-
-Los módulos de apoyo son simples y de una sola responsabilidad:
-`ObservationsService` agrega y lista observaciones, `MilestonesService` gestiona
-los hitos y `AttachmentsService` sube, descarga y borra archivos validando
-tamaño y tipo.
-
-En el plano transversal, `StorageModule` expone `StorageService` (implementado
-por `S3StorageService`) para guardar los binarios en MinIO/S3 sin atar el código
-a un proveedor, y `PrismaService` es la única puerta de acceso a PostgreSQL.
-Además, `LoggerMiddleware` da trazabilidad a las peticiones y Swagger publica la
-documentación interactiva de la API en `/api`.
-
-### Grafo simplificado de módulos y services
-
-```mermaid
-flowchart LR
-    Client["Cliente HTTP"]:::client --> Guards["AuthGuard / AdminGuard<br/>autentican y autorizan"]:::guard
-
-    subgraph Modules[Módulos + Services]
-        Auth["AuthModule / AuthService<br/>login, usuarios y roles"]:::service
-        Projects["ProjectsModule / ProjectsService<br/>CRUD, actores y estados"]:::service
-        Observations["ObservationsModule / ObservationsService<br/>observaciones por proyecto"]:::service
-        Milestones["MilestonesModule / MilestonesService<br/>hitos por proyecto"]:::service
-        Attachments["AttachmentsModule / AttachmentsService<br/>subida y descarga de archivos"]:::service
-    end
-
-    Guards --> Modules
-
-    subgraph Shared[Transversal]
-        Authorization["AuthorizationService<br/>reglas de permisos"]:::service
-        Prisma["PrismaService<br/>acceso a datos"]:::data
-        Storage["StorageModule / S3StorageService<br/>archivos en MinIO/S3"]:::data
-    end
-
-    Modules --> Authorization
-    Modules --> Prisma
-    Attachments --> Storage
-    Prisma --> DB[(PostgreSQL)]:::ext
-    Storage --> MinIO[(MinIO / S3)]:::ext
-
-    classDef client fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
-    classDef guard fill:#fef9c3,stroke:#ca8a04,color:#713f12
-    classDef service fill:#dcfce7,stroke:#16a34a,color:#14532d
-    classDef data fill:#fae8ff,stroke:#a21caf,color:#581c87
-    classDef ext fill:#ffe4e6,stroke:#e11d48,color:#881337
-```

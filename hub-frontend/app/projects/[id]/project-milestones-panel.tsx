@@ -180,7 +180,7 @@ export default function ProjectMilestonesPanel({
     setDetailOpen(true);
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
 

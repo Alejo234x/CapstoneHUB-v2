@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/empty";
 
 type ProjectStatusHistoryPanelProps = {
-  history: ProjectStatusHistoryItem[];
+  readonly history: ProjectStatusHistoryItem[];
 };
 
 function formatDate(dateValue: string): string {

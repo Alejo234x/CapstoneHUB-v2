@@ -62,7 +62,8 @@ const projectInclude = {
   actorAssignments: { include: { user: true } },
   milestones: true,
   statusHistory: { select: projectStatusHistorySelect },
-  attachments: { select: attachmentSelect },
+  // Los archivos de una entrega se muestran en su pestaña, no en Anexos.
+  attachments: { where: { reportId: null }, select: attachmentSelect },
   reports: { select: reportSelect },
   deliverables: true,
 } as const satisfies Prisma.ProjectInclude;

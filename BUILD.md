@@ -144,12 +144,81 @@ DELETE /projects/:projectId/attachments/:id
 
 Límite de 10 MB por archivo, y se permite PDF, Word, Excel, PNG y JPEG
 
+# Contenido de entregas
+
+Cada entrega tiene un **tipo** fijo (`text`, `link` o `file`) definido al crearla
+y, para el tipo Archivo, los **MIME permitidos** (documentos, imágenes y videos)
+y el **máximo de archivos**; el estudiante solo aporta contenido que cumpla esa
+configuración. Los binarios se guardan en el mismo bucket con **subida directa
+desde el navegador** (URL prefirmada), de modo que el archivo no pasa por Nest ni
+por el BFF:
+
+```
+POST   /projects/:projectId/reports/:reportId/contents                 (JSON: texto o enlace)
+POST   /projects/:projectId/reports/:reportId/contents/files/presign   (JSON: metadatos → URL firmada)
+PUT    <uploadUrl>                                                     (navegador → MinIO/S3)
+POST   /projects/:projectId/reports/:reportId/contents/files/confirm   (JSON: storageKey → contenido)
+PATCH  /projects/:projectId/reports/:reportId/contents/:id
+DELETE /projects/:projectId/reports/:reportId/contents/:id
+GET    /projects/:projectId/reports/:reportId/contents/:id/stream      (inline, soporta Range)
+```
+
+El flujo es: `presign` valida tipo/MIME/tamaño y devuelve una URL `PUT`; el
+navegador sube el binario; `confirm` verifica el objeto con `HeadObject` y crea
+el `ProjectAttachment` + `ProjectReportContent`. Todos los archivos de una
+entrega pueden pesar hasta `MAX_REPORT_FILE_SIZE_BYTES` (100 MB por defecto). Si
+el objeto real excede el límite, se borra y se rechaza. Los archivos de una
+entrega no se listan en Anexos.
+
+Requisitos de configuración para que funcione:
+
+- `S3_PUBLIC_ENDPOINT`: la URL de MinIO/S3 que alcanza el navegador
+  (`http://localhost:9000` en dev). La firma incluye el host, así que debe
+  coincidir con el usado al subir.
+- CORS: MinIO lo controla con la variable `MINIO_API_CORS_ALLOW_ORIGIN`
+  (por defecto `*`; en los compose se toma de `S3_CORS_ORIGINS`). Con S3 real hay
+  que configurar el CORS del bucket por separado (consola o `PutBucketCors`).
+
+## Limpieza de objetos huérfanos (storage gc)
+
+La subida directa es de dos pasos (`presign` → subir → `confirm`). Si el usuario
+cierra el navegador después de subir y antes de confirmar, el objeto queda en el
+bucket sin fila en `project_attachment` (huérfano). El recolector recorre el
+prefijo `projects/`, lo compara con los `storageKey` registrados y borra los
+objetos sin fila que superan la antigüedad mínima (24 h por defecto).
+
+```bash
+npm run storage:gc                    # borra huérfanos de más de 24 h
+npm run storage:gc -- --dry-run       # solo lista lo que borraría
+npm run storage:gc -- --max-age-hours=1
+```
+
+| Flag | Efecto |
+| --- | --- |
+| `--dry-run` | No borra; informa qué objetos eliminaría. |
+| `--max-age-hours=N` | Antigüedad mínima en horas (default `24`). |
+
+Imprime un JSON con `scanned` (objetos revisados), `deleted` (claves borradas) y
+`kept`. Requiere la base de datos y las variables `S3_*` configuradas.
+
+- Entrada CLI: `hub-backend/src/storage/gc-cli.ts` (arranca un contexto de Nest
+  sin servidor HTTP, lee los flags y ejecuta el servicio).
+- Lógica: `hub-backend/src/storage/storage-gc.service.ts`.
+
+No hay scheduler interno; se ejecuta a mano o desde un cron externo, por ejemplo:
+
+```cron
+0 4 * * * cd /workspace/hub-backend && npm run storage:gc >> /var/log/capstonehub-gc.log 2>&1
+```
+
 ## MinIO
 
 `compose.yml` y `.devcontainer/docker-compose.yml` levantan `minio` en
 `localhost:9000` (API) y `localhost:9001` (consola). Un contenedor de un solo
-uso, `minio-init`, espera a MinIO y crea el bucket de forma idempotente antes
-de que arranque el backend, así que no hay que crearlo a mano
+uso, `minio-init`, espera a MinIO y crea el bucket de forma idempotente antes de
+que arranque el backend, así que no hay que crearlo a mano. El CORS para las
+subidas directas se configura con `MINIO_API_CORS_ALLOW_ORIGIN` en el servicio
+`minio` (toma `S3_CORS_ORIGINS`, por defecto `*`).
 
 Credenciales y bucket por defecto (`.env` raíz y `hub-backend/.env`):
 

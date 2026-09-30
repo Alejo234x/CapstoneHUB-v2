@@ -35,7 +35,9 @@ export class AttachmentsService {
     await this.authorization.assertProjectMember(user, projectId);
 
     const attachments = await this.prisma.projectAttachment.findMany({
-      where: { projectId },
+      // Los archivos de una entrega viven en la pestaña Entregas; Anexos solo
+      // lista los archivos sueltos del proyecto.
+      where: { projectId, reportId: null },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: attachmentSelect,
     });
@@ -106,9 +108,9 @@ export class AttachmentsService {
       );
     }
 
-    const stream = await this.storage.read(attachment.storageKey);
+    const stored = await this.storage.read(attachment.storageKey);
 
-    return { attachment: mapAttachment(attachment), stream };
+    return { attachment: mapAttachment(attachment), stream: stored.stream };
   }
 
   async deleteAttachment(params: {

@@ -29,7 +29,7 @@ Ver también: [Arquitectura del backend](./backend_arch.md),
 | `/` | Inicio. |
 | `/login` | Inicio de sesión. |
 | `/projects` | Lista de proyectos. |
-| `/projects/[id]` | Detalle por pestañas (general, equipo, hitos, anexos, historial). |
+| `/projects/[id]` | Detalle por pestañas (general, equipo, hitos, entregas, anexos, historial). |
 | `/submit`, `/submit/natural` | Propuesta de proyecto. |
 | `/admin/users` | Administración de usuarios y roles. |
 
@@ -40,6 +40,12 @@ recibe la petición, reenvía el header `Authorization` y hace `fetch` a
 `BACKEND_URL` (por defecto `http://localhost:3001`), devolviendo la respuesta
 tal cual. Esto evita CORS y oculta la URL del backend.
 
+La excepción son los binarios de las entregas: el frontend pide una URL
+prefirmada (`.../contents/files/presign`), sube el archivo **directo a
+MinIO/S3** con `XMLHttpRequest` (para mostrar progreso) y confirma
+(`.../contents/files/confirm`). La descarga/reproducción sigue pasando por el
+proxy `stream`, que reenvía `Range`.
+
 `app/api/auth/proxy.ts` es un helper reutilizable para login y usuarios.
 
 ## Capa de servicios
@@ -48,7 +54,9 @@ tal cual. Esto evita CORS y oculta la URL del backend.
 
 - `auth.ts` — sesión en `localStorage` (`capstonehub.auth.session`) y funciones
   de login/usuarios.
-- `projects.ts` — proyectos, hitos, observaciones y anexos.
+- `projects.ts` — proyectos, hitos, observaciones, anexos y contenido de las
+  entregas (texto, enlaces y archivos), incluida la configuración de tipo, MIME
+  permitidos y máximo de archivos.
 - `schemas.ts` — tipos TypeScript compartidos (`ProjectDetails`, etc.).
 - `utils.ts` — helpers de formato (estados, fechas).
 
@@ -74,15 +82,3 @@ leen el token al hacer peticiones. No hay cookies ni sesión en el servidor.
 - `NEXT_PUBLIC_SITE_URL` como base de la API cuando se llama desde el cliente.
 - Build Docker multi-etapa con salida *standalone*, expuesto en el puerto
   `3000`.
-
-## Diagrama
-
-```mermaid
-flowchart TD
-    Browser[Navegador] --> Pages[Páginas App Router]
-    Pages -->|Server Components| Services[app/services]
-    Pages -->|Client Components| Services
-    Services -->|fetch /api/*| BFF[Route handlers / BFF]
-    BFF -->|BACKEND_URL| Backend[API NestJS]
-    Services -. token en localStorage .-> BFF
-```

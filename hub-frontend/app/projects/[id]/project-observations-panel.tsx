@@ -36,9 +36,9 @@ type ProjectActorAssignment = {
 };
 
 type ProjectObservationsPanelProps = {
-  projectId: number;
-  observations: ProjectObservationItem[];
-  assignments: ProjectActorAssignment[];
+  readonly projectId: number;
+  readonly observations: ProjectObservationItem[];
+  readonly assignments: ProjectActorAssignment[];
 };
 
 function canCreateObservation(
@@ -73,7 +73,7 @@ export default function ProjectObservationsPanel({
     currentUser !== undefined &&
     canCreateObservation(currentUser.id, assignments);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
 

@@ -1,6 +1,22 @@
 import { SeedContext, log, requireProjectId } from './common';
 import { loadReports } from './fixtures';
 
+/** MIME por defecto para los fixtures de tipo Archivo que no los especifican. */
+const DEFAULT_FILE_MIME_TYPES: string[] = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+  'video/mp4',
+  'video/webm',
+  'video/ogg',
+];
+
 export async function seedReports({
   prisma,
   options,
@@ -33,9 +49,17 @@ export async function seedReports({
           : null;
       const reviewComment = report.reviewComment ?? null;
 
+      const type = report.type ?? 'file';
+      const isFileType = type === 'file';
+
       const data = {
         description: report.description ?? null,
         dueDate: new Date(report.dueDate),
+        type,
+        allowedMimeTypes: isFileType
+          ? (report.allowedMimeTypes ?? DEFAULT_FILE_MIME_TYPES)
+          : [],
+        maxFiles: isFileType ? (report.maxFiles ?? 1) : null,
         status,
         submittedAt,
         reviewedAt,

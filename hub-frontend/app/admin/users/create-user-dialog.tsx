@@ -58,7 +58,7 @@ export default function CreateUserDialog({
     setError(null);
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!fullName.trim() || !email.trim() || !password) {
