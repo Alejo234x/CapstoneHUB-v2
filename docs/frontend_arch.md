@@ -80,7 +80,8 @@ advertencia y una confirmación antes de publicarlo.
 (`useAuth`). El login y el registro guardan usuario + token en `localStorage`;
 los services leen el token al hacer peticiones. No hay cookies ni sesión en el
 servidor. El registro (`POST /auth/register` vía el BFF) crea al usuario con rol
-`proposer`, lo deja autenticado igual que el login y redirige a `/submit`.
+`proposer`, lo deja autenticado igual que el login y redirige a `/submit`. Si un
+usuario con sesión abre `/register`, se le redirige a `/profile`.
 
 ## Server vs Client Components
 

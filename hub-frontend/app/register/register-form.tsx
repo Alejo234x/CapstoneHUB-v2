@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../components/auth-provider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -17,13 +17,30 @@ import { Spinner } from "@/components/ui/spinner";
 
 export default function RegisterForm() {
   const router = useRouter();
-  const { register } = useAuth();
+  const { register, ready, isAuthenticated } = useAuth();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
+  const redirectChecked = useRef(false);
+
+  // Si ya hay sesión al abrir /register, se envía al perfil. La comprobación se
+  // hace una sola vez para no competir con el alta y su redirección a /submit.
+  useEffect(() => {
+    if (!ready || redirectChecked.current) {
+      return;
+    }
+
+    redirectChecked.current = true;
+
+    if (isAuthenticated) {
+      setRedirecting(true);
+      router.replace("/profile");
+    }
+  }, [ready, isAuthenticated, router]);
 
   async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,6 +71,10 @@ export default function RegisterForm() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  if (redirecting) {
+    return <div className="utb-skeleton h-72 w-full rounded-2xl" />;
   }
 
   return (
