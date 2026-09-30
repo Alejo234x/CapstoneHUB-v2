@@ -92,32 +92,119 @@ describe('AuthorizationService', () => {
     expect(findAssignment).not.toHaveBeenCalled();
   });
 
-  it('allows admins to edit project details without an assignment', () => {
-    const service = new AuthorizationService({} as never);
-
-    expect(() =>
-      service.assertCanEditProjectDetails(user([UserRole.admin])),
-    ).not.toThrow();
+  const editableProject = (
+    overrides: Partial<{
+      id: number;
+      proposerUserId: number | null;
+      status: ProjectStatus;
+    }> = {},
+  ) => ({
+    id: 10,
+    proposerUserId: null,
+    status: ProjectStatus.proposed,
+    ...overrides,
   });
 
-  it('allows a global evaluator to edit project details', () => {
-    const service = new AuthorizationService({} as never);
+  it('allows admins to edit project details without an assignment', async () => {
+    const findAssignment = jest.fn();
+    const service = new AuthorizationService({
+      projectActorAssignment: { findFirst: findAssignment },
+    } as never);
 
-    expect(() =>
-      service.assertCanEditProjectDetails(user([UserRole.evaluator])),
-    ).not.toThrow();
+    await expect(
+      service.assertCanEditProjectDetails(
+        user([UserRole.admin]),
+        editableProject(),
+      ),
+    ).resolves.toBeUndefined();
+    expect(findAssignment).not.toHaveBeenCalled();
   });
 
-  it.each([UserRole.coordinator, UserRole.advisor, UserRole.student])(
-    'rejects the %s role from editing project details',
-    (role) => {
-      const service = new AuthorizationService({} as never);
+  it('allows a global evaluator to edit project details without an assignment', async () => {
+    const findAssignment = jest.fn();
+    const service = new AuthorizationService({
+      projectActorAssignment: { findFirst: findAssignment },
+    } as never);
 
-      expect(() => service.assertCanEditProjectDetails(user([role]))).toThrow(
-        ForbiddenException,
-      );
+    await expect(
+      service.assertCanEditProjectDetails(
+        user([UserRole.evaluator]),
+        editableProject(),
+      ),
+    ).resolves.toBeUndefined();
+    expect(findAssignment).not.toHaveBeenCalled();
+  });
+
+  it.each([UserRole.coordinator, UserRole.advisor])(
+    'allows an assigned %s to edit project details',
+    async (role) => {
+      const findAssignment = jest.fn().mockResolvedValue({ id: 3 });
+      const service = new AuthorizationService({
+        projectActorAssignment: { findFirst: findAssignment },
+      } as never);
+
+      await expect(
+        service.assertCanEditProjectDetails(user([role]), editableProject()),
+      ).resolves.toBeUndefined();
+      expect(findAssignment).toHaveBeenCalledWith({
+        where: { projectId: 10, userId: 7, role: { in: [role] } },
+        select: { id: true },
+      });
     },
   );
+
+  it.each([UserRole.coordinator, UserRole.advisor])(
+    'rejects an unassigned %s',
+    async (role) => {
+      const findAssignment = jest.fn().mockResolvedValue(null);
+      const service = new AuthorizationService({
+        projectActorAssignment: { findFirst: findAssignment },
+      } as never);
+
+      await expect(
+        service.assertCanEditProjectDetails(user([role]), editableProject()),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    },
+  );
+
+  it('rejects a student who is not the proposer', async () => {
+    const service = new AuthorizationService({} as never);
+
+    await expect(
+      service.assertCanEditProjectDetails(
+        user([UserRole.student]),
+        editableProject(),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it.each([ProjectStatus.proposed, ProjectStatus.under_review])(
+    'allows the proposer to edit while the project is %s',
+    async (status) => {
+      const service = new AuthorizationService({} as never);
+
+      await expect(
+        service.assertCanEditProjectDetails(
+          user([UserRole.student]),
+          editableProject({ proposerUserId: 7, status }),
+        ),
+      ).resolves.toBeUndefined();
+    },
+  );
+
+  it('rejects the proposer once the project leaves the review window', async () => {
+    const service = new AuthorizationService({} as never);
+
+    await expect(
+      service.assertCanEditProjectDetails(
+        user([UserRole.student]),
+        editableProject({
+          proposerUserId: 7,
+          status: ProjectStatus.approved,
+        }),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
 
   it('allows any assigned project member to create observations', async () => {
     const findAssignment = jest.fn().mockResolvedValue({ id: 4 });

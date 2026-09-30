@@ -222,6 +222,8 @@ export type ProjectDetails = {
   requiresLegalization?: boolean;
   isPrivate?: boolean;
   canViewSensitiveData?: boolean;
+  /** `true` cuando el usuario actual propuso el proyecto. */
+  isProposer?: boolean;
   source?: ProjectSource;
   proposer?: ProjectProposer;
   startDate: string | null;

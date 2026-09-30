@@ -151,6 +151,8 @@ export type ProjectDetailResponse = ProjectListResponse & {
   teamRequirements: string | null;
   expectedOutcomes: string | null;
   deliverables: ProjectDeliverableResponse[];
+  /** `true` cuando el espectador es el proponente del proyecto. */
+  isProposer: boolean;
   createdAt: Date;
   updatedAt: Date;
   observations: {
@@ -351,6 +353,7 @@ function mapProjectListResponse(
 function mapProjectDetailResponse(
   project: ProjectWithRelations,
   canViewSensitiveData: boolean,
+  viewer?: AuthenticatedUser,
 ): ProjectDetailResponse {
   return {
     ...mapProjectListResponse(project, canViewSensitiveData),
@@ -362,6 +365,7 @@ function mapProjectDetailResponse(
     facultyAdvisor: project.facultyAdvisor,
     teamRequirements: project.teamRequirements,
     expectedOutcomes: project.expectedOutcomes,
+    isProposer: viewer != null && project.proposerUserId === viewer.id,
     deliverables: project.deliverables
       .slice()
       .sort((left, right) => left.id - right.id)
@@ -601,6 +605,7 @@ export class ProjectsService {
       ? mapProjectDetailResponse(
           project,
           this.canViewSensitiveData(project, viewer),
+          viewer,
         )
       : null;
   }
@@ -726,7 +731,7 @@ export class ProjectsService {
         ...data,
         proposer: { connect: { id: user.id } },
       });
-      return mapProjectDetailResponse(project, true);
+      return mapProjectDetailResponse(project, true, user);
     } catch (error) {
       rethrowProjectCreateError(error);
     }
@@ -758,6 +763,7 @@ export class ProjectsService {
       select: {
         id: true,
         status: true,
+        proposerUserId: true,
         name: true,
         description: true,
         context: true,
@@ -782,7 +788,11 @@ export class ProjectsService {
       throw new NotFoundException(`Project ${projectId} not found`);
     }
 
-    this.authorization.assertCanEditProjectDetails(user);
+    await this.authorization.assertCanEditProjectDetails(user, {
+      id: current.id,
+      proposerUserId: current.proposerUserId,
+      status: current.status,
+    });
 
     if (
       current.status === ProjectStatus.closed ||
@@ -840,7 +850,7 @@ export class ProjectsService {
       return updated;
     });
 
-    return mapProjectDetailResponse(project, true);
+    return mapProjectDetailResponse(project, true, user);
   }
 
   /** Aplica los campos enviados sobre los valores actuales del proyecto. */

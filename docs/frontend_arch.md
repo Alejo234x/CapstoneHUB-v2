@@ -64,13 +64,14 @@ proxy `stream`, que reenvía `Range`.
 Cada petición autenticada lee el token de `auth.ts` y agrega
 `Authorization: Bearer <token>`.
 
-En la pestaña **General** del detalle, administradores y evaluadores ven un
-botón **Editar proyecto** que abre la pantalla dedicada
-`/projects/[id]/edit` (los mismos campos de la propuesta, salvo el proponente).
-Los cambios se envían por `PUT` y la pestaña **Historial** muestra, junto al
-historial de estados, una entrada por cada campo modificado con su valor
-anterior y nuevo. Al desmarcar «Proyecto privado» se muestra una advertencia y
-una confirmación antes de publicarlo.
+En la pestaña **General** del detalle, quienes pueden editar (administradores,
+evaluadores, coordinadores/asesores asignados al proyecto y el proponente
+mientras esté en revisión) ven un botón **Editar proyecto** que abre la pantalla
+dedicada `/projects/[id]/edit` (los mismos campos de la propuesta, salvo el
+proponente). Los cambios se envían por `PUT` y la pestaña **Historial** muestra,
+junto al historial de estados, una entrada por cada campo modificado con su
+valor anterior y nuevo. Al desmarcar «Proyecto privado» se muestra una
+advertencia y una confirmación antes de publicarlo.
 
 ## Autenticación
 

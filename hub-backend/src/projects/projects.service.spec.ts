@@ -41,6 +41,7 @@ function createProjectDetail() {
     facultyAdvisor: null,
     teamRequirements: null,
     expectedOutcomes: null,
+    isProposer: false,
     deliverables: [],
     startDate: new Date(),
     endDate: null,
@@ -88,7 +89,7 @@ function createAuthorizationMock() {
     assertCanTransitionProject: jest.fn().mockResolvedValue(undefined),
     assertCanAssignActors: jest.fn().mockResolvedValue(undefined),
     assertAssignableUser: jest.fn().mockResolvedValue(undefined),
-    assertCanEditProjectDetails: jest.fn(),
+    assertCanEditProjectDetails: jest.fn().mockResolvedValue(undefined),
     projectVisibilityWhere: jest.fn().mockReturnValue({}),
   };
 }
@@ -606,6 +607,7 @@ describe('ProjectsService', () => {
       const currentProject = {
         id: 10,
         status,
+        proposerUserId: 999,
         name: 'Project',
         description: 'Description',
         context: 'Context',
@@ -650,6 +652,11 @@ describe('ProjectsService', () => {
 
       expect(authorization.assertCanEditProjectDetails).toHaveBeenCalledWith(
         EVALUATOR_USER,
+        {
+          id: 10,
+          proposerUserId: 999,
+          status: ProjectStatus.under_review,
+        },
       );
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
       expect(update).toHaveBeenCalledWith(
