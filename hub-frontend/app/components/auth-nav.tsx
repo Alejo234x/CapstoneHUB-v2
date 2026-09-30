@@ -26,12 +26,20 @@ export function AuthNav({ showUserInfo = true }: { showUserInfo?: boolean }) {
 
   if (!isAuthenticated) {
     return (
-      <Link
-        href="/login"
-        className="flex h-9 shrink-0 items-center justify-center rounded-xl bg-utb-blue px-4 text-[13px] font-semibold text-white shadow-lg shadow-utb-blue/30 transition-colors hover:bg-utb-blue-dark focus-visible:ring-2 focus-visible:ring-utb-blue-pale/60 focus-visible:outline-none"
-      >
-        Iniciar sesión
-      </Link>
+      <div className="flex shrink-0 items-center gap-2">
+        <Link
+          href="/register"
+          className="flex h-9 shrink-0 items-center justify-center rounded-xl border border-white/15 px-3.5 text-[13px] font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-utb-blue-pale/60 focus-visible:outline-none"
+        >
+          Crear cuenta
+        </Link>
+        <Link
+          href="/login"
+          className="flex h-9 shrink-0 items-center justify-center rounded-xl bg-utb-blue px-4 text-[13px] font-semibold text-white shadow-lg shadow-utb-blue/30 transition-colors hover:bg-utb-blue-dark focus-visible:ring-2 focus-visible:ring-utb-blue-pale/60 focus-visible:outline-none"
+        >
+          Iniciar sesión
+        </Link>
+      </div>
     );
   }
 

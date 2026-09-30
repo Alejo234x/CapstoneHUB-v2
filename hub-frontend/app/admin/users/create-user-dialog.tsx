@@ -30,6 +30,7 @@ const roles = [
   { value: "advisor", label: "Asesor" },
   { value: "coordinator", label: "Coordinador" },
   { value: "evaluator", label: "Evaluador" },
+  { value: "proposer", label: "Proponente" },
   { value: "admin", label: "Administrador" },
 ];
 

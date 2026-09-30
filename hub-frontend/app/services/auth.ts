@@ -75,7 +75,29 @@ export async function loginUser(payload: {
     body: JSON.stringify(payload),
   });
 
-  
+  if (!response.ok) {
+    const errorBody = (await response.json().catch(() => null)) as
+      | { message?: string }
+      | null;
+
+    throw new Error(
+      errorBody?.message ?? `Backend responded with status ${response.status}`,
+    );
+  }
+
+  return (await response.json()) as AuthSession;
+}
+
+export async function registerUser(payload: {
+  fullName: string;
+  email: string;
+  password: string;
+}): Promise<AuthSession> {
+  const response = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 
   if (!response.ok) {
     const errorBody = (await response.json().catch(() => null)) as
