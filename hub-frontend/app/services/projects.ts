@@ -13,6 +13,13 @@ import {
   UpdateProjectPayload,
 } from "./schemas";
 import { getAuthToken } from "./auth";
+import { ensureOk, readBackendMessage } from "@/lib/http";
+
+const PROJECT_EDIT_CONFLICT_MESSAGE =
+  "El proyecto está cerrado o rechazado y ya no se puede editar.";
+
+const REPORT_CONFLICT_MESSAGE =
+  "La entrega no está en un estado válido para esta acción.";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
 
@@ -68,7 +75,7 @@ export async function getProjects(): Promise<{
       return {
         projects: [],
         status: response.status,
-        error: `Backend responded with status ${response.status}`,
+        error: await readBackendMessage(response),
       };
     }
 
@@ -97,7 +104,7 @@ export async function getMyProjects(): Promise<{
     if (!response.ok) {
       return {
         projects: [],
-        error: `Backend responded with status ${response.status}`,
+        error: await readBackendMessage(response),
       };
     }
 
@@ -128,7 +135,7 @@ export async function getProjectById(id: string): Promise<{
     if (!response.ok) {
       return {
         status: response.status,
-        error: `Backend responded with status ${response.status}`,
+        error: await readBackendMessage(response),
       };
     }
 
@@ -157,36 +164,9 @@ export async function updateProjectStatus(
     body: JSON.stringify({ status, description }),
   });
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "cambiar el estado del proyecto" });
 
   return (await response.json()) as ProjectDetails;
-}
-
-async function projectUpdateRequestError(
-  response: Response,
-): Promise<Error> {
-  if (response.status === 401) {
-    return new Error("Inicia sesión para editar el proyecto.");
-  }
-
-  if (response.status === 403) {
-    return new Error("No tienes permisos para editar este proyecto.");
-  }
-
-  if (response.status === 409) {
-    return new Error(
-      "El proyecto está cerrado o rechazado y ya no se puede editar.",
-    );
-  }
-
-  return new Error(
-    await parseBackendMessage(
-      response,
-      `Backend responded with status ${response.status}`,
-    ),
-  );
 }
 
 export async function updateProject(
@@ -202,9 +182,10 @@ export async function updateProject(
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    throw await projectUpdateRequestError(response);
-  }
+  await ensureOk(response, {
+    action: "editar el proyecto",
+    conflictMessage: PROJECT_EDIT_CONFLICT_MESSAGE,
+  });
 
   return (await response.json()) as ProjectDetails;
 }
@@ -222,9 +203,7 @@ export async function createProjectObservation(
     body: JSON.stringify({ content }),
   });
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "añadir una observación" });
 
   return (await response.json()) as ProjectObservationItem;
 }
@@ -248,9 +227,7 @@ export async function getProjectMilestones(
     cache: "no-store",
   });
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "consultar los hitos del proyecto" });
 
   return (await response.json()) as ProjectMilestoneItem[];
 }
@@ -268,9 +245,7 @@ export async function createProjectMilestone(
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "crear un hito" });
 
   return (await response.json()) as ProjectMilestoneItem;
 }
@@ -292,9 +267,7 @@ export async function updateProjectMilestone(
     },
   );
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "editar un hito" });
 
   return (await response.json()) as ProjectMilestoneItem;
 }
@@ -311,9 +284,7 @@ export async function deleteProjectMilestone(
     },
   );
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "eliminar un hito" });
 }
 
 export async function createProject(
@@ -328,9 +299,7 @@ export async function createProject(
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    throw new Error(`Backend responded with status ${res.status}, ${res.url}`);
-  }
+  await ensureOk(res, { action: "proponer un proyecto" });
 
   return (await res.json()) as ProjectDetails;
 }
@@ -350,7 +319,7 @@ export async function getAssignableUsers(
     if (!response.ok) {
       return {
         users: [],
-        error: `Backend responded with status ${response.status}`,
+        error: await readBackendMessage(response),
       };
     }
 
@@ -387,9 +356,7 @@ export async function addProjectActorAssignment(
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "asignar actores al proyecto" });
 
   return (await response.json()) as {
     id: number;
@@ -402,18 +369,6 @@ export async function addProjectActorAssignment(
   };
 }
 
-function attachmentRequestError(response: Response, action: string): Error {
-  if (response.status === 401) {
-    return new Error(`Inicia sesión para ${action} este anexo.`);
-  }
-
-  if (response.status === 403) {
-    return new Error(`No tienes permisos para ${action} este anexo.`);
-  }
-
-  return new Error(`Backend responded with status ${response.status}`);
-}
-
 export async function getProjectAttachments(
   id: string,
 ): Promise<ProjectAttachmentItem[]> {
@@ -422,9 +377,7 @@ export async function getProjectAttachments(
     cache: "no-store",
   });
 
-  if (!response.ok) {
-    throw attachmentRequestError(response, "consultar");
-  }
+  await ensureOk(response, { action: "consultar el anexo" });
 
   return (await response.json()) as ProjectAttachmentItem[];
 }
@@ -447,9 +400,7 @@ export async function uploadProjectAttachment(
     body: formData,
   });
 
-  if (!response.ok) {
-    throw attachmentRequestError(response, "subir");
-  }
+  await ensureOk(response, { action: "subir el anexo" });
 
   return (await response.json()) as ProjectAttachmentItem;
 }
@@ -466,9 +417,7 @@ export async function deleteProjectAttachment(
     },
   );
 
-  if (!response.ok) {
-    throw attachmentRequestError(response, "eliminar");
-  }
+  await ensureOk(response, { action: "eliminar el anexo" });
 }
 
 export async function downloadProjectAttachment(
@@ -484,9 +433,7 @@ export async function downloadProjectAttachment(
     },
   );
 
-  if (!response.ok) {
-    throw attachmentRequestError(response, "descargar");
-  }
+  await ensureOk(response, { action: "descargar el anexo" });
 
   const blob = await response.blob();
   const objectUrl = URL.createObjectURL(blob);
@@ -501,24 +448,6 @@ export async function downloadProjectAttachment(
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
-}
-
-function reportRequestError(response: Response, action: string): Error {
-  if (response.status === 401) {
-    return new Error(`Inicia sesión para ${action} esta entrega.`);
-  }
-
-  if (response.status === 403) {
-    return new Error(`No tienes permisos para ${action} esta entrega.`);
-  }
-
-  if (response.status === 409) {
-    return new Error(
-      "La entrega no está en un estado válido para esta acción.",
-    );
-  }
-
-  return new Error(`Backend responded with status ${response.status}`);
 }
 
 export type CreateProjectReportPayload = {
@@ -540,9 +469,10 @@ export async function getProjectReports(
     cache: "no-store",
   });
 
-  if (!response.ok) {
-    throw reportRequestError(response, "consultar");
-  }
+  await ensureOk(response, {
+    action: "consultar la entrega",
+    conflictMessage: REPORT_CONFLICT_MESSAGE,
+  });
 
   return (await response.json()) as ProjectReportItem[];
 }
@@ -560,9 +490,10 @@ export async function createProjectReport(
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    throw reportRequestError(response, "crear");
-  }
+  await ensureOk(response, {
+    action: "crear la entrega",
+    conflictMessage: REPORT_CONFLICT_MESSAGE,
+  });
 
   return (await response.json()) as ProjectReportItem;
 }
@@ -584,9 +515,10 @@ export async function updateProjectReport(
     },
   );
 
-  if (!response.ok) {
-    throw reportRequestError(response, "editar");
-  }
+  await ensureOk(response, {
+    action: "editar la entrega",
+    conflictMessage: REPORT_CONFLICT_MESSAGE,
+  });
 
   return (await response.json()) as ProjectReportItem;
 }
@@ -603,9 +535,10 @@ export async function deleteProjectReport(
     },
   );
 
-  if (!response.ok) {
-    throw reportRequestError(response, "eliminar");
-  }
+  await ensureOk(response, {
+    action: "eliminar la entrega",
+    conflictMessage: REPORT_CONFLICT_MESSAGE,
+  });
 }
 
 export async function submitProjectReport(
@@ -622,9 +555,10 @@ export async function submitProjectReport(
     },
   );
 
-  if (!response.ok) {
-    throw reportRequestError(response, "enviar");
-  }
+  await ensureOk(response, {
+    action: "enviar la entrega",
+    conflictMessage: REPORT_CONFLICT_MESSAGE,
+  });
 
   return (await response.json()) as ProjectReportItem;
 }
@@ -647,9 +581,10 @@ export async function reviewProjectReport(
     },
   );
 
-  if (!response.ok) {
-    throw reportRequestError(response, "revisar");
-  }
+  await ensureOk(response, {
+    action: "revisar la entrega",
+    conflictMessage: REPORT_CONFLICT_MESSAGE,
+  });
 
   return (await response.json()) as ProjectReportItem;
 }
@@ -670,57 +605,6 @@ export type ReportContentFileMetadata = {
   sizeBytes: number;
 };
 
-async function parseBackendMessage(
-  response: Response,
-  fallback: string,
-): Promise<string> {
-  try {
-    const body = (await response.json()) as {
-      message?: string | string[];
-    };
-
-    if (Array.isArray(body.message)) {
-      return body.message.join(" ");
-    }
-
-    if (typeof body.message === "string" && body.message.trim()) {
-      return body.message;
-    }
-  } catch {
-    // La respuesta no era JSON; se usa el mensaje genérico.
-  }
-
-  return fallback;
-}
-
-async function reportContentRequestError(
-  response: Response,
-  action: string,
-): Promise<Error> {
-  if (response.status === 401) {
-    return new Error(`Inicia sesión para ${action} el contenido de la entrega.`);
-  }
-
-  if (response.status === 403) {
-    return new Error(
-      `No tienes permisos para ${action} el contenido de la entrega.`,
-    );
-  }
-
-  if (response.status === 409) {
-    return new Error(
-      "La entrega no está en un estado válido para esta acción.",
-    );
-  }
-
-  const message = await parseBackendMessage(
-    response,
-    `Backend responded with status ${response.status}`,
-  );
-
-  return new Error(message);
-}
-
 export async function createReportContent(
   id: string,
   reportId: number,
@@ -738,9 +622,10 @@ export async function createReportContent(
     },
   );
 
-  if (!response.ok) {
-    throw await reportContentRequestError(response, "agregar");
-  }
+  await ensureOk(response, {
+    action: "agregar el contenido de la entrega",
+    conflictMessage: REPORT_CONFLICT_MESSAGE,
+  });
 
   return (await response.json()) as ProjectReportContentItem;
 }
@@ -771,9 +656,10 @@ export async function presignReportContentFile(
     },
   );
 
-  if (!response.ok) {
-    throw await reportContentRequestError(response, "preparar la subida");
-  }
+  await ensureOk(response, {
+    action: "preparar la subida del contenido de la entrega",
+    conflictMessage: REPORT_CONFLICT_MESSAGE,
+  });
 
   return (await response.json()) as ReportFileUploadTarget;
 }
@@ -841,9 +727,10 @@ export async function confirmReportContentFile(
     },
   );
 
-  if (!response.ok) {
-    throw await reportContentRequestError(response, "confirmar la subida");
-  }
+  await ensureOk(response, {
+    action: "confirmar la subida del contenido de la entrega",
+    conflictMessage: REPORT_CONFLICT_MESSAGE,
+  });
 
   return (await response.json()) as ProjectReportContentItem;
 }
@@ -868,9 +755,10 @@ export async function updateReportContent(
     },
   );
 
-  if (!response.ok) {
-    throw await reportContentRequestError(response, "editar");
-  }
+  await ensureOk(response, {
+    action: "editar el contenido de la entrega",
+    conflictMessage: REPORT_CONFLICT_MESSAGE,
+  });
 
   return (await response.json()) as ProjectReportContentItem;
 }
@@ -890,9 +778,10 @@ export async function deleteReportContent(
     },
   );
 
-  if (!response.ok) {
-    throw await reportContentRequestError(response, "eliminar");
-  }
+  await ensureOk(response, {
+    action: "eliminar el contenido de la entrega",
+    conflictMessage: REPORT_CONFLICT_MESSAGE,
+  });
 }
 
 /**
