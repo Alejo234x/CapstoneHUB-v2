@@ -97,6 +97,7 @@ proyecto. El `admin` siempre pasa.
 | --- | :---: | :---: | :---: | :---: | :---: | :---: |
 | Listar / ver proyectos | sí | sí | sí | sí | sí | sí |
 | Crear proyecto | no | rol | rol | rol | rol | rol |
+| Editar datos del proyecto | no | sí | miembro | sí | miembro | no† |
 | Gestionar proyecto / asignar actores | no | sí | miembro | no | no | no |
 | Gestionar hitos | no | sí | miembro | miembro | miembro | no |
 | Cambiar estado | no | sí | miembro | miembro* | no | no |
@@ -104,8 +105,16 @@ proyecto. El `admin` siempre pasa.
 | Comentar un proyecto | no | sí | miembro | miembro | miembro | miembro |
 
 - `Crear proyecto` solo requiere que el usuario tenga al menos un rol global.
+- `Editar datos del proyecto`: lo permiten `admin` y cualquier `evaluator`
+  global (sin asignarse); un `coordinator` o `advisor` solo si está asignado al
+  proyecto con su rol correspondiente. Un proyecto `closed` o `rejected` es de
+  solo lectura (responde `409`). Cada campo modificado se registra en
+  `ProjectChangeHistory`.
 - \* Los evaluadores solo pueden mover proyectos en `proposed`/`under_review` o
   rechazar cualquier proyecto activo; el resto son acciones de coordinador.
+- † El `student` no edita los datos por su rol, pero el **proponente** (de
+  cualquier rol global, incluido `student`) puede editar mientras el proyecto
+  esté en `proposed` o `under_review`.
 
 Al arrancar, `AuthService` crea un admin inicial si la base de datos está vacía
 y existen `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD` y
@@ -165,7 +174,7 @@ El esquema Prisma completo está documentado en
 - **Proyecto**: `Project`, `ProjectSchool`, `ProjectNaturalProposer`,
   `ProjectDeliverable`.
 - **Equipo y seguimiento**: `ProjectActorAssignment`, `ProjectObservation`,
-  `ProjectStatusHistory`, `ProjectMilestones`.
+  `ProjectStatusHistory`, `ProjectChangeHistory`, `ProjectMilestones`.
 - **Archivos**: `ProjectAttachment` (solo metadatos; el binario vive en
   S3/MinIO).
 
@@ -271,7 +280,8 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 | `GET` | `/projects/mine` | Proyectos propuestos y asignados al usuario. |
 | `GET` | `/projects/:id` | Detalle (404 si el proyecto es privado y el solicitante no es miembro). |
 | `POST` | `/projects` | Crear un proyecto; `isPrivate` lo define el proponente. |
-| `PUT/DELETE` | `/projects/:id` | Editar / borrar (admin o coordinador asignado). |
+| `PUT` | `/projects/:id` | Editar los datos (admin, evaluador, coordinador/asesor asignado o proponente en revisión; `409` si está cerrado/rechazado). Registra historial por campo. |
+| `DELETE` | `/projects/:id` | Borrar (admin o coordinador asignado). |
 | `PATCH` | `/projects/:id/status` | Cambiar estado (registra historial). |
 | `POST` | `/projects/:id/actors` | Asignar un usuario a un proyecto. |
 | `GET/POST` | `/projects/:id/observations` | Listar / agregar observaciones. |

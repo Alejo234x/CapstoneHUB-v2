@@ -5,6 +5,7 @@ import ProjectMilestonesPanel from "./project-milestones-panel";
 import ProjectReportsPanel from "./project-reports-panel";
 import ProjectAttachmentsPanel from "./project-attachments-panel";
 import ProjectStatusHistoryPanel from "./project-status-history-panel";
+import ProjectChangeHistoryPanel from "./project-change-history-panel";
 import { TabsContent } from "@/components/ui/tabs";
 
 type ProjectMemberTabsProps = {
@@ -60,7 +61,10 @@ export default function ProjectMemberTabs({
       </TabsContent>
 
       <TabsContent value="historial" className="mt-6">
-        <ProjectStatusHistoryPanel history={project.statusHistory ?? []} />
+        <div className="flex flex-col gap-6">
+          <ProjectChangeHistoryPanel history={project.changeHistory ?? []} />
+          <ProjectStatusHistoryPanel history={project.statusHistory ?? []} />
+        </div>
       </TabsContent>
     </>
   );

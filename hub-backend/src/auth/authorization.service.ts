@@ -167,6 +167,65 @@ export class AuthorizationService {
     await this.assertProjectAssignment(user, projectId, ActorRole.coordinator);
   }
 
+  /**
+   * Editar los datos del proyecto está disponible para administradores,
+   * evaluadores globales, coordinadores/asesores asignados con su rol
+   * correspondiente y, mientras el proyecto siga en propuesta o revisión, para
+   * su proponente (sea cual sea su rol global).
+   */
+  async assertCanEditProjectDetails(
+    user: AuthenticatedUser,
+    project: {
+      id: number;
+      proposerUserId: number | null;
+      status: ProjectStatus;
+    },
+  ): Promise<void> {
+    if (user.roles.includes(UserRole.admin)) {
+      return;
+    }
+
+    if (user.roles.includes(UserRole.evaluator)) {
+      return;
+    }
+
+    const editorRoles: ActorRole[] = [];
+    if (user.roles.includes(UserRole.coordinator)) {
+      editorRoles.push(ActorRole.coordinator);
+    }
+    if (user.roles.includes(UserRole.advisor)) {
+      editorRoles.push(ActorRole.advisor);
+    }
+
+    if (editorRoles.length > 0) {
+      const assignment = await this.prisma.projectActorAssignment.findFirst({
+        where: {
+          projectId: project.id,
+          userId: user.id,
+          role: { in: editorRoles },
+        },
+        select: { id: true },
+      });
+
+      if (assignment) {
+        return;
+      }
+    }
+
+    const isEditableProposer =
+      project.proposerUserId === user.id &&
+      (project.status === ProjectStatus.proposed ||
+        project.status === ProjectStatus.under_review);
+
+    if (isEditableProposer) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      'You do not have permission to edit this project',
+    );
+  }
+
   async assertCanAssignActors(
     user: AuthenticatedUser,
     projectId: number,

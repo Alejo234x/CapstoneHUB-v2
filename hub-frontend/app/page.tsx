@@ -43,6 +43,7 @@ export default function Home() {
               style={{ "--utb-delay": "50ms" } as React.CSSProperties}
             >
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+              {" "}
               Universidad Tecnológica de Bolívar
             </p>
 

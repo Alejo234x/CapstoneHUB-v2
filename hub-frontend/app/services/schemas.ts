@@ -147,6 +147,37 @@ export type ProjectStatusHistoryItem = {
   } | null;
 };
 
+export type ProjectChangeHistoryItem = {
+  id: number;
+  projectId: number;
+  field: string;
+  previousValue: string | null;
+  newValue: string | null;
+  changedAt: string;
+  author: {
+    id: number;
+    fullName: string;
+    email: string;
+  } | null;
+};
+
+export type UpdateProjectPayload = {
+  name?: string;
+  description?: string;
+  context?: string;
+  location?: string | null;
+  source?: ProjectSource;
+  startDate?: string | null;
+  endDate?: string | null;
+  estimatedCost?: number | null;
+  requiresLegalization?: boolean;
+  isPrivate?: boolean;
+  facultyAdvisor?: string | null;
+  teamRequirements?: string | null;
+  expectedOutcomes?: string | null;
+  deliverables?: string[];
+};
+
 export type ProjectItem = {
   id: string;
   name: string;
@@ -191,6 +222,8 @@ export type ProjectDetails = {
   requiresLegalization?: boolean;
   isPrivate?: boolean;
   canViewSensitiveData?: boolean;
+  /** `true` cuando el usuario actual propuso el proyecto. */
+  isProposer?: boolean;
   source?: ProjectSource;
   proposer?: ProjectProposer;
   startDate: string | null;
@@ -209,6 +242,7 @@ export type ProjectDetails = {
   categories?: ProjectCategory[];
   milestones?: ProjectMilestoneItem[];
   statusHistory?: ProjectStatusHistoryItem[];
+  changeHistory?: ProjectChangeHistoryItem[];
   attachments?: ProjectAttachmentItem[];
   reports?: ProjectReportItem[];
 };

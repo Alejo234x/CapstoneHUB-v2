@@ -30,6 +30,7 @@ Ver también: [Arquitectura del backend](./backend_arch.md),
 | `/login` | Inicio de sesión. |
 | `/projects` | Lista de proyectos. |
 | `/projects/[id]` | Detalle por pestañas (general, equipo, hitos, entregas, anexos, historial). |
+| `/projects/[id]/edit` | Edición de los datos del proyecto (admin o evaluador). |
 | `/submit`, `/submit/natural` | Propuesta de proyecto. |
 | `/admin/users` | Administración de usuarios y roles. |
 
@@ -56,12 +57,21 @@ proxy `stream`, que reenvía `Range`.
   de login/usuarios.
 - `projects.ts` — proyectos, hitos, observaciones, anexos y contenido de las
   entregas (texto, enlaces y archivos), incluida la configuración de tipo, MIME
-  permitidos y máximo de archivos.
+  permitidos y máximo de archivos, y la edición de los datos del proyecto.
 - `schemas.ts` — tipos TypeScript compartidos (`ProjectDetails`, etc.).
 - `utils.ts` — helpers de formato (estados, fechas).
 
 Cada petición autenticada lee el token de `auth.ts` y agrega
 `Authorization: Bearer <token>`.
+
+En la pestaña **General** del detalle, quienes pueden editar (administradores,
+evaluadores, coordinadores/asesores asignados al proyecto y el proponente
+mientras esté en revisión) ven un botón **Editar proyecto** que abre la pantalla
+dedicada `/projects/[id]/edit` (los mismos campos de la propuesta, salvo el
+proponente). Los cambios se envían por `PUT` y la pestaña **Historial** muestra,
+junto al historial de estados, una entrada por cada campo modificado con su
+valor anterior y nuevo. Al desmarcar «Proyecto privado» se muestra una
+advertencia y una confirmación antes de publicarlo.
 
 ## Autenticación
 

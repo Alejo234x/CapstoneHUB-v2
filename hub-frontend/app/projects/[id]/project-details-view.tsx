@@ -10,6 +10,7 @@ import ProjectMemberTabs from "./project-member-tabs";
 import ProjectMissingState from "./project-missing-state";
 import ProjectTabs from "./project-tabs";
 import { visibleProjectTabs } from "./project-tabs-config";
+import { useCanEditProject } from "./use-can-edit-project";
 import { useIsProjectMember } from "./use-is-project-member";
 import { useProjectDetails } from "./use-project-details";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +32,7 @@ function ProjectTabsList({ isMember }: { readonly isMember: boolean }) {
 export default function ProjectDetailsView({ id }: { readonly id: string }) {
   const { project, loading, status } = useProjectDetails(id);
   const isMember = useIsProjectMember(project);
+  const canEdit = useCanEditProject(project);
 
   if (loading) {
     return <ProjectDetailsSkeleton />;
@@ -59,7 +61,7 @@ export default function ProjectDetailsView({ id }: { readonly id: string }) {
               <ProjectTabsList isMember={isMember} />
 
               <TabsContent value="general" className="mt-6 flex flex-col gap-6">
-                <ProjectGeneralTab project={project} />
+                <ProjectGeneralTab project={project} canEdit={canEdit} />
               </TabsContent>
 
               <TabsContent value="categorias" className="mt-6">

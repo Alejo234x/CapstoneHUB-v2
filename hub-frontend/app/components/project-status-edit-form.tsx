@@ -162,7 +162,7 @@ export default function ProjectStatusEditForm({
     status === currentStatus ||
     (isReasonRequired && trimmedReason.length === 0);
 
-  async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
+  function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
 

@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import {
+  diffProjectUpdate,
   isValidProjectStatusTransition,
   ProjectsService,
 } from './projects.service';
@@ -39,6 +41,7 @@ function createProjectDetail() {
     facultyAdvisor: null,
     teamRequirements: null,
     expectedOutcomes: null,
+    isProposer: false,
     deliverables: [],
     startDate: new Date(),
     endDate: null,
@@ -49,6 +52,7 @@ function createProjectDetail() {
     actorAssignments: [],
     milestones: [],
     statusHistory: [],
+    changeHistory: [],
     attachments: [],
     reports: [],
   };
@@ -85,6 +89,7 @@ function createAuthorizationMock() {
     assertCanTransitionProject: jest.fn().mockResolvedValue(undefined),
     assertCanAssignActors: jest.fn().mockResolvedValue(undefined),
     assertAssignableUser: jest.fn().mockResolvedValue(undefined),
+    assertCanEditProjectDetails: jest.fn().mockResolvedValue(undefined),
     projectVisibilityWhere: jest.fn().mockReturnValue({}),
   };
 }
@@ -402,6 +407,7 @@ describe('ProjectsService', () => {
       observations: [],
       milestones: [],
       statusHistory: [],
+      changeHistory: [],
       attachments: [],
       reports: [],
       description: 'Description',
@@ -533,5 +539,196 @@ describe('ProjectsService', () => {
     const result = await service.project({ id: 33 }, EVALUATOR_USER);
 
     expect(result?.canViewSensitiveData).toBe(true);
+  });
+
+  describe('diffProjectUpdate', () => {
+    const base = {
+      name: 'Project',
+      description: 'Description',
+      context: 'Context',
+      location: null,
+      source: ProjectSource.external_entity,
+      startDate: null,
+      endDate: null,
+      estimatedCost: null,
+      requiresLegalization: false,
+      isPrivate: true,
+      facultyAdvisor: null,
+      teamRequirements: null,
+      expectedOutcomes: null,
+      deliverables: ['One'],
+    };
+
+    it('returns one row per changed field, in field order', () => {
+      const rows = diffProjectUpdate(base, {
+        ...base,
+        name: 'Renamed',
+        isPrivate: false,
+        deliverables: ['One', 'Two'],
+      });
+
+      expect(rows).toEqual([
+        { field: 'name', previousValue: 'Project', newValue: 'Renamed' },
+        { field: 'isPrivate', previousValue: 'true', newValue: 'false' },
+        {
+          field: 'deliverables',
+          previousValue: JSON.stringify(['One']),
+          newValue: JSON.stringify(['One', 'Two']),
+        },
+      ]);
+    });
+
+    it('returns no rows when nothing changed', () => {
+      expect(diffProjectUpdate(base, { ...base })).toEqual([]);
+    });
+
+    it('treats equivalent decimals and dates as unchanged', () => {
+      const rows = diffProjectUpdate(
+        {
+          ...base,
+          estimatedCost: '1500.00',
+          startDate: new Date('2026-01-05T00:00:00.000Z'),
+        },
+        {
+          ...base,
+          estimatedCost: 1500,
+          startDate: new Date('2026-01-05T00:00:00.000Z'),
+        },
+      );
+
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('updateProject', () => {
+    function createUpdatePrismaMock(
+      status: ProjectStatus = ProjectStatus.under_review,
+    ) {
+      const currentProject = {
+        id: 10,
+        status,
+        proposerUserId: 999,
+        name: 'Project',
+        description: 'Description',
+        context: 'Context',
+        location: null,
+        source: ProjectSource.external_entity,
+        startDate: null,
+        endDate: null,
+        estimatedCost: null,
+        requiresLegalization: false,
+        isPrivate: true,
+        facultyAdvisor: null,
+        teamRequirements: null,
+        expectedOutcomes: null,
+        deliverables: [{ description: 'One' }],
+      };
+      const update = jest.fn().mockResolvedValue(createProjectDetail());
+      const createMany = jest.fn().mockResolvedValue({ count: 1 });
+      const transaction = {
+        project: { update },
+        projectChangeHistory: { createMany },
+      };
+      const prisma = {
+        project: { findUnique: jest.fn().mockResolvedValue(currentProject) },
+        $transaction: jest.fn((callback: (value: unknown) => unknown) =>
+          callback(transaction),
+        ),
+      };
+
+      return { prisma, update, createMany };
+    }
+
+    it('records one history row per changed field in the same transaction', async () => {
+      const { prisma, update, createMany } = createUpdatePrismaMock();
+      const authorization = createAuthorizationMock();
+      const service = createService(prisma, authorization);
+
+      await service.updateProject({
+        user: EVALUATOR_USER,
+        projectId: 10,
+        fields: { name: 'Renamed', isPrivate: false },
+      });
+
+      expect(authorization.assertCanEditProjectDetails).toHaveBeenCalledWith(
+        EVALUATOR_USER,
+        {
+          id: 10,
+          proposerUserId: 999,
+          status: ProjectStatus.under_review,
+        },
+      );
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 10 },
+          data: { name: 'Renamed', isPrivate: false },
+        }),
+      );
+      expect(createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            projectId: 10,
+            authorUserId: EVALUATOR_USER.id,
+            field: 'name',
+            previousValue: 'Project',
+            newValue: 'Renamed',
+          },
+          {
+            projectId: 10,
+            authorUserId: EVALUATOR_USER.id,
+            field: 'isPrivate',
+            previousValue: 'true',
+            newValue: 'false',
+          },
+        ],
+      });
+    });
+
+    it('does not write history when nothing changed', async () => {
+      const { prisma, createMany } = createUpdatePrismaMock();
+      const service = createService(prisma, createAuthorizationMock());
+
+      await service.updateProject({
+        user: EVALUATOR_USER,
+        projectId: 10,
+        fields: { name: 'Project' },
+      });
+
+      expect(createMany).not.toHaveBeenCalled();
+    });
+
+    it.each([ProjectStatus.closed, ProjectStatus.rejected])(
+      'rejects editing a project in %s',
+      async (status) => {
+        const { prisma, update } = createUpdatePrismaMock(status);
+        const authorization = createAuthorizationMock();
+        const service = createService(prisma, authorization);
+
+        await expect(
+          service.updateProject({
+            user: EVALUATOR_USER,
+            projectId: 10,
+            fields: { name: 'Renamed' },
+          }),
+        ).rejects.toBeInstanceOf(ConflictException);
+        expect(update).not.toHaveBeenCalled();
+      },
+    );
+
+    it('returns 404 when the project does not exist', async () => {
+      const prisma = {
+        project: { findUnique: jest.fn().mockResolvedValue(null) },
+      };
+      const service = createService(prisma, createAuthorizationMock());
+
+      await expect(
+        service.updateProject({
+          user: EVALUATOR_USER,
+          projectId: 10,
+          fields: { name: 'Renamed' },
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
   });
 });

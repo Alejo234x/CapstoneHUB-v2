@@ -70,7 +70,7 @@ export default function AssignedProjects() {
       }
     }
 
-    loadProjects();
+    void loadProjects();
 
     return () => {
       active = false;
