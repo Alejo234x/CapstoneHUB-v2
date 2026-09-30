@@ -63,7 +63,7 @@ de datos y mantener estable el contrato de la API aunque cambie el esquema.
 
 | Módulo | Descripción |
 | --- | --- |
-| **Auth** | Login, gestión de usuarios y asignación de roles. Crea el primer admin. |
+| **Auth** | Registro público, login, gestión de usuarios y asignación de roles. Crea el primer admin. |
 | **Projects** | CRUD de proyectos, asignación de actores y transición de estados. |
 | **Observations** | Observaciones de texto libre asociadas a un proyecto. |
 | **Milestones** | Entregables programados por proyecto. |
@@ -79,8 +79,13 @@ librerías externas). `AuthGuard` valida el header
 `request.user`.
 
 Roles globales (`UserRole`): `admin`, `evaluator`, `coordinator`, `advisor`,
-`student`. Roles dentro de un proyecto (`ActorRole`): `advisor`, `coordinator`,
-`student`, `evaluator`.
+`student`, `proposer`. Roles dentro de un proyecto (`ActorRole`): `advisor`,
+`coordinator`, `student`, `evaluator`.
+
+`proposer` identifica a los proponentes externos que se registran solos desde
+`/register`. No es un `ActorRole`, así que no se les asigna como actores;
+proponen proyectos y, como proponentes del proyecto, pueden editarlo mientras
+siga en `proposed` o `under_review`.
 
 `AuthorizationService` responde preguntas como "¿puede este usuario crear un
 proyecto?", "¿puede gestionar este proyecto?" o "¿puede asignar actores?",
@@ -273,6 +278,7 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
+| `POST` | `/auth/register` | Registro público de un proponente; crea la cuenta con rol `proposer` y devuelve usuario + token (público). |
 | `POST` | `/auth/login` | Iniciar sesión y recibir un token de acceso (público). |
 | `GET/POST` | `/auth/users` | Listar / crear usuarios (admin). |
 | `PATCH` | `/auth/users/:id/roles` | Reemplazar los roles de un usuario (admin). |
@@ -297,10 +303,10 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 | `GET` | `/projects/:id/reports/:rid/contents/:cid/stream` | Ver o reproducir el archivo inline, con `Range`. |
 
 La autenticación es **global** (`AuthGuard` como `APP_GUARD`): todas las rutas
-requieren token salvo las marcadas con `@Public()` (`/auth/login`, `GET /projects`
-y `GET /projects/:id`). En las rutas públicas el token es opcional: si llega, se
-resuelve el usuario y se adaptan los datos mostrados, y si es inválido se
-responde `401` en lugar de degradar a anónimo.
+requieren token salvo las marcadas con `@Public()` (`/auth/register`,
+`/auth/login`, `GET /projects` y `GET /projects/:id`). En las rutas públicas el
+token es opcional: si llega, se resuelve el usuario y se adaptan los datos
+mostrados, y si es inválido se responde `401` en lugar de degradar a anónimo.
 
 ### Visibilidad de proyectos
 

@@ -352,4 +352,22 @@ describe('AuthorizationService', () => {
       });
     });
   });
+
+  describe('assertCanCreateProject', () => {
+    it('allows a self-registered proposer to create projects', () => {
+      const service = new AuthorizationService({} as never);
+
+      expect(() =>
+        service.assertCanCreateProject(user([UserRole.proposer])),
+      ).not.toThrow();
+    });
+
+    it('rejects users without any global role', () => {
+      const service = new AuthorizationService({} as never);
+
+      expect(() => service.assertCanCreateProject(user([]))).toThrow(
+        ForbiddenException,
+      );
+    });
+  });
 });

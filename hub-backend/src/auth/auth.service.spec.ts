@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { UserRole } from '../generated/prisma/client';
+import { Prisma, UserRole } from '../generated/prisma/client';
 import { AuthService } from './auth.service';
 
 type CreateUserArgs = {
@@ -112,5 +112,114 @@ describe('AuthService role management', () => {
     await expect(service.replaceUserRoles(1, [])).rejects.toBeInstanceOf(
       BadRequestException,
     );
+  });
+});
+
+describe('AuthService registration', () => {
+  const registeredAt = new Date('2026-09-30T12:00:00.000Z');
+
+  const createdUser = {
+    id: 7,
+    fullName: 'External Proposer',
+    email: 'proposer@example.com',
+    isActive: true,
+    emailVerifiedAt: null,
+    lastLoginAt: registeredAt,
+    createdAt: registeredAt,
+    updatedAt: registeredAt,
+    roleAssignments: [{ role: UserRole.proposer }],
+  };
+
+  beforeEach(() => {
+    process.env.AUTH_SECRET = 'test-secret-that-is-at-least-32-characters';
+  });
+
+  it('registers a proposer with a hashed password and a token', async () => {
+    const createUser = jest.fn().mockResolvedValue(createdUser);
+    const prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: createUser,
+      },
+    };
+    const service = new AuthService(prisma as never);
+
+    const result = await service.register({
+      fullName: '  External Proposer  ',
+      email: '  PROPOSER@example.com ',
+      password: 'password123',
+    });
+
+    expect(result.user).toEqual({
+      id: 7,
+      fullName: 'External Proposer',
+      email: 'proposer@example.com',
+      roles: [UserRole.proposer],
+    });
+    expect(result.user).not.toHaveProperty('passwordHash');
+    expect(result.accessToken.split('.')).toHaveLength(3);
+
+    const [callArguments] = createUser.mock.calls as unknown as [
+      [
+        {
+          data: {
+            email: string;
+            passwordHash: string;
+            roleAssignments: { create: Array<{ role: UserRole }> };
+          };
+        },
+      ],
+    ];
+    expect(callArguments[0].data.email).toBe('proposer@example.com');
+    expect(callArguments[0].data.roleAssignments.create).toEqual([
+      { role: UserRole.proposer },
+    ]);
+    expect(callArguments[0].data.passwordHash).toMatch(
+      /^scrypt\$[0-9a-f]+\$[0-9a-f]+$/,
+    );
+    expect(callArguments[0].data.passwordHash).not.toContain('password123');
+  });
+
+  it('rejects an already registered email without creating a user', async () => {
+    const createUser = jest.fn();
+    const prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ id: 1 }),
+        create: createUser,
+      },
+    };
+    const service = new AuthService(prisma as never);
+
+    await expect(
+      service.register({
+        fullName: 'Duplicate',
+        email: 'admin@example.com',
+        password: 'password123',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(createUser).not.toHaveBeenCalled();
+  });
+
+  it('maps a unique-constraint race to a clear error', async () => {
+    const prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockRejectedValue(
+          new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+            code: 'P2002',
+            clientVersion: 'test',
+          }),
+        ),
+      },
+    };
+    const service = new AuthService(prisma as never);
+
+    await expect(
+      service.register({
+        fullName: 'Race',
+        email: 'race@example.com',
+        password: 'password123',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

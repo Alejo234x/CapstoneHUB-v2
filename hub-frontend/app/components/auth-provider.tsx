@@ -13,6 +13,7 @@ import {
   clearAuthSession,
   loadAuthSession,
   loginUser,
+  registerUser,
   saveAuthSession,
 } from "../services/auth";
 
@@ -21,6 +22,11 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   ready: boolean;
   login: (payload: { email: string; password: string }) => Promise<void>;
+  register: (payload: {
+    fullName: string;
+    email: string;
+    password: string;
+  }) => Promise<void>;
   logout: () => void;
 };
 
@@ -58,6 +64,11 @@ export default function AuthProvider({
       ready,
       login: async (payload) => {
         const nextSession = await loginUser(payload);
+        saveAuthSession(nextSession);
+        setSession(nextSession);
+      },
+      register: async (payload) => {
+        const nextSession = await registerUser(payload);
         saveAuthSession(nextSession);
         setSession(nextSession);
       },

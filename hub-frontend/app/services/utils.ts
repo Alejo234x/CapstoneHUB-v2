@@ -46,6 +46,8 @@ export function formatRole(role: string): string {
       return "Asesor";
     case "student":
       return "Estudiante";
+    case "proposer":
+      return "Proponente";
     default:
       return role;
   }

@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "../components/auth-provider";
+import PasswordInput from "../components/password-input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -52,9 +54,8 @@ export default function LoginForm() {
 
         <Field>
           <FieldLabel htmlFor="password">Contraseña</FieldLabel>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
@@ -72,6 +73,16 @@ export default function LoginForm() {
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
+
+        <p className="text-center text-sm text-muted-foreground">
+          ¿No tienes cuenta?{" "}
+          <Link
+            href="/register"
+            className="font-medium text-utb-blue hover:underline"
+          >
+            Crear cuenta
+          </Link>
+        </p>
       </FieldGroup>
     </form>
   );

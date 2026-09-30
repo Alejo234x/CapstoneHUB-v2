@@ -1,6 +1,7 @@
 "use client";
 
 import FormActions from "@/app/components/form-actions";
+import PasswordInput from "@/app/components/password-input";
 import { useState } from "react";
 import { createUser, AuthUser } from "../../services/auth";
 import {
@@ -30,6 +31,7 @@ const roles = [
   { value: "advisor", label: "Asesor" },
   { value: "coordinator", label: "Coordinador" },
   { value: "evaluator", label: "Evaluador" },
+  { value: "proposer", label: "Proponente" },
   { value: "admin", label: "Administrador" },
 ];
 
@@ -144,9 +146,8 @@ export default function CreateUserDialog({
             <Field>
               <FieldLabel htmlFor="password">Contraseña</FieldLabel>
 
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Contraseña"

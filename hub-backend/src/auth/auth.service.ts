@@ -7,6 +7,7 @@ import {
 import { Prisma, UserRole } from '../generated/prisma/client';
 import { PrismaService } from '../prisma.service';
 import { LoginUserDto } from './dto/login-user.dto';
+import { RegisterUserDto } from './dto/register-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { AuthenticatedUser } from './auth.types';
 import {
@@ -115,6 +116,54 @@ export class AuthService implements OnModuleInit {
       select: authUserSelect,
     });
     const user = this.toAuthenticatedUser(userRecordWithRoles);
+
+    return {
+      user,
+      accessToken: this.createAccessToken(user),
+    };
+  }
+
+  async register(payload: RegisterUserDto): Promise<AuthResponse> {
+    const email = this.normalizeEmail(payload.email);
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('Email is already registered');
+    }
+
+    let userRecord: AuthUser;
+
+    try {
+      userRecord = await this.prisma.user.create({
+        data: {
+          fullName: payload.fullName.trim(),
+          email,
+          passwordHash: await this.hashPassword(payload.password),
+          isActive: true,
+          lastLoginAt: new Date(),
+          roleAssignments: {
+            create: [{ role: UserRole.proposer }],
+          },
+        },
+        select: authUserSelect,
+      });
+    } catch (error) {
+      // La verificación previa no cubre una carrera entre dos registros con el
+      // mismo correo; la restricción única de la tabla sí lo hace.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new BadRequestException('Email is already registered');
+      }
+
+      throw error;
+    }
+
+    const user = this.toAuthenticatedUser(userRecord);
 
     return {
       user,
