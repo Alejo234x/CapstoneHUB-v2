@@ -14,11 +14,18 @@ import { AuthGuard } from './auth.guard';
 import { Public } from './public.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { RegisterUserDto } from './dto/register-user.dto';
 import { UpdateUserRolesDto } from './dto/update-user-roles.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Post('register')
+  register(@Body() payload: RegisterUserDto) {
+    return this.authService.register(payload);
+  }
 
   @Public()
   @Post('login')
