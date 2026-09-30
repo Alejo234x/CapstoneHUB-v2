@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { getMyProjects } from "../services/projects";
 import { MyProject } from "../services/schemas";
@@ -80,94 +80,111 @@ export default function AssignedProjects() {
     };
   }, [reloadKey]);
 
+  let description: string;
+
+  if (loading) {
+    description = "Cargando proyectos...";
+  } else if (projects.length === 0) {
+    description = "Aún no propones ni participas en ningún proyecto.";
+  } else {
+    description = `${projects.length} proyecto(s) propuesto(s) o asignado(s).`;
+  }
+
+  let content: ReactNode;
+
+  if (loading) {
+    content = (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    );
+  } else if (error === SERVICE_UNAVAILABLE_MESSAGE) {
+    content = (
+      <ServiceUnavailable
+        message={error}
+        onRetry={() => setReloadKey((key) => key + 1)}
+      />
+    );
+  } else if (error) {
+    content = (
+      <Alert variant="destructive">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  } else if (projects.length === 0) {
+    content = (
+      <Empty className="border">
+        <EmptyHeader>
+          <EmptyTitle>Sin proyectos</EmptyTitle>
+          <EmptyDescription>
+            Cuando propongas un proyecto o te asignen a uno aparecerá aquí.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  } else {
+    content = (
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <TableHead>Proyecto</TableHead>
+            <TableHead>Mi vínculo</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead>Inicio</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {projects.map((project) => (
+            <TableRow
+              key={project.id}
+              className="transition-colors hover:bg-utb-blue/[0.04]"
+            >
+              <TableCell className="font-medium">
+                <Button
+                  variant="link"
+                  className="h-auto justify-start p-0 font-medium"
+                  nativeButton={false}
+                  render={
+                    <Link href={`/projects/${project.id}`}>
+                      {project.name}
+                    </Link>
+                  }
+                />
+              </TableCell>
+              <TableCell>
+                {project.myRole ? (
+                  <Badge variant="outline">
+                    {formatRole(project.myRole)}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary">Proponente</Badge>
+                )}
+              </TableCell>
+              <TableCell>
+                <Badge variant="secondary">
+                  {formatStatus(project.status)}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {formatDate(project.startDate)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Mis proyectos</CardTitle>
-        <CardDescription>
-          {loading
-            ? "Cargando proyectos..."
-            : projects.length === 0
-              ? "Aún no propones ni participas en ningún proyecto."
-              : `${projects.length} proyecto(s) propuesto(s) o asignado(s).`}
-        </CardDescription>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
 
-      <CardContent>
-        {loading ? (
-          <div className="flex flex-col gap-3">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ) : error ? (
-          error === SERVICE_UNAVAILABLE_MESSAGE ? (
-            <ServiceUnavailable
-              message={error}
-              onRetry={() => setReloadKey((key) => key + 1)}
-            />
-          ) : (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )
-        ) : projects.length === 0 ? (
-          <Empty className="border">
-            <EmptyHeader>
-              <EmptyTitle>Sin proyectos</EmptyTitle>
-              <EmptyDescription>
-                Cuando propongas un proyecto o te asignen a uno aparecerá aquí.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead>Proyecto</TableHead>
-                <TableHead>Mi vínculo</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Inicio</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {projects.map((project) => (
-                <TableRow key={project.id} className="transition-colors hover:bg-utb-blue/[0.04]">
-                  <TableCell className="font-medium">
-                    <Button
-                      variant="link"
-                      className="h-auto justify-start p-0 font-medium"
-                      nativeButton={false}
-                      render={
-                        <Link href={`/projects/${project.id}`}>
-                          {project.name}
-                        </Link>
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {project.myRole ? (
-                      <Badge variant="outline">
-                        {formatRole(project.myRole)}
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">Proponente</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {formatStatus(project.status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(project.startDate)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
+      <CardContent>{content}</CardContent>
     </Card>
   );
 }
