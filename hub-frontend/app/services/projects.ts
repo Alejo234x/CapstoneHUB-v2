@@ -13,6 +13,7 @@ import {
   UpdateProjectPayload,
 } from "./schemas";
 import { getAuthToken } from "./auth";
+import { ensureOk, readBackendMessage } from "@/lib/http";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
 
@@ -157,9 +158,7 @@ export async function updateProjectStatus(
     body: JSON.stringify({ status, description }),
   });
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "cambiar el estado del proyecto" });
 
   return (await response.json()) as ProjectDetails;
 }
@@ -181,12 +180,7 @@ async function projectUpdateRequestError(
     );
   }
 
-  return new Error(
-    await parseBackendMessage(
-      response,
-      `Backend responded with status ${response.status}`,
-    ),
-  );
+  return new Error(await readBackendMessage(response));
 }
 
 export async function updateProject(
@@ -222,9 +216,7 @@ export async function createProjectObservation(
     body: JSON.stringify({ content }),
   });
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "añadir una observación" });
 
   return (await response.json()) as ProjectObservationItem;
 }
@@ -248,9 +240,7 @@ export async function getProjectMilestones(
     cache: "no-store",
   });
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "consultar los hitos del proyecto" });
 
   return (await response.json()) as ProjectMilestoneItem[];
 }
@@ -268,9 +258,7 @@ export async function createProjectMilestone(
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "crear un hito" });
 
   return (await response.json()) as ProjectMilestoneItem;
 }
@@ -292,9 +280,7 @@ export async function updateProjectMilestone(
     },
   );
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "editar un hito" });
 
   return (await response.json()) as ProjectMilestoneItem;
 }
@@ -311,9 +297,7 @@ export async function deleteProjectMilestone(
     },
   );
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "eliminar un hito" });
 }
 
 export async function createProject(
@@ -328,9 +312,7 @@ export async function createProject(
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    throw new Error(`Backend responded with status ${res.status}, ${res.url}`);
-  }
+  await ensureOk(res, { action: "proponer un proyecto" });
 
   return (await res.json()) as ProjectDetails;
 }
@@ -387,9 +369,7 @@ export async function addProjectActorAssignment(
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    throw new Error(`Backend responded with status ${response.status}`);
-  }
+  await ensureOk(response, { action: "asignar actores al proyecto" });
 
   return (await response.json()) as {
     id: number;
@@ -670,29 +650,6 @@ export type ReportContentFileMetadata = {
   sizeBytes: number;
 };
 
-async function parseBackendMessage(
-  response: Response,
-  fallback: string,
-): Promise<string> {
-  try {
-    const body = (await response.json()) as {
-      message?: string | string[];
-    };
-
-    if (Array.isArray(body.message)) {
-      return body.message.join(" ");
-    }
-
-    if (typeof body.message === "string" && body.message.trim()) {
-      return body.message;
-    }
-  } catch {
-    // La respuesta no era JSON; se usa el mensaje genérico.
-  }
-
-  return fallback;
-}
-
 async function reportContentRequestError(
   response: Response,
   action: string,
@@ -713,12 +670,7 @@ async function reportContentRequestError(
     );
   }
 
-  const message = await parseBackendMessage(
-    response,
-    `Backend responded with status ${response.status}`,
-  );
-
-  return new Error(message);
+  return new Error(await readBackendMessage(response));
 }
 
 export async function createReportContent(
