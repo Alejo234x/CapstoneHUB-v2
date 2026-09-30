@@ -10,7 +10,7 @@ Ver también: [Arquitectura del backend](./backend_arch.md).
 
 - `ProjectStatus`: `proposed`, `under_review`, `approved`, `assigned`,
   `in_progress`, `closed`, `rejected`.
-- `UserRole`: `admin`, `evaluator`, `coordinator`, `advisor`, `student`.
+- `UserRole`: `admin`, `evaluator`, `coordinator`, `advisor`, `student`, `proposer`.
 - `ActorRole`: `advisor`, `coordinator`, `student`, `evaluator`.
 - `ProjectSource`: `external_entity`, `research`, `internal_need`,
   `social_impact`.
@@ -301,6 +301,7 @@ classDiagram
         coordinator
         advisor
         student
+        proposer
     }
 
     class ActorRole {

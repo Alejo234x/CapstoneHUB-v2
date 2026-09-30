@@ -28,6 +28,7 @@ Ver también: [Arquitectura del backend](./backend_arch.md),
 | --- | --- |
 | `/` | Inicio. |
 | `/login` | Inicio de sesión. |
+| `/register` | Registro de proponentes (auto-login). |
 | `/projects` | Lista de proyectos. |
 | `/projects/[id]` | Detalle por pestañas (general, equipo, hitos, entregas, anexos, historial). |
 | `/projects/[id]/edit` | Edición de los datos del proyecto (admin o evaluador). |
@@ -54,7 +55,7 @@ proxy `stream`, que reenvía `Range`.
 `app/services/` concentra toda la comunicación con la API:
 
 - `auth.ts` — sesión en `localStorage` (`capstonehub.auth.session`) y funciones
-  de login/usuarios.
+  de login, registro y usuarios.
 - `projects.ts` — proyectos, hitos, observaciones, anexos y contenido de las
   entregas (texto, enlaces y archivos), incluida la configuración de tipo, MIME
   permitidos y máximo de archivos, y la edición de los datos del proyecto.
@@ -76,8 +77,10 @@ advertencia y una confirmación antes de publicarlo.
 ## Autenticación
 
 `AuthProvider` (cliente) mantiene la sesión y la expone por contexto
-(`useAuth`). El login guarda usuario + token en `localStorage`; los services
-leen el token al hacer peticiones. No hay cookies ni sesión en el servidor.
+(`useAuth`). El login y el registro guardan usuario + token en `localStorage`;
+los services leen el token al hacer peticiones. No hay cookies ni sesión en el
+servidor. El registro (`POST /auth/register` vía el BFF) crea al usuario con rol
+`proposer`, lo deja autenticado igual que el login y redirige a `/submit`.
 
 ## Server vs Client Components
 
