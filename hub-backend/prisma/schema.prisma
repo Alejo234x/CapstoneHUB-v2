@@ -71,6 +71,7 @@ model User {
   roleAssignments        UserRoleAssignment[]
   projectAssignments     ProjectActorAssignment[]
   projectStatusHistories ProjectStatusHistory[]
+  projectChangeHistories ProjectChangeHistory[]
   authoredObservations   ProjectObservation[]
   uploadedAttachments    ProjectAttachment[]
   createdReports         ProjectReport[]          @relation("ReportCreatedBy")
@@ -126,6 +127,7 @@ model Project {
   attachments      ProjectAttachment[]
   reports          ProjectReport[]
   deliverables     ProjectDeliverable[]
+  changeHistory    ProjectChangeHistory[]
 
   @@index([status], map: "idx_project_status")
   @@index([startDate], map: "idx_project_start_date")
@@ -222,6 +224,23 @@ model ProjectStatusHistory {
   @@index([nextStatus], map: "idx_project_status_history_next_status")
   @@index([changedAt], map: "idx_project_status_history_changed_at")
   @@map("project_status_history")
+}
+
+model ProjectChangeHistory {
+  id            Int      @id @default(autoincrement())
+  projectId     Int      @map("project_id")
+  authorUserId  Int?     @map("author_user_id")
+  field         String   @db.VarChar(64)
+  previousValue String?  @map("previous_value") @db.Text
+  newValue      String?  @map("new_value") @db.Text
+  changedAt     DateTime @default(now()) @map("changed_at")
+
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorUser User?   @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([projectId], map: "idx_project_change_history_project_id")
+  @@index([changedAt], map: "idx_project_change_history_changed_at")
+  @@map("project_change_history")
 }
 
 model ProjectMilestones {

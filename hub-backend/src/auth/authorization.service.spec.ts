@@ -92,6 +92,33 @@ describe('AuthorizationService', () => {
     expect(findAssignment).not.toHaveBeenCalled();
   });
 
+  it('allows admins to edit project details without an assignment', () => {
+    const service = new AuthorizationService({} as never);
+
+    expect(() =>
+      service.assertCanEditProjectDetails(user([UserRole.admin])),
+    ).not.toThrow();
+  });
+
+  it('allows a global evaluator to edit project details', () => {
+    const service = new AuthorizationService({} as never);
+
+    expect(() =>
+      service.assertCanEditProjectDetails(user([UserRole.evaluator])),
+    ).not.toThrow();
+  });
+
+  it.each([UserRole.coordinator, UserRole.advisor, UserRole.student])(
+    'rejects the %s role from editing project details',
+    (role) => {
+      const service = new AuthorizationService({} as never);
+
+      expect(() => service.assertCanEditProjectDetails(user([role]))).toThrow(
+        ForbiddenException,
+      );
+    },
+  );
+
   it('allows any assigned project member to create observations', async () => {
     const findAssignment = jest.fn().mockResolvedValue({ id: 4 });
     const prisma = {

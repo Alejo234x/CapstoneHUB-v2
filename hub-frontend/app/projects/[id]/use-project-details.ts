@@ -8,6 +8,8 @@ type UseProjectDetailsResult = {
   project: ProjectDetails | null;
   loading: boolean;
   status: number | undefined;
+  /** Reemplaza el proyecto en memoria tras una edición exitosa. */
+  setProject: (project: ProjectDetails) => void;
 };
 
 /**
@@ -52,5 +54,5 @@ export function useProjectDetails(id: string): UseProjectDetailsResult {
     };
   }, [id]);
 
-  return { project, loading, status };
+  return { project, loading, status, setProject };
 }

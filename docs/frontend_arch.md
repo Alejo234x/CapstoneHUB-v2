@@ -56,12 +56,19 @@ proxy `stream`, que reenvía `Range`.
   de login/usuarios.
 - `projects.ts` — proyectos, hitos, observaciones, anexos y contenido de las
   entregas (texto, enlaces y archivos), incluida la configuración de tipo, MIME
-  permitidos y máximo de archivos.
+  permitidos y máximo de archivos, y la edición de los datos del proyecto.
 - `schemas.ts` — tipos TypeScript compartidos (`ProjectDetails`, etc.).
 - `utils.ts` — helpers de formato (estados, fechas).
 
 Cada petición autenticada lee el token de `auth.ts` y agrega
 `Authorization: Bearer <token>`.
+
+En la pestaña **General** del detalle, administradores y evaluadores ven un
+botón **Editar proyecto** que abre un formulario en línea (los mismos campos de
+la propuesta, salvo el proponente). Los cambios se envían por `PUT` y la
+pestaña **Historial** muestra, junto al historial de estados, una entrada por
+cada campo modificado con su valor anterior y nuevo. Al desmarcar «Proyecto
+privado» se muestra una advertencia y una confirmación antes de publicarlo.
 
 ## Autenticación
 

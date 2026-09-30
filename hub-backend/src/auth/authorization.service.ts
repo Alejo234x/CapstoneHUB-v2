@@ -167,6 +167,19 @@ export class AuthorizationService {
     await this.assertProjectAssignment(user, projectId, ActorRole.coordinator);
   }
 
+  /**
+   * Editar los datos del proyecto (a diferencia de gestionarlo o asignar
+   * actores) está reservado a administradores y evaluadores. Un evaluador
+   * global puede editar cualquier proyecto sin necesidad de autoasignarse.
+   */
+  assertCanEditProjectDetails(user: AuthenticatedUser): void {
+    if (user.roles.includes(UserRole.admin)) {
+      return;
+    }
+
+    this.assertRole(user, UserRole.evaluator);
+  }
+
   async assertCanAssignActors(
     user: AuthenticatedUser,
     projectId: number,

@@ -28,8 +28,33 @@ import {
   ProjectDetailResponse,
   ProjectListResponse,
   MyProjectResponse,
+  ProjectUpdateFields,
 } from './projects.service';
 import { CreateProjectActorAssignmentDTO } from './dto/create-project-actor-assignment.dto';
+import { UpdateProjectDTO } from './dto/update-project.dto';
+
+function parseProjectDate(value: string | null): Date | null {
+  if (value === null || value.trim().length === 0) {
+    return null;
+  }
+
+  const parsed = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    throw new BadRequestException(`Invalid date: ${value}`);
+  }
+
+  return parsed;
+}
+
+function normalizeOptionalText(value: string | null): string | null {
+  if (value === null) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
 
 @Controller('projects')
 export class ProjectsController {
@@ -181,26 +206,77 @@ export class ProjectsController {
   @UseGuards(AuthGuard)
   async projectUpdate(
     @Param('id') id: string,
-    @Body()
-    data: {
-      newName?: string;
-    },
+    @Body() data: UpdateProjectDTO,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<ProjectDetailResponse> {
-    const updateData: { name?: string } = {};
+    const fields: ProjectUpdateFields = {};
 
-    if (data.newName) {
-      updateData.name = data.newName;
+    if (data.name !== undefined) {
+      fields.name = data.name.trim();
     }
 
-    if (Object.keys(updateData).length === 0) {
+    if (data.description !== undefined) {
+      fields.description = data.description.trim();
+    }
+
+    if (data.context !== undefined) {
+      fields.context = data.context.trim();
+    }
+
+    if (data.location !== undefined) {
+      fields.location = normalizeOptionalText(data.location);
+    }
+
+    if (data.source !== undefined) {
+      fields.source = data.source;
+    }
+
+    if (data.startDate !== undefined) {
+      fields.startDate = parseProjectDate(data.startDate);
+    }
+
+    if (data.endDate !== undefined) {
+      fields.endDate = parseProjectDate(data.endDate);
+    }
+
+    if (data.estimatedCost !== undefined) {
+      fields.estimatedCost = data.estimatedCost;
+    }
+
+    if (data.requiresLegalization !== undefined) {
+      fields.requiresLegalization = data.requiresLegalization;
+    }
+
+    if (data.isPrivate !== undefined) {
+      fields.isPrivate = data.isPrivate;
+    }
+
+    if (data.facultyAdvisor !== undefined) {
+      fields.facultyAdvisor = normalizeOptionalText(data.facultyAdvisor);
+    }
+
+    if (data.teamRequirements !== undefined) {
+      fields.teamRequirements = normalizeOptionalText(data.teamRequirements);
+    }
+
+    if (data.expectedOutcomes !== undefined) {
+      fields.expectedOutcomes = normalizeOptionalText(data.expectedOutcomes);
+    }
+
+    if (data.deliverables !== undefined) {
+      fields.deliverables = data.deliverables
+        .map((deliverable) => deliverable.trim())
+        .filter((deliverable) => deliverable.length > 0);
+    }
+
+    if (Object.keys(fields).length === 0) {
       throw new BadRequestException('No update fields provided');
     }
 
     return this.projectService.updateProject({
       user,
-      where: { id: Number(id) },
-      data: updateData,
+      projectId: Number(id),
+      fields,
     });
   }
 

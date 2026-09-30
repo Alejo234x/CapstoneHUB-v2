@@ -10,6 +10,7 @@ import {
   ProjectSource,
   UserSummary,
   MyProject,
+  UpdateProjectPayload,
 } from "./schemas";
 import { getAuthToken } from "./auth";
 
@@ -158,6 +159,51 @@ export async function updateProjectStatus(
 
   if (!response.ok) {
     throw new Error(`Backend responded with status ${response.status}`);
+  }
+
+  return (await response.json()) as ProjectDetails;
+}
+
+async function projectUpdateRequestError(
+  response: Response,
+): Promise<Error> {
+  if (response.status === 401) {
+    return new Error("Inicia sesión para editar el proyecto.");
+  }
+
+  if (response.status === 403) {
+    return new Error("No tienes permisos para editar este proyecto.");
+  }
+
+  if (response.status === 409) {
+    return new Error(
+      "El proyecto está cerrado o rechazado y ya no se puede editar.",
+    );
+  }
+
+  return new Error(
+    await parseBackendMessage(
+      response,
+      `Backend responded with status ${response.status}`,
+    ),
+  );
+}
+
+export async function updateProject(
+  id: string,
+  payload: UpdateProjectPayload,
+): Promise<ProjectDetails> {
+  const response = await fetch(getApiUrl(`/api/projects/${id}`), {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await projectUpdateRequestError(response);
   }
 
   return (await response.json()) as ProjectDetails;

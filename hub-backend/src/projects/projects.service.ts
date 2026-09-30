@@ -56,12 +56,29 @@ const projectObservationSelect = {
   },
 } as const satisfies Prisma.ProjectObservationSelect;
 
+const projectChangeHistorySelect = {
+  id: true,
+  projectId: true,
+  field: true,
+  previousValue: true,
+  newValue: true,
+  changedAt: true,
+  authorUser: {
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+    },
+  },
+} as const satisfies Prisma.ProjectChangeHistorySelect;
+
 const projectInclude = {
   naturalProposer: true,
   observations: { select: projectObservationSelect },
   actorAssignments: { include: { user: true } },
   milestones: true,
   statusHistory: { select: projectStatusHistorySelect },
+  changeHistory: { select: projectChangeHistorySelect },
   // Los archivos de una entrega se muestran en su pestaña, no en Anexos.
   attachments: { where: { reportId: null }, select: attachmentSelect },
   reports: { select: reportSelect },
@@ -174,6 +191,19 @@ export type ProjectDetailResponse = ProjectListResponse & {
     previousStatus: ProjectStatus | null;
     nextStatus: ProjectStatus;
     description: string | null;
+    changedAt: Date;
+    author: {
+      id: number;
+      fullName: string;
+      email: string;
+    } | null;
+  }[];
+  changeHistory: {
+    id: number;
+    projectId: number;
+    field: string;
+    previousValue: string | null;
+    newValue: string | null;
     changedAt: Date;
     author: {
       id: number;
@@ -373,6 +403,20 @@ function mapProjectDetailResponse(
             author: mapAuthor(entry.authorUser),
           }))
       : [],
+    changeHistory: canViewSensitiveData
+      ? project.changeHistory
+          .slice()
+          .sort(byDateThenId((entry) => entry.changedAt.getTime(), 'desc'))
+          .map((entry) => ({
+            id: entry.id,
+            projectId: entry.projectId,
+            field: entry.field,
+            previousValue: entry.previousValue,
+            newValue: entry.newValue,
+            changedAt: entry.changedAt,
+            author: mapAuthor(entry.authorUser),
+          }))
+      : [],
     attachments: canViewSensitiveData
       ? project.attachments
           .slice()
@@ -411,6 +455,127 @@ function rethrowProjectCreateError(error: unknown): never {
   }
 
   throw error;
+}
+
+/** Campos editables del proyecto, ya normalizados por el controlador. */
+export type ProjectUpdateFields = {
+  name?: string;
+  description?: string;
+  context?: string;
+  location?: string | null;
+  source?: ProjectSource;
+  startDate?: Date | null;
+  endDate?: Date | null;
+  estimatedCost?: Prisma.Decimal | number | string | null;
+  requiresLegalization?: boolean;
+  isPrivate?: boolean;
+  facultyAdvisor?: string | null;
+  teamRequirements?: string | null;
+  expectedOutcomes?: string | null;
+  deliverables?: string[];
+};
+
+/** Valores actuales o resultantes de los campos auditables. */
+type ProjectEditableValues = {
+  name: string;
+  description: string;
+  context: string;
+  location: string | null;
+  source: ProjectSource;
+  startDate: Date | null;
+  endDate: Date | null;
+  estimatedCost: Prisma.Decimal | number | string | null;
+  requiresLegalization: boolean;
+  isPrivate: boolean;
+  facultyAdvisor: string | null;
+  teamRequirements: string | null;
+  expectedOutcomes: string | null;
+  deliverables: string[];
+};
+
+/** Campos auditables, en el orden en que se registran en el historial. */
+const EDITABLE_PROJECT_FIELDS = [
+  'name',
+  'description',
+  'context',
+  'location',
+  'source',
+  'startDate',
+  'endDate',
+  'estimatedCost',
+  'requiresLegalization',
+  'isPrivate',
+  'facultyAdvisor',
+  'teamRequirements',
+  'expectedOutcomes',
+  'deliverables',
+] as const;
+
+type EditableProjectField = (typeof EDITABLE_PROJECT_FIELDS)[number];
+
+export type ProjectChangeRow = {
+  field: string;
+  previousValue: string | null;
+  newValue: string | null;
+};
+
+function serializeProjectChangeValue(
+  field: EditableProjectField,
+  value: unknown,
+): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (field === 'deliverables') {
+    const list = Array.isArray(value) ? value : [];
+    return JSON.stringify(
+      list
+        .map((item) => (typeof item === 'string' ? item.trim() : ''))
+        .filter(Boolean),
+    );
+  }
+
+  if (field === 'estimatedCost') {
+    return new Prisma.Decimal(value as string | number).toString();
+  }
+
+  if (field === 'startDate' || field === 'endDate') {
+    return new Date(value as string).toISOString();
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false';
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return String(value);
+  }
+
+  return null;
+}
+
+/** Compara los valores previos y nuevos y devuelve una fila por campo cambiado. */
+export function diffProjectUpdate(
+  previous: ProjectEditableValues,
+  next: ProjectEditableValues,
+): ProjectChangeRow[] {
+  const rows: ProjectChangeRow[] = [];
+
+  for (const field of EDITABLE_PROJECT_FIELDS) {
+    const previousValue = serializeProjectChangeValue(field, previous[field]);
+    const newValue = serializeProjectChangeValue(field, next[field]);
+
+    if (previousValue !== newValue) {
+      rows.push({ field, previousValue, newValue });
+    }
+  }
+
+  return rows;
 }
 
 @Injectable()
@@ -576,21 +741,181 @@ export class ProjectsService {
     });
   }
 
+  /**
+   * Edita los datos del proyecto y registra una fila de historial por cada
+   * campo que cambió. Solo administradores y evaluadores; un proyecto cerrado
+   * o rechazado es de solo lectura.
+   */
   async updateProject(params: {
     user: AuthenticatedUser;
-    where: Prisma.ProjectWhereUniqueInput;
-    data: { name?: string };
+    projectId: number;
+    fields: ProjectUpdateFields;
   }): Promise<ProjectDetailResponse> {
-    const { user, where, data } = params;
-    const projectId = this.projectIdFromWhere(where);
-    await this.authorization.assertCanManageProject(user, projectId);
-    const project = await this.prisma.project.update({
-      data,
-      where,
-      include: projectInclude,
+    const { user, projectId, fields } = params;
+
+    const current = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        status: true,
+        name: true,
+        description: true,
+        context: true,
+        location: true,
+        source: true,
+        startDate: true,
+        endDate: true,
+        estimatedCost: true,
+        requiresLegalization: true,
+        isPrivate: true,
+        facultyAdvisor: true,
+        teamRequirements: true,
+        expectedOutcomes: true,
+        deliverables: {
+          select: { description: true },
+          orderBy: { id: 'asc' },
+        },
+      },
+    });
+
+    if (!current) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+
+    this.authorization.assertCanEditProjectDetails(user);
+
+    if (
+      current.status === ProjectStatus.closed ||
+      current.status === ProjectStatus.rejected
+    ) {
+      throw new ConflictException(
+        'Projects cannot be edited once closed or rejected',
+      );
+    }
+
+    const currentValues: ProjectEditableValues = {
+      name: current.name,
+      description: current.description,
+      context: current.context,
+      location: current.location,
+      source: current.source,
+      startDate: current.startDate,
+      endDate: current.endDate,
+      estimatedCost: current.estimatedCost,
+      requiresLegalization: current.requiresLegalization,
+      isPrivate: current.isPrivate,
+      facultyAdvisor: current.facultyAdvisor,
+      teamRequirements: current.teamRequirements,
+      expectedOutcomes: current.expectedOutcomes,
+      deliverables: current.deliverables.map(
+        (deliverable) => deliverable.description,
+      ),
+    };
+
+    const changeRows = diffProjectUpdate(
+      currentValues,
+      this.mergeUpdateFields(currentValues, fields),
+    );
+    const data = this.buildProjectUpdateData(fields);
+
+    const project = await this.prisma.$transaction(async (transaction) => {
+      const updated = await transaction.project.update({
+        where: { id: projectId },
+        data,
+        include: projectInclude,
+      });
+
+      if (changeRows.length > 0) {
+        await transaction.projectChangeHistory.createMany({
+          data: changeRows.map((row) => ({
+            projectId,
+            authorUserId: user.id,
+            field: row.field,
+            previousValue: row.previousValue,
+            newValue: row.newValue,
+          })),
+        });
+      }
+
+      return updated;
     });
 
     return mapProjectDetailResponse(project, true);
+  }
+
+  /** Aplica los campos enviados sobre los valores actuales del proyecto. */
+  private mergeUpdateFields(
+    current: ProjectEditableValues,
+    fields: ProjectUpdateFields,
+  ): ProjectEditableValues {
+    return {
+      name: fields.name ?? current.name,
+      description: fields.description ?? current.description,
+      context: fields.context ?? current.context,
+      location:
+        fields.location !== undefined ? fields.location : current.location,
+      source: fields.source ?? current.source,
+      startDate:
+        fields.startDate !== undefined ? fields.startDate : current.startDate,
+      endDate: fields.endDate !== undefined ? fields.endDate : current.endDate,
+      estimatedCost:
+        fields.estimatedCost !== undefined
+          ? fields.estimatedCost
+          : current.estimatedCost,
+      requiresLegalization:
+        fields.requiresLegalization ?? current.requiresLegalization,
+      isPrivate: fields.isPrivate ?? current.isPrivate,
+      facultyAdvisor:
+        fields.facultyAdvisor !== undefined
+          ? fields.facultyAdvisor
+          : current.facultyAdvisor,
+      teamRequirements:
+        fields.teamRequirements !== undefined
+          ? fields.teamRequirements
+          : current.teamRequirements,
+      expectedOutcomes:
+        fields.expectedOutcomes !== undefined
+          ? fields.expectedOutcomes
+          : current.expectedOutcomes,
+      deliverables:
+        fields.deliverables !== undefined
+          ? fields.deliverables
+          : current.deliverables,
+    };
+  }
+
+  private buildProjectUpdateData(
+    fields: ProjectUpdateFields,
+  ): Prisma.ProjectUpdateInput {
+    const data: Prisma.ProjectUpdateInput = {};
+
+    if (fields.name !== undefined) data.name = fields.name;
+    if (fields.description !== undefined) data.description = fields.description;
+    if (fields.context !== undefined) data.context = fields.context;
+    if (fields.location !== undefined) data.location = fields.location;
+    if (fields.source !== undefined) data.source = fields.source;
+    if (fields.startDate !== undefined) data.startDate = fields.startDate;
+    if (fields.endDate !== undefined) data.endDate = fields.endDate;
+    if (fields.estimatedCost !== undefined)
+      data.estimatedCost = fields.estimatedCost;
+    if (fields.requiresLegalization !== undefined)
+      data.requiresLegalization = fields.requiresLegalization;
+    if (fields.isPrivate !== undefined) data.isPrivate = fields.isPrivate;
+    if (fields.facultyAdvisor !== undefined)
+      data.facultyAdvisor = fields.facultyAdvisor;
+    if (fields.teamRequirements !== undefined)
+      data.teamRequirements = fields.teamRequirements;
+    if (fields.expectedOutcomes !== undefined)
+      data.expectedOutcomes = fields.expectedOutcomes;
+
+    if (fields.deliverables !== undefined) {
+      data.deliverables = {
+        deleteMany: {},
+        create: fields.deliverables.map((description) => ({ description })),
+      };
+    }
+
+    return data;
   }
 
   async transitionProjectStatus(params: {

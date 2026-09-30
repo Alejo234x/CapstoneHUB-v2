@@ -89,6 +89,14 @@ Bitácora de cambios de estado: `previousStatus`, `nextStatus`, `description`
 opcional y autor. Se escribe dentro de la misma transacción que la
 actualización de estado.
 
+### ProjectChangeHistory
+
+Bitácora de ediciones de los datos del proyecto: una fila por cada campo
+modificado, con `field` (por ejemplo `name`, `isPrivate` o `deliverables`),
+`previousValue`/`newValue` ya serializados como texto y el autor. Se escribe
+dentro de la misma transacción que la actualización del proyecto; los cambios de
+estado se siguen registrando en `ProjectStatusHistory`.
+
 ### ProjectMilestones
 
 Entregables programados con `title`, `description` opcional, `dueDate` y un
@@ -213,6 +221,16 @@ classDiagram
         +DateTime changedAt
     }
 
+    class ProjectChangeHistory {
+        +Int id
+        +Int projectId
+        +Int authorUserId
+        +String field
+        +String previousValue
+        +String newValue
+        +DateTime changedAt
+    }
+
     class ProjectMilestones {
         +Int id
         +Int projectId
@@ -314,6 +332,7 @@ classDiagram
     User "1" --> "0..*" ProjectActorAssignment : projectAssignments
     User "0..1" --> "0..*" ProjectObservation : authoredObservations
     User "0..1" --> "0..*" ProjectStatusHistory : projectStatusHistories
+    User "0..1" --> "0..*" ProjectChangeHistory : projectChangeHistories
     User "0..1" --> "0..*" ProjectAttachment : uploadedAttachments
     User "0..1" --> "0..*" ProjectReport : createdReports
     User "0..1" --> "0..*" ProjectReportContent : reportContents
@@ -325,6 +344,7 @@ classDiagram
     Project "1" *-- "0..*" ProjectActorAssignment : actorAssignments
     Project "1" *-- "0..*" ProjectObservation : observations
     Project "1" *-- "0..*" ProjectStatusHistory : statusHistory
+    Project "1" *-- "0..*" ProjectChangeHistory : changeHistory
     Project "1" *-- "0..*" ProjectMilestones : milestones
     Project "1" *-- "0..*" ProjectAttachment : attachments
     Project "1" *-- "0..*" ProjectReport : reports
