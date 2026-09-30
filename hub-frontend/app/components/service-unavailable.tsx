@@ -20,7 +20,7 @@ export default function ServiceUnavailable({
   message,
   onRetry,
   className,
-}: ServiceUnavailableProps) {
+}: Readonly<ServiceUnavailableProps>) {
   return (
     <Alert variant="destructive" className={cn(className)}>
       <AlertTitle>Servicio no disponible</AlertTitle>
