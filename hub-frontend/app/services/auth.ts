@@ -65,11 +65,11 @@ export function getAuthToken(): string | null {
   return loadAuthSession()?.accessToken ?? null;
 }
 
-export async function loginUser(payload: {
-  email: string;
-  password: string;
-}): Promise<AuthSession> {
-  const response = await fetch("/api/auth/login", {
+async function requestAuthSession(
+  path: string,
+  payload: unknown,
+): Promise<AuthSession> {
+  const response = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -88,28 +88,19 @@ export async function loginUser(payload: {
   return (await response.json()) as AuthSession;
 }
 
+export async function loginUser(payload: {
+  email: string;
+  password: string;
+}): Promise<AuthSession> {
+  return requestAuthSession("/api/auth/login", payload);
+}
+
 export async function registerUser(payload: {
   fullName: string;
   email: string;
   password: string;
 }): Promise<AuthSession> {
-  const response = await fetch("/api/auth/register", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const errorBody = (await response.json().catch(() => null)) as
-      | { message?: string }
-      | null;
-
-    throw new Error(
-      errorBody?.message ?? `Backend responded with status ${response.status}`,
-    );
-  }
-
-  return (await response.json()) as AuthSession;
+  return requestAuthSession("/api/auth/register", payload);
 }
 
 export async function getUsers(): Promise<AuthUser[]> {
