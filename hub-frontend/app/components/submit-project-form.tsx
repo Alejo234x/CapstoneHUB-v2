@@ -1,20 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 
 import { createProject } from "../services/projects";
 import { type ProjectSource } from "../services/schemas";
 import { useAuth } from "./auth-provider";
-
+import AccessNotice from "./access-notice";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -403,21 +399,10 @@ export default function SubmitProjectForm() {
 
   if (!isAuthenticated) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Acceso requerido</CardTitle>
-          <CardDescription>
-            Inicia sesión para proponer nuevos proyectos.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          <Button
-            nativeButton={false}
-            render={<Link href="/login">Iniciar sesión</Link>}
-          />
-        </CardContent>
-      </Card>
+      <AccessNotice
+        title="Acceso requerido"
+        message="Inicia sesión para proponer nuevos proyectos."
+      />
     );
   }
 

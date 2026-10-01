@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   confirmReportContentFile,
@@ -27,6 +26,7 @@ import {
   ProjectReportStatus,
 } from "../../services/schemas";
 import { useAuth } from "../../components/auth-provider";
+import AccessNotice from "../../components/access-notice";
 import {
   REPORT_FILE_MIME_OPTIONS,
   REPORT_TEXT_MAX_LENGTH,
@@ -1210,17 +1210,10 @@ function ReportsAccessNotice({
 
   if (!isAuthenticated) {
     return (
-      <Alert>
-        <AlertDescription>
-          Inicia sesión para enviar entregas.
-          <div className="mt-3">
-            <Button
-              nativeButton={false}
-              render={<Link href="/login">Iniciar sesión</Link>}
-            />
-          </div>
-        </AlertDescription>
-      </Alert>
+      <AccessNotice
+        variant="alert"
+        message="Inicia sesión para enviar entregas."
+      />
     );
   }
 

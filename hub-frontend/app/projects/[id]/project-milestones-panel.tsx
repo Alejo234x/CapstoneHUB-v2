@@ -9,8 +9,8 @@ import {
 } from "../../services/projects";
 import { ProjectMilestoneItem } from "../../services/schemas";
 import { formatDate, toDateTimeLocal } from "../../services/utils";
-import Link from "next/link";
 import { useAuth } from "../../components/auth-provider";
+import AccessNotice from "../../components/access-notice";
 import FormActions from "@/app/components/form-actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -416,17 +416,11 @@ export default function ProjectMilestonesPanel({
             <AlertDescription>Cargando acceso...</AlertDescription>
           </Alert>
         ) : !isAuthenticated ? (
-          <Alert className="mt-6">
-            <AlertDescription>
-              Inicia sesión para administrar los hitos.
-              <div className="mt-3">
-                <Button
-                  nativeButton={false}
-                  render={<Link href="/login">Iniciar sesión</Link>}
-                />
-              </div>
-            </AlertDescription>
-          </Alert>
+          <AccessNotice
+            variant="alert"
+            className="mt-6"
+            message="Inicia sesión para administrar los hitos."
+          />
         ) : null}
       </CardContent>
 

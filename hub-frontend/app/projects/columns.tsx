@@ -10,6 +10,18 @@ import { type ProjectTableFeatures } from "./projects-table-features";
 
 const columnHelper = createColumnHelper<ProjectTableFeatures, ProjectItem>();
 
+function sortIndicator(sorted: false | "asc" | "desc"): string {
+  if (sorted === "asc") {
+    return "↑";
+  }
+
+  if (sorted === "desc") {
+    return "↓";
+  }
+
+  return "↕";
+}
+
 function SortableHeader({
   label,
   column,
@@ -29,9 +41,7 @@ function SortableHeader({
       className="-ml-3 h-8 px-3"
     >
       {label}
-      <span className="ml-2 text-xs">
-        {sorted === "asc" ? "↑" : sorted === "desc" ? "↓" : "↕"}
-      </span>
+      <span className="ml-2 text-xs">{sortIndicator(sorted)}</span>
     </Button>
   );
 }

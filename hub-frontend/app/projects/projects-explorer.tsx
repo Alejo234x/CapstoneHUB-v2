@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { getProjects } from "../services/projects";
 import { ProjectItem } from "../services/schemas";
 import ProjectsTable from "./projects-table";
 import ServiceUnavailable from "../components/service-unavailable";
+import AccessNotice from "../components/access-notice";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Empty,
   EmptyDescription,
@@ -81,22 +79,11 @@ export default function ProjectsExplorer() {
 
   if (status === 401) {
     return (
-      <Card className="rounded-2xl">
-        <CardContent className="flex flex-col items-start gap-4">
-          <div>
-            <p className="font-semibold">Inicia sesión para ver los proyectos</p>
-            <p className="text-sm text-muted-foreground">
-              Solo los proyectos finalizados y públicos se pueden consultar sin
-              cuenta. Inicia sesión para ver tus proyectos propuestos y
-              asignados.
-            </p>
-          </div>
-          <Button
-            nativeButton={false}
-            render={<Link href="/login">Iniciar sesión</Link>}
-          />
-        </CardContent>
-      </Card>
+      <AccessNotice
+        className="rounded-2xl"
+        title="Inicia sesión para ver los proyectos"
+        message="Solo los proyectos finalizados y públicos se pueden consultar sin cuenta. Inicia sesión para ver tus proyectos propuestos y asignados."
+      />
     );
   }
 

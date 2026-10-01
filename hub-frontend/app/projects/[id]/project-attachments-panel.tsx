@@ -11,6 +11,7 @@ import {
 } from "../../services/projects";
 import { ProjectAttachmentItem } from "../../services/schemas";
 import { useAuth } from "../../components/auth-provider";
+import AccessNotice from "../../components/access-notice";
 import {
   ATTACHMENT_ACCEPT,
   formatBytes,
@@ -126,17 +127,10 @@ function AttachmentUploadCard({
 
     if (!isAuthenticated) {
       return (
-        <Alert>
-          <AlertDescription>
-            <div className="flex flex-wrap items-center gap-3">
-              Inicia sesión para consultar y subir anexos.
-              <Button
-                nativeButton={false}
-                render={<Link href="/login">Iniciar sesión</Link>}
-              />
-            </div>
-          </AlertDescription>
-        </Alert>
+        <AccessNotice
+          variant="alert"
+          message="Inicia sesión para consultar y subir anexos."
+        />
       );
     }
 
