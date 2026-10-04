@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { getProjects } from "../services/projects";
 import { ProjectItem } from "../services/schemas";
 import ProjectsTable from "./projects-table";
@@ -15,48 +14,19 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isServiceUnavailableStatus } from "@/lib/http";
+import { useApiResource } from "@/lib/use-api-resource";
 
 export default function ProjectsExplorer() {
-  const [projects, setProjects] = useState<ProjectItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<number | undefined>(undefined);
-  const [reloadKey, setReloadKey] = useState(0);
+  const {
+    data: projectsResult,
+    loading,
+    error: loadError,
+    reload,
+  } = useApiResource(() => getProjects());
 
-  useEffect(() => {
-    let active = true;
-
-    async function loadProjects() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const {
-          projects: nextProjects,
-          error: nextError,
-          status: nextStatus,
-        } = await getProjects();
-
-        if (!active) {
-          return;
-        }
-
-        setProjects(nextProjects);
-        setError(nextError ?? null);
-        setStatus(nextStatus);
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadProjects();
-
-    return () => {
-      active = false;
-    };
-  }, [reloadKey]);
+  const projects: ProjectItem[] = projectsResult?.projects ?? [];
+  const error = projectsResult?.error ?? loadError ?? null;
+  const status = projectsResult?.status;
 
   if (loading) {
     return (
@@ -72,7 +42,7 @@ export default function ProjectsExplorer() {
       <ServiceUnavailable
         className="mb-6"
         message={error}
-        onRetry={() => setReloadKey((key) => key + 1)}
+        onRetry={reload}
       />
     );
   }

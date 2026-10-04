@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import Link from "next/link";
 import { getMyProjects } from "../services/projects";
 import { MyProject } from "../services/schemas";
@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SERVICE_UNAVAILABLE_MESSAGE } from "@/lib/http";
+import { useApiResource } from "@/lib/use-api-resource";
 
 function formatDate(value: string | null): string {
   if (!value) {
@@ -44,41 +45,15 @@ function formatDate(value: string | null): string {
 }
 
 export default function AssignedProjects() {
-  const [projects, setProjects] = useState<MyProject[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
+  const {
+    data: projectsResult,
+    loading,
+    error: loadError,
+    reload,
+  } = useApiResource(() => getMyProjects());
 
-  useEffect(() => {
-    let active = true;
-
-    async function loadProjects() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const { projects: nextProjects, error: nextError } =
-          await getMyProjects();
-
-        if (!active) {
-          return;
-        }
-
-        setProjects(nextProjects);
-        setError(nextError ?? null);
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadProjects();
-
-    return () => {
-      active = false;
-    };
-  }, [reloadKey]);
+  const projects: MyProject[] = projectsResult?.projects ?? [];
+  const error = projectsResult?.error ?? loadError ?? null;
 
   let description: string;
 
@@ -104,7 +79,7 @@ export default function AssignedProjects() {
     content = (
       <ServiceUnavailable
         message={error}
-        onRetry={() => setReloadKey((key) => key + 1)}
+        onRetry={reload}
       />
     );
   } else if (error) {
