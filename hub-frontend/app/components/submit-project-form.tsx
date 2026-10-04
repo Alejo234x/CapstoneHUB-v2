@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type ChangeEvent, type FormEvent } from "react";
+
 import { createProject } from "../services/projects";
 import { type ProjectSource } from "../services/schemas";
 import { useAuth } from "./auth-provider";
@@ -48,6 +49,8 @@ import { RiAddLine, RiDeleteBinLine } from "@remixicon/react";
 const MAX_NAME_LENGTH = 100;
 const MAX_TEXT_LENGTH = 250;
 
+const emailPattern = /^[^\s@]+@[^.\s@]+(?:\.[^.\s@]+)+$/;
+
 const projectSources: ReadonlyArray<{
   value: ProjectSource;
   label: string;
@@ -76,6 +79,11 @@ const steps = [
   },
 ] as const;
 
+type DeliverableFormItem = {
+  id: string;
+  value: string;
+};
+
 type FormState = {
   name: string;
   source: ProjectSource;
@@ -88,10 +96,17 @@ type FormState = {
   facultyAdvisor: string;
   teamRequirements: string;
   expectedOutcomes: string;
-  deliverables: string[];
+  deliverables: DeliverableFormItem[];
   requiresLegalization: boolean;
   isPrivate: boolean;
 };
+
+function createDeliverable(): DeliverableFormItem {
+  return {
+    id: crypto.randomUUID(),
+    value: "",
+  };
+}
 
 const initialForm: FormState = {
   name: "",
@@ -105,12 +120,14 @@ const initialForm: FormState = {
   facultyAdvisor: "",
   teamRequirements: "",
   expectedOutcomes: "",
-  deliverables: [""],
+  deliverables: [createDeliverable()],
   requiresLegalization: false,
   isPrivate: true,
 };
 
 type Status = "idle" | "saving" | "success" | "error";
+
+type StepValidator = (form: FormState) => string | null;
 
 function CharacterCounter({
   value,
@@ -125,6 +142,63 @@ function CharacterCounter({
     </p>
   );
 }
+
+function validateStepOne(form: FormState): string | null {
+  if (!form.namep.trim()) {
+    return "Ingresa el nombre del responsable.";
+  }
+
+  if (!form.correo.trim()) {
+    return "Ingresa el correo electrónico.";
+  }
+
+  if (!emailPattern.test(form.correo.trim())) {
+    return "Ingresa un correo electrónico válido.";
+  }
+
+  if (
+    form.source === "external_entity" &&
+    !form.sourceDetails.trim()
+  ) {
+    return "Describe la entidad externa de la que proviene el proyecto.";
+  }
+
+  return null;
+}
+
+function validateStepTwo(form: FormState): string | null {
+  if (!form.name.trim()) {
+    return "Ingresa el nombre del proyecto.";
+  }
+
+  if (!form.description.trim()) {
+    return "Ingresa la descripción del proyecto.";
+  }
+
+  if (!form.context.trim()) {
+    return "Ingresa la justificación del proyecto.";
+  }
+
+  return null;
+}
+
+function validateStepThree(form: FormState): string | null {
+  if (form.hasFacultyAdvisor && !form.facultyAdvisor.trim()) {
+    return "Ingresa el nombre o contacto UTB del asesor.";
+  }
+
+  if (!form.teamRequirements.trim()) {
+    return "Describe el tipo de estudiantes o perfiles requeridos.";
+  }
+
+  return null;
+}
+
+const stepValidators: Record<number, StepValidator> = {
+  1: validateStepOne,
+  2: validateStepTwo,
+  3: validateStepThree,
+};
 
 export default function SubmitProjectForm() {
   const { isAuthenticated, ready } = useAuth();
@@ -176,16 +250,15 @@ export default function SubmitProjectForm() {
     setStepError(null);
   }
 
-  function handleDeliverableChange(index: number, value: string) {
-    setForm((prev) => {
-      const deliverables = [...prev.deliverables];
-      deliverables[index] = value;
-
-      return {
-        ...prev,
-        deliverables,
-      };
-    });
+  function handleDeliverableChange(id: string, value: string) {
+    setForm((prev) => ({
+      ...prev,
+      deliverables: prev.deliverables.map((deliverable) =>
+        deliverable.id === id
+          ? { ...deliverable, value }
+          : deliverable,
+      ),
+    }));
 
     setStepError(null);
   }
@@ -193,19 +266,20 @@ export default function SubmitProjectForm() {
   function addDeliverable() {
     setForm((prev) => ({
       ...prev,
-      deliverables: [...prev.deliverables, ""],
+      deliverables: [...prev.deliverables, createDeliverable()],
     }));
   }
 
-  function removeDeliverable(index: number) {
+  function removeDeliverable(id: string) {
     setForm((prev) => {
       const deliverables = prev.deliverables.filter(
-        (_, itemIndex) => itemIndex !== index,
+        (deliverable) => deliverable.id !== id,
       );
 
       return {
         ...prev,
-        deliverables: deliverables.length > 0 ? deliverables : [""],
+        deliverables:
+          deliverables.length > 0 ? deliverables : [createDeliverable()],
       };
     });
   }
@@ -220,66 +294,12 @@ export default function SubmitProjectForm() {
   function validateCurrentStep(): boolean {
     setStepError(null);
 
-    if (currentStep === 1) {
-      if (!form.namep.trim()) {
-        setStepError("Ingresa el nombre del responsable.");
-        return false;
-      }
+    const validator = stepValidators[currentStep];
+    const validationError = validator ? validator(form) : null;
 
-      if (!form.correo.trim()) {
-        setStepError("Ingresa el correo electrónico.");
-        return false;
-      }
-
-      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-      if (!emailPattern.test(form.correo.trim())) {
-        setStepError("Ingresa un correo electrónico válido.");
-        return false;
-      }
-
-      if (
-        form.source === "external_entity" &&
-        !form.sourceDetails.trim()
-      ) {
-        setStepError(
-          "Describe la entidad externa de la que proviene el proyecto.",
-        );
-        return false;
-      }
-    }
-
-    if (currentStep === 2) {
-      if (!form.name.trim()) {
-        setStepError("Ingresa el nombre del proyecto.");
-        return false;
-      }
-
-      if (!form.description.trim()) {
-        setStepError("Ingresa la descripción del proyecto.");
-        return false;
-      }
-
-      if (!form.context.trim()) {
-        setStepError("Ingresa la justificación del proyecto.");
-        return false;
-      }
-    }
-
-    if (currentStep === 3) {
-      if (form.hasFacultyAdvisor && !form.facultyAdvisor.trim()) {
-        setStepError(
-          "Ingresa el nombre o contacto UTB del asesor.",
-        );
-        return false;
-      }
-
-      if (!form.teamRequirements.trim()) {
-        setStepError(
-          "Describe el tipo de estudiantes o perfiles requeridos.",
-        );
-        return false;
-      }
+    if (validationError) {
+      setStepError(validationError);
+      return false;
     }
 
     return true;
@@ -351,7 +371,7 @@ export default function SubmitProjectForm() {
         teamRequirements: form.teamRequirements.trim(),
         expectedOutcomes: form.expectedOutcomes.trim() || undefined,
         deliverables: form.deliverables
-          .map((deliverable) => deliverable.trim())
+          .map((deliverable) => deliverable.value.trim())
           .filter(Boolean),
         submissionConsentAt,
       });
@@ -432,7 +452,10 @@ export default function SubmitProjectForm() {
             <p className="text-sm leading-6">
               Los proyectos propuestos mediante esta plataforma se
               ejecutan durante{" "}
-              <strong>2 semestres académicos, aproximadamente 1 año</strong>.
+              <strong>
+                2 semestres académicos, aproximadamente 1 año
+              </strong>
+              .
             </p>
 
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -457,6 +480,11 @@ export default function SubmitProjectForm() {
               {steps.map((step) => {
                 const isActive = currentStep === step.number;
                 const isCompleted = currentStep > step.number;
+                const stepClassName = isActive
+                  ? "border-primary bg-primary/10"
+                  : isCompleted
+                    ? "border-primary/40 bg-primary/5"
+                    : "border-border bg-muted/30";
 
                 return (
                   <button
@@ -464,13 +492,7 @@ export default function SubmitProjectForm() {
                     type="button"
                     onClick={() => goToStep(step.number)}
                     disabled={step.number > currentStep + 1}
-                    className={`rounded-lg border p-3 text-left transition-colors ${
-                      isActive
-                        ? "border-primary bg-primary/10"
-                        : isCompleted
-                          ? "border-primary/40 bg-primary/5"
-                          : "border-border bg-muted/30"
-                    } disabled:cursor-default disabled:opacity-70`}
+                    className={`rounded-lg border p-3 text-left transition-colors ${stepClassName} disabled:cursor-default disabled:opacity-70`}
                   >
                     <div className="flex items-center gap-2">
                       <span
@@ -509,7 +531,9 @@ export default function SubmitProjectForm() {
           {/* PASO 1 */}
           {currentStep === 1 && (
             <FieldSet>
-              <FieldLegend>Información del proponente y origen</FieldLegend>
+              <FieldLegend>
+                Información del proponente y origen
+              </FieldLegend>
 
               <Field>
                 <FieldLabel htmlFor="namep">
@@ -575,7 +599,10 @@ export default function SubmitProjectForm() {
 
                   <SelectContent>
                     {projectSources.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                      >
                         {option.label}
                       </SelectItem>
                     ))}
@@ -612,7 +639,9 @@ export default function SubmitProjectForm() {
           {/* PASO 2 */}
           {currentStep === 2 && (
             <FieldSet>
-              <FieldLegend>Descripción y propósito del proyecto</FieldLegend>
+              <FieldLegend>
+                Descripción y propósito del proyecto
+              </FieldLegend>
 
               <Field>
                 <FieldLabel htmlFor="name">
@@ -679,13 +708,14 @@ export default function SubmitProjectForm() {
               </Field>
 
               <div className="rounded-lg border bg-muted/40 p-4">
-                <p className="font-medium">
-                  Duración estimada
-                </p>
+                <p className="font-medium">Duración estimada</p>
 
                 <p className="mt-1 text-sm text-muted-foreground">
                   Los proyectos se ejecutan durante{" "}
-                  <strong>2 semestres académicos (aproximadamente 1 año)</strong>.
+                  <strong>
+                    2 semestres académicos (aproximadamente 1 año)
+                  </strong>
+                  .
                 </p>
               </div>
             </FieldSet>
@@ -694,7 +724,9 @@ export default function SubmitProjectForm() {
           {/* PASO 3 */}
           {currentStep === 3 && (
             <FieldSet>
-              <FieldLegend>Equipo, resultados y condiciones</FieldLegend>
+              <FieldLegend>
+                Equipo, resultados y condiciones
+              </FieldLegend>
 
               <Field>
                 <FieldLabel>
@@ -786,14 +818,14 @@ export default function SubmitProjectForm() {
                 <div className="flex flex-col gap-2">
                   {form.deliverables.map((deliverable, index) => (
                     <div
-                      key={`deliverable-${index}`}
+                      key={deliverable.id}
                       className="flex items-center gap-2"
                     >
                       <Input
-                        value={deliverable}
+                        value={deliverable.value}
                         onChange={(event) =>
                           handleDeliverableChange(
-                            index,
+                            deliverable.id,
                             event.target.value,
                           )
                         }
@@ -806,7 +838,7 @@ export default function SubmitProjectForm() {
                         variant="ghost"
                         size="icon"
                         onClick={() =>
-                          removeDeliverable(index)
+                          removeDeliverable(deliverable.id)
                         }
                         aria-label="Eliminar entregable"
                       >
@@ -907,9 +939,7 @@ export default function SubmitProjectForm() {
 
           {stepError && (
             <Alert variant="destructive">
-              <AlertDescription>
-                {stepError}
-              </AlertDescription>
+              <AlertDescription>{stepError}</AlertDescription>
             </Alert>
           )}
 
@@ -926,10 +956,7 @@ export default function SubmitProjectForm() {
             </Button>
 
             {currentStep < steps.length ? (
-              <Button
-                type="button"
-                onClick={goToNextStep}
-              >
+              <Button type="button" onClick={goToNextStep}>
                 Siguiente
               </Button>
             ) : (
