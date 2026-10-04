@@ -53,11 +53,13 @@ export type CreateProjectPayload = {
   requiresLegalization?: boolean;
   isPrivate?: boolean;
   source?: ProjectSource;
+  sourceDetails?: string;
   ncedua?: string;
   facultyAdvisor?: string;
   teamRequirements?: string;
   expectedOutcomes?: string;
   deliverables?: string[];
+  submissionConsentAt: string;
 };
 
 export async function getProjects(): Promise<{

@@ -77,8 +77,6 @@ export class ProjectsController {
     const project = await this.projectService.project({ id: Number(id) }, user);
 
     if (!project) {
-      // El proyecto no existe o el espectador no puede verlo. Respondemos 404
-      // en ambos casos para no revelar la existencia de proyectos privados.
       throw new NotFoundException(`Project ${id} not found`);
     }
 
@@ -111,9 +109,11 @@ export class ProjectsController {
       requiresLegalization?: boolean;
       isPrivate?: boolean;
       source?: ProjectSource;
+      sourceDetails?: string;
       facultyAdvisor?: string;
       teamRequirements?: string;
       expectedOutcomes?: string;
+      submissionConsentAt?: string;
       deliverables?: string[];
     },
   ): Promise<ProjectDetailResponse> {
@@ -130,10 +130,12 @@ export class ProjectsController {
       requiresLegalization,
       isPrivate,
       source,
+      sourceDetails,
       facultyAdvisor,
       teamRequirements,
       expectedOutcomes,
       deliverables,
+      submissionConsentAt,
     } = projectData;
 
     const parsedStartDate = startDate
@@ -142,6 +144,22 @@ export class ProjectsController {
 
     if (parsedStartDate && Number.isNaN(parsedStartDate.getTime())) {
       throw new BadRequestException('Invalid start date');
+    }
+
+    if (!submissionConsentAt) {
+      throw new BadRequestException('Submission consent is required');
+    }
+
+    const parsedSubmissionConsentAt = new Date(submissionConsentAt);
+
+    if (Number.isNaN(parsedSubmissionConsentAt.getTime())) {
+      throw new BadRequestException('Invalid submission consent date');
+    }
+
+    if (source === ProjectSource.external_entity && !sourceDetails?.trim()) {
+      throw new BadRequestException(
+        'Source details are required for external projects',
+      );
     }
 
     const deliverableDescriptions = (deliverables ?? [])
@@ -158,9 +176,11 @@ export class ProjectsController {
       requiresLegalization: requiresLegalization ?? false,
       isPrivate: isPrivate ?? true,
       source: source ?? ProjectSource.external_entity,
+      sourceDetails: sourceDetails?.trim() || null,
       facultyAdvisor: facultyAdvisor?.trim() || null,
       teamRequirements: teamRequirements?.trim() || null,
       expectedOutcomes: expectedOutcomes?.trim() || null,
+      submissionConsentAt: parsedSubmissionConsentAt,
       deliverables: deliverableDescriptions.length
         ? {
             create: deliverableDescriptions.map((description) => ({

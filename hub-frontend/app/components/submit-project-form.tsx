@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { createProject } from "../services/projects";
 import { type ProjectSource } from "../services/schemas";
 import { useAuth } from "./auth-provider";
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +15,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Field,
   FieldContent,
@@ -36,6 +45,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RiAddLine, RiDeleteBinLine } from "@remixicon/react";
 
+const MAX_NAME_LENGTH = 100;
+const MAX_TEXT_LENGTH = 250;
+
 const projectSources: ReadonlyArray<{
   value: ProjectSource;
   label: string;
@@ -46,13 +58,33 @@ const projectSources: ReadonlyArray<{
   { value: "social_impact", label: "Impacto social" },
 ];
 
+const steps = [
+  {
+    number: 1,
+    title: "Proponente y origen",
+    description: "Responsable y fuente",
+  },
+  {
+    number: 2,
+    title: "Información del proyecto",
+    description: "Descripción y justificación",
+  },
+  {
+    number: 3,
+    title: "Equipo y condiciones",
+    description: "Estudiantes y expectativas",
+  },
+] as const;
+
 type FormState = {
   name: string;
   source: ProjectSource;
+  sourceDetails: string;
   namep: string;
   correo: string;
   description: string;
   context: string;
+  hasFacultyAdvisor: boolean;
   facultyAdvisor: string;
   teamRequirements: string;
   expectedOutcomes: string;
@@ -64,10 +96,12 @@ type FormState = {
 const initialForm: FormState = {
   name: "",
   source: "external_entity",
+  sourceDetails: "",
   namep: "",
   correo: "",
   description: "",
   context: "",
+  hasFacultyAdvisor: false,
   facultyAdvisor: "",
   teamRequirements: "",
   expectedOutcomes: "",
@@ -76,30 +110,84 @@ const initialForm: FormState = {
   isPrivate: true,
 };
 
+type Status = "idle" | "saving" | "success" | "error";
+
+function CharacterCounter({
+  value,
+  maxLength,
+}: {
+  readonly value: string;
+  readonly maxLength: number;
+}) {
+  return (
+    <p className="text-right text-xs text-muted-foreground">
+      {value.length}/{maxLength}
+    </p>
+  );
+}
+
 export default function SubmitProjectForm() {
   const { isAuthenticated, ready } = useAuth();
+
   const [form, setForm] = useState<FormState>(initialForm);
-
-  const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">(
-    "idle",
-  );
-
+  const [currentStep, setCurrentStep] = useState(1);
+  const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [stepError, setStepError] = useState<string | null>(null);
+
+  const [showDurationNotice, setShowDurationNotice] = useState(true);
+  const [submissionConsentAt, setSubmissionConsentAt] = useState<
+    string | null
+  >(null);
 
   function handleChange(
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) {
     const { name, value } = event.target;
 
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    setStepError(null);
+  }
+
+  function handleSourceChange(value: string) {
+    const source = value as ProjectSource;
+
+    setForm((prev) => ({
+      ...prev,
+      source,
+      sourceDetails:
+        source === "external_entity" ? prev.sourceDetails : "",
+    }));
+
+    setStepError(null);
+  }
+
+  function handleAdvisorChange(value: boolean) {
+    setForm((prev) => ({
+      ...prev,
+      hasFacultyAdvisor: value,
+      facultyAdvisor: value ? prev.facultyAdvisor : "",
+    }));
+
+    setStepError(null);
   }
 
   function handleDeliverableChange(index: number, value: string) {
     setForm((prev) => {
       const deliverables = [...prev.deliverables];
       deliverables[index] = value;
-      return { ...prev, deliverables };
+
+      return {
+        ...prev,
+        deliverables,
+      };
     });
+
+    setStepError(null);
   }
 
   function addDeliverable() {
@@ -110,41 +198,175 @@ export default function SubmitProjectForm() {
   }
 
   function removeDeliverable(index: number) {
-    setForm((prev) => ({
-      ...prev,
-      deliverables: prev.deliverables.filter((_, itemIndex) => itemIndex !== index),
-    }));
+    setForm((prev) => {
+      const deliverables = prev.deliverables.filter(
+        (_, itemIndex) => itemIndex !== index,
+      );
+
+      return {
+        ...prev,
+        deliverables: deliverables.length > 0 ? deliverables : [""],
+      };
+    });
   }
 
-  async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
+  function acceptDurationNotice() {
+    const acceptedAt = new Date().toISOString();
+
+    setSubmissionConsentAt(acceptedAt);
+    setShowDurationNotice(false);
+  }
+
+  function validateCurrentStep(): boolean {
+    setStepError(null);
+
+    if (currentStep === 1) {
+      if (!form.namep.trim()) {
+        setStepError("Ingresa el nombre del responsable.");
+        return false;
+      }
+
+      if (!form.correo.trim()) {
+        setStepError("Ingresa el correo electrónico.");
+        return false;
+      }
+
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!emailPattern.test(form.correo.trim())) {
+        setStepError("Ingresa un correo electrónico válido.");
+        return false;
+      }
+
+      if (
+        form.source === "external_entity" &&
+        !form.sourceDetails.trim()
+      ) {
+        setStepError(
+          "Describe la entidad externa de la que proviene el proyecto.",
+        );
+        return false;
+      }
+    }
+
+    if (currentStep === 2) {
+      if (!form.name.trim()) {
+        setStepError("Ingresa el nombre del proyecto.");
+        return false;
+      }
+
+      if (!form.description.trim()) {
+        setStepError("Ingresa la descripción del proyecto.");
+        return false;
+      }
+
+      if (!form.context.trim()) {
+        setStepError("Ingresa la justificación del proyecto.");
+        return false;
+      }
+    }
+
+    if (currentStep === 3) {
+      if (form.hasFacultyAdvisor && !form.facultyAdvisor.trim()) {
+        setStepError(
+          "Ingresa el nombre o contacto UTB del asesor.",
+        );
+        return false;
+      }
+
+      if (!form.teamRequirements.trim()) {
+        setStepError(
+          "Describe el tipo de estudiantes o perfiles requeridos.",
+        );
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function goToNextStep() {
+    if (!validateCurrentStep()) {
+      return;
+    }
+
+    setCurrentStep((step) => Math.min(step + 1, steps.length));
+  }
+
+  function goToPreviousStep() {
+    setStepError(null);
+    setCurrentStep((step) => Math.max(step - 1, 1));
+  }
+
+  function goToStep(step: number) {
+    if (step < currentStep) {
+      setStepError(null);
+      setCurrentStep(step);
+      return;
+    }
+
+    if (step === currentStep + 1 && validateCurrentStep()) {
+      setCurrentStep(step);
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!submissionConsentAt) {
+      setShowDurationNotice(true);
+      return;
+    }
+
+    if (currentStep !== steps.length) {
+      goToNextStep();
+      return;
+    }
+
+    if (!validateCurrentStep()) {
+      return;
+    }
+
     setStatus("saving");
     setErrorMessage(null);
+    setStepError(null);
 
     try {
       await createProject({
-        name: form.name,
-        namep: form.namep,
-        correo: form.correo,
-        description: form.description,
-        context: form.context,
+        name: form.name.trim(),
+        namep: form.namep.trim(),
+        correo: form.correo.trim(),
+        description: form.description.trim(),
+        context: form.context.trim(),
         source: form.source,
+        sourceDetails:
+          form.source === "external_entity"
+            ? form.sourceDetails.trim()
+            : undefined,
         requiresLegalization: form.requiresLegalization,
         isPrivate: form.isPrivate,
-        facultyAdvisor: form.facultyAdvisor.trim() || undefined,
-        teamRequirements: form.teamRequirements.trim() || undefined,
+        facultyAdvisor: form.hasFacultyAdvisor
+          ? form.facultyAdvisor.trim()
+          : undefined,
+        teamRequirements: form.teamRequirements.trim(),
         expectedOutcomes: form.expectedOutcomes.trim() || undefined,
         deliverables: form.deliverables
           .map((deliverable) => deliverable.trim())
           .filter(Boolean),
+        submissionConsentAt,
       });
 
       setStatus("success");
       setForm(initialForm);
+      setCurrentStep(1);
+      setSubmissionConsentAt(null);
+      setShowDurationNotice(true);
     } catch (error) {
       setStatus("error");
       setErrorMessage(
-        error instanceof Error ? error.message : "Unable to create project",
+        error instanceof Error
+          ? error.message
+          : "No se pudo crear el proyecto.",
       );
     }
   }
@@ -153,7 +375,9 @@ export default function SubmitProjectForm() {
     return (
       <Card>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Cargando acceso...</p>
+          <p className="text-sm text-muted-foreground">
+            Cargando acceso...
+          </p>
         </CardContent>
       </Card>
     );
@@ -168,6 +392,7 @@ export default function SubmitProjectForm() {
             Inicia sesión para proponer nuevos proyectos.
           </CardDescription>
         </CardHeader>
+
         <CardContent>
           <Button
             nativeButton={false}
@@ -179,261 +404,567 @@ export default function SubmitProjectForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <FieldGroup>
-        <FieldSet>
-          <FieldLegend>Proponente</FieldLegend>
+    <>
+      <Dialog
+        open={showDurationNotice}
+        onOpenChange={(open) => {
+          if (!open && !submissionConsentAt) {
+            setShowDurationNotice(true);
+          }
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className="sm:max-w-lg"
+        >
+          <DialogHeader>
+            <DialogTitle>
+              Información importante sobre la duración
+            </DialogTitle>
 
-          <Field>
-            <FieldLabel htmlFor="namep">Nombre del responsable</FieldLabel>
-            <Input
-              id="namep"
-              name="namep"
-              value={form.namep}
-              onChange={handleChange}
-              required
-            />
-          </Field>
+            <DialogDescription>
+              Antes de comenzar debes conocer y aceptar la duración
+              establecida para este tipo de proyectos.
+            </DialogDescription>
+          </DialogHeader>
 
-          <Field>
-            <FieldLabel htmlFor="correo">Correo electrónico</FieldLabel>
-            <Input
-              type="email"
-              id="correo"
-              name="correo"
-              value={form.correo}
-              onChange={handleChange}
-              required
-            />
-          </Field>
-        </FieldSet>
+          <div className="rounded-lg border bg-muted/40 p-4">
+            <p className="text-sm leading-6">
+              Los proyectos propuestos mediante esta plataforma se
+              ejecutan durante{" "}
+              <strong>2 semestres académicos, aproximadamente 1 año</strong>.
+            </p>
 
-        <FieldSet>
-          <FieldLegend>Proyecto</FieldLegend>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+              Al seleccionar &quot;Aceptar y continuar&quot;, dejas
+              constancia de que conoces y aceptas esta condición antes
+              de registrar la propuesta.
+            </p>
+          </div>
 
-          <Field>
-            <FieldLabel htmlFor="name">Nombre del proyecto</FieldLabel>
-            <Input
-              id="name"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-            />
-          </Field>
+          <DialogFooter>
+            <Button onClick={acceptDurationNotice}>
+              Aceptar y continuar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          <Field>
-            <FieldLabel htmlFor="source">Fuente del proyecto</FieldLabel>
-            <Select
-              value={form.source}
-              onValueChange={(value) =>
-                setForm((prev) => ({
-                  ...prev,
-                  source: value as ProjectSource,
-                }))
-              }
-            >
-              <SelectTrigger id="source" className="w-full">
-                <SelectValue>
-                  {projectSources.find((option) => option.value === form.source)
-                    ?.label ?? "Selecciona una fuente"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {projectSources.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FieldDescription>
-              Indica de dónde proviene el proyecto: entidad externa,
-              investigación, necesidad interna o impacto social.
-            </FieldDescription>
-          </Field>
+      <form onSubmit={handleSubmit}>
+        <FieldGroup>
+          <div className="mb-6">
+            <div className="grid gap-2 md:grid-cols-3">
+              {steps.map((step) => {
+                const isActive = currentStep === step.number;
+                const isCompleted = currentStep > step.number;
 
-          <Field>
-            <FieldLabel htmlFor="description">Descripción</FieldLabel>
-            <Textarea
-              id="description"
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              rows={4}
-              required
-            />
-          </Field>
+                return (
+                  <button
+                    key={step.number}
+                    type="button"
+                    onClick={() => goToStep(step.number)}
+                    disabled={step.number > currentStep + 1}
+                    className={`rounded-lg border p-3 text-left transition-colors ${
+                      isActive
+                        ? "border-primary bg-primary/10"
+                        : isCompleted
+                          ? "border-primary/40 bg-primary/5"
+                          : "border-border bg-muted/30"
+                    } disabled:cursor-default disabled:opacity-70`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${
+                          isActive || isCompleted
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {step.number}
+                      </span>
 
-          <Field>
-            <FieldLabel htmlFor="context">Justificación</FieldLabel>
-            <Textarea
-              id="context"
-              name="context"
-              value={form.context}
-              onChange={handleChange}
-              rows={4}
-              required
-            />
-          </Field>
-        </FieldSet>
+                      <span className="font-medium">
+                        {step.title}
+                      </span>
+                    </div>
 
-        <FieldSet>
-          <FieldLegend>Requisitos y expectativas</FieldLegend>
+                    <p className="mt-1 pl-9 text-xs text-muted-foreground">
+                      {step.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
 
-          <Field>
-            <FieldLabel htmlFor="facultyAdvisor">
-              Asesor de la facultad
-            </FieldLabel>
-            <Input
-              id="facultyAdvisor"
-              name="facultyAdvisor"
-              value={form.facultyAdvisor}
-              onChange={handleChange}
-              placeholder="Docente recomendado, si aplica"
-            />
-            <FieldDescription>
-              Si deseas recomendar un docente para que acompañe el proyecto,
-              indícalo aquí.
-            </FieldDescription>
-          </Field>
+            <div className="mt-4 h-1 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{
+                  width: `${(currentStep / steps.length) * 100}%`,
+                }}
+              />
+            </div>
+          </div>
 
-          <Field>
-            <FieldLabel htmlFor="teamRequirements">
-              Equipo requerido
-            </FieldLabel>
-            <Textarea
-              id="teamRequirements"
-              name="teamRequirements"
-              value={form.teamRequirements}
-              onChange={handleChange}
-              rows={3}
-              placeholder="Tipo de estudiantes o perfiles que el proyecto necesita"
-            />
-          </Field>
+          {/* PASO 1 */}
+          {currentStep === 1 && (
+            <FieldSet>
+              <FieldLegend>Información del proponente y origen</FieldLegend>
 
-          <Field>
-            <FieldLabel>Entregables</FieldLabel>
-            <div className="flex flex-col gap-2">
-              {form.deliverables.map((deliverable, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
-                    value={deliverable}
-                    onChange={(event) =>
-                      handleDeliverableChange(index, event.target.value)
+              <Field>
+                <FieldLabel htmlFor="namep">
+                  Nombre del responsable
+                </FieldLabel>
+
+                <Input
+                  id="namep"
+                  name="namep"
+                  value={form.namep}
+                  onChange={handleChange}
+                  maxLength={MAX_NAME_LENGTH}
+                  required
+                />
+
+                <CharacterCounter
+                  value={form.namep}
+                  maxLength={MAX_NAME_LENGTH}
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="correo">
+                  Correo electrónico
+                </FieldLabel>
+
+                <Input
+                  type="email"
+                  id="correo"
+                  name="correo"
+                  value={form.correo}
+                  onChange={handleChange}
+                  maxLength={MAX_TEXT_LENGTH}
+                  required
+                />
+
+                <CharacterCounter
+                  value={form.correo}
+                  maxLength={MAX_TEXT_LENGTH}
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="source">
+                  Fuente del proyecto
+                </FieldLabel>
+
+                <Select
+                  value={form.source}
+                  onValueChange={(value) => {
+                    if (value !== null) {
+                      handleSourceChange(value);
                     }
-                    placeholder={`Entregable ${index + 1}`}
+                  }}
+                >
+                  <SelectTrigger id="source" className="w-full">
+                    <SelectValue>
+                      {projectSources.find(
+                        (option) => option.value === form.source,
+                      )?.label ?? "Selecciona una fuente"}
+                    </SelectValue>
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    {projectSources.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              {form.source === "external_entity" && (
+                <Field>
+                  <FieldLabel htmlFor="sourceDetails">
+                    ¿De qué entidad externa proviene?
+                  </FieldLabel>
+
+                  <Textarea
+                    id="sourceDetails"
+                    name="sourceDetails"
+                    value={form.sourceDetails}
+                    onChange={handleChange}
+                    maxLength={MAX_TEXT_LENGTH}
+                    rows={3}
+                    placeholder="Indica el nombre de la empresa, organización o entidad y una breve descripción."
+                    required
                   />
+
+                  <CharacterCounter
+                    value={form.sourceDetails}
+                    maxLength={MAX_TEXT_LENGTH}
+                  />
+                </Field>
+              )}
+            </FieldSet>
+          )}
+
+          {/* PASO 2 */}
+          {currentStep === 2 && (
+            <FieldSet>
+              <FieldLegend>Descripción y propósito del proyecto</FieldLegend>
+
+              <Field>
+                <FieldLabel htmlFor="name">
+                  Nombre del proyecto
+                </FieldLabel>
+
+                <Input
+                  id="name"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  maxLength={MAX_NAME_LENGTH}
+                  required
+                />
+
+                <CharacterCounter
+                  value={form.name}
+                  maxLength={MAX_NAME_LENGTH}
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="description">
+                  ¿Qué se propone realizar?
+                </FieldLabel>
+
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  maxLength={MAX_TEXT_LENGTH}
+                  rows={4}
+                  placeholder="Describe de forma concreta qué se desarrollará en el proyecto."
+                  required
+                />
+
+                <CharacterCounter
+                  value={form.description}
+                  maxLength={MAX_TEXT_LENGTH}
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="context">
+                  Problema y justificación
+                </FieldLabel>
+
+                <Textarea
+                  id="context"
+                  name="context"
+                  value={form.context}
+                  onChange={handleChange}
+                  maxLength={MAX_TEXT_LENGTH}
+                  rows={4}
+                  placeholder="Explica qué problema se busca solucionar y por qué el proyecto es necesario."
+                  required
+                />
+
+                <CharacterCounter
+                  value={form.context}
+                  maxLength={MAX_TEXT_LENGTH}
+                />
+              </Field>
+
+              <div className="rounded-lg border bg-muted/40 p-4">
+                <p className="font-medium">
+                  Duración estimada
+                </p>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Los proyectos se ejecutan durante{" "}
+                  <strong>2 semestres académicos (aproximadamente 1 año)</strong>.
+                </p>
+              </div>
+            </FieldSet>
+          )}
+
+          {/* PASO 3 */}
+          {currentStep === 3 && (
+            <FieldSet>
+              <FieldLegend>Equipo, resultados y condiciones</FieldLegend>
+
+              <Field>
+                <FieldLabel>
+                  ¿Cuenta con un contacto o asesor de la UTB?
+                </FieldLabel>
+
+                <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeDeliverable(index)}
-                    aria-label="Eliminar entregable"
+                    variant={
+                      form.hasFacultyAdvisor
+                        ? "default"
+                        : "outline"
+                    }
+                    onClick={() => handleAdvisorChange(true)}
                   >
-                    <RiDeleteBinLine />
+                    Sí
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant={
+                      !form.hasFacultyAdvisor
+                        ? "default"
+                        : "outline"
+                    }
+                    onClick={() => handleAdvisorChange(false)}
+                  >
+                    No
                   </Button>
                 </div>
-              ))}
+              </Field>
 
+              {form.hasFacultyAdvisor && (
+                <Field>
+                  <FieldLabel htmlFor="facultyAdvisor">
+                    Nombre o contacto UTB
+                  </FieldLabel>
+
+                  <Input
+                    id="facultyAdvisor"
+                    name="facultyAdvisor"
+                    value={form.facultyAdvisor}
+                    onChange={handleChange}
+                    maxLength={MAX_TEXT_LENGTH}
+                    placeholder="Nombre del docente o contacto de la UTB"
+                    required
+                  />
+
+                  <CharacterCounter
+                    value={form.facultyAdvisor}
+                    maxLength={MAX_TEXT_LENGTH}
+                  />
+                </Field>
+              )}
+
+              <Field>
+                <FieldLabel htmlFor="teamRequirements">
+                  Estudiantes requeridos
+                </FieldLabel>
+
+                <FieldDescription>
+                  El proyecto requiere un mínimo de{" "}
+                  <strong>3 estudiantes</strong>. Indica qué tipo de
+                  estudiantes, carreras, conocimientos o perfiles se
+                  necesitan.
+                </FieldDescription>
+
+                <Textarea
+                  id="teamRequirements"
+                  name="teamRequirements"
+                  value={form.teamRequirements}
+                  onChange={handleChange}
+                  maxLength={MAX_TEXT_LENGTH}
+                  rows={4}
+                  placeholder="Ejemplo: mínimo 3 estudiantes de Ingeniería de Sistemas con conocimientos en desarrollo web."
+                  required
+                />
+
+                <CharacterCounter
+                  value={form.teamRequirements}
+                  maxLength={MAX_TEXT_LENGTH}
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel>Entregables esperados</FieldLabel>
+
+                <div className="flex flex-col gap-2">
+                  {form.deliverables.map((deliverable, index) => (
+                    <div
+                      key={`deliverable-${index}`}
+                      className="flex items-center gap-2"
+                    >
+                      <Input
+                        value={deliverable}
+                        onChange={(event) =>
+                          handleDeliverableChange(
+                            index,
+                            event.target.value,
+                          )
+                        }
+                        maxLength={MAX_TEXT_LENGTH}
+                        placeholder={`Entregable ${index + 1}`}
+                      />
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          removeDeliverable(index)
+                        }
+                        aria-label="Eliminar entregable"
+                      >
+                        <RiDeleteBinLine />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-fit"
+                  onClick={addDeliverable}
+                >
+                  <RiAddLine data-icon="inline-start" />
+                  Agregar entregable
+                </Button>
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="expectedOutcomes">
+                  Resultados esperados
+                </FieldLabel>
+
+                <Textarea
+                  id="expectedOutcomes"
+                  name="expectedOutcomes"
+                  value={form.expectedOutcomes}
+                  onChange={handleChange}
+                  maxLength={MAX_TEXT_LENGTH}
+                  rows={3}
+                  placeholder="Describe qué se espera obtener al finalizar el proyecto."
+                />
+
+                <CharacterCounter
+                  value={form.expectedOutcomes}
+                  maxLength={MAX_TEXT_LENGTH}
+                />
+              </Field>
+
+              <Field orientation="horizontal">
+                <Checkbox
+                  id="requiresLegalization"
+                  checked={form.requiresLegalization}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      requiresLegalization: checked === true,
+                    }))
+                  }
+                />
+
+                <FieldContent>
+                  <FieldLabel
+                    htmlFor="requiresLegalization"
+                    className="font-normal"
+                  >
+                    Requiere proceso de legalización
+                  </FieldLabel>
+
+                  <FieldDescription>
+                    Marca esta opción si se requieren convenios,
+                    contratos u otros trámites legales.
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+
+              <Field orientation="horizontal">
+                <Checkbox
+                  id="isPrivate"
+                  checked={form.isPrivate}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      isPrivate: checked === true,
+                    }))
+                  }
+                />
+
+                <FieldContent>
+                  <FieldLabel
+                    htmlFor="isPrivate"
+                    className="font-normal"
+                  >
+                    Proyecto privado
+                  </FieldLabel>
+
+                  <FieldDescription>
+                    Si está marcado, el proyecto permanecerá privado
+                    según las reglas de visibilidad de la plataforma.
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+            </FieldSet>
+          )}
+
+          {stepError && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                {stepError}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex items-center justify-between gap-3 border-t pt-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={goToPreviousStep}
+              disabled={
+                currentStep === 1 || status === "saving"
+              }
+            >
+              Anterior
+            </Button>
+
+            {currentStep < steps.length ? (
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
-                className="w-fit"
-                onClick={addDeliverable}
+                onClick={goToNextStep}
               >
-                <RiAddLine data-icon="inline-start" />
-                Agregar entregable
+                Siguiente
               </Button>
-            </div>
-            <FieldDescription>
-              Lista los productos o resultados que dejará el proyecto.
-            </FieldDescription>
-          </Field>
-
-          <Field>
-            <FieldLabel htmlFor="expectedOutcomes">
-              Expectativas al finalizar
-            </FieldLabel>
-            <Textarea
-              id="expectedOutcomes"
-              name="expectedOutcomes"
-              value={form.expectedOutcomes}
-              onChange={handleChange}
-              rows={3}
-              placeholder="Qué se espera lograr al terminar el proyecto"
-            />
-          </Field>
-
-          <Field orientation="horizontal">
-            <Checkbox
-              id="requiresLegalization"
-              checked={form.requiresLegalization}
-              onCheckedChange={(checked) =>
-                setForm((prev) => ({
-                  ...prev,
-                  requiresLegalization: checked === true,
-                }))
-              }
-            />
-            <FieldContent>
-              <FieldLabel
-                htmlFor="requiresLegalization"
-                className="font-normal"
+            ) : (
+              <Button
+                type="submit"
+                disabled={status === "saving"}
               >
-                Requiere proceso de legalización
-              </FieldLabel>
-              <FieldDescription>
-                Marca esta opción si el proyecto necesita contratos de
-                confidencialidad, convenios u otros trámites legales con el
-                proponente.
-              </FieldDescription>
-            </FieldContent>
-          </Field>
+                {status === "saving" && (
+                  <Spinner data-icon="inline-start" />
+                )}
 
-          <Field orientation="horizontal">
-            <Checkbox
-              id="isPrivate"
-              checked={form.isPrivate}
-              onCheckedChange={(checked) =>
-                setForm((prev) => ({
-                  ...prev,
-                  isPrivate: checked === true,
-                }))
-              }
-            />
-            <FieldContent>
-              <FieldLabel htmlFor="isPrivate" className="font-normal">
-                Proyecto privado
-              </FieldLabel>
-              <FieldDescription>
-                Si está marcado, solo el proponente, el equipo asignado y los
-                evaluadores podrán verlo, incluso después de finalizar. Si lo
-                desmarcas, el proyecto se hará público cuando su estado sea
-                &quot;Cerrado&quot;.
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-        </FieldSet>
+                {status === "saving"
+                  ? "Guardando..."
+                  : "Proponer proyecto"}
+              </Button>
+            )}
+          </div>
 
-        <Button type="submit" disabled={status === "saving"}>
-          {status === "saving" && <Spinner data-icon="inline-start" />}
-          {status === "saving" ? "Saving..." : "Proponer"}
-        </Button>
+          {status === "success" && (
+            <Alert>
+              <AlertDescription>
+                Proyecto creado correctamente.
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {status === "success" && (
-          <Alert>
-            <AlertDescription>Project created.</AlertDescription>
-          </Alert>
-        )}
-
-        {status === "error" && errorMessage && (
-          <Alert variant="destructive">
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        )}
-      </FieldGroup>
-    </form>
+          {status === "error" && errorMessage && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                {errorMessage}
+              </AlertDescription>
+            </Alert>
+          )}
+        </FieldGroup>
+      </form>
+    </>
   );
 }

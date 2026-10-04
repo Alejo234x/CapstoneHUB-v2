@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
 import {
   ActorRole,
   Prisma,
@@ -12,6 +13,7 @@ import {
   ProjectStatus,
   UserRole,
 } from '../generated/prisma/client';
+
 import { PrismaService } from '../prisma.service';
 import { AuthorizationService } from '../auth/authorization.service';
 import { AuthenticatedUser } from '../auth/auth.types';
@@ -20,6 +22,7 @@ import {
   attachmentSelect,
   mapAttachment,
 } from '../attachments/attachments.select';
+
 import {
   ProjectReportResponse,
   mapReport,
@@ -105,6 +108,7 @@ export type ProjectListResponse = {
   requiresLegalization: boolean;
   isPrivate: boolean;
   source: ProjectSource;
+  sourceDetails: string | null;
   proposer: ProjectProposerResponse | null;
   actors: ProjectActorResponse[];
   /** `false` cuando el espectador solo puede ver la vista pública, sin datos sensibles. */
@@ -252,7 +256,6 @@ function mapProjectProposer(
       email: project.naturalProposer.email,
     };
   }
-
   return null;
 }
 
@@ -278,7 +281,6 @@ export function isValidProjectStatusTransition(
     [ProjectStatus.closed]: [],
     [ProjectStatus.rejected]: [],
   };
-
   return transitions[previousStatus].includes(nextStatus);
 }
 
@@ -340,6 +342,7 @@ function mapProjectListResponse(
     requiresLegalization: project.requiresLegalization,
     isPrivate: project.isPrivate,
     source: project.source,
+    sourceDetails: project.sourceDetails,
     proposer: mapProjectProposer(project),
     // El equipo (nombres y correos) es sensible, así que solo se expone a los
     // miembros mientras el proyecto no sea todavía público.
@@ -457,17 +460,17 @@ function rethrowProjectCreateError(error: unknown): never {
       `Duplicate value for a unique field: ${target}`,
     );
   }
-
   throw error;
 }
-
 /** Campos editables del proyecto, ya normalizados por el controlador. */
+
 export type ProjectUpdateFields = {
   name?: string;
   description?: string;
   context?: string;
   location?: string | null;
   source?: ProjectSource;
+  sourceDetails?: string | null;
   startDate?: Date | null;
   endDate?: Date | null;
   estimatedCost?: Prisma.Decimal | number | string | null;
@@ -478,14 +481,15 @@ export type ProjectUpdateFields = {
   expectedOutcomes?: string | null;
   deliverables?: string[];
 };
-
 /** Valores actuales o resultantes de los campos auditables. */
+
 type ProjectEditableValues = {
   name: string;
   description: string;
   context: string;
   location: string | null;
   source: ProjectSource;
+  sourceDetails: string | null;
   startDate: Date | null;
   endDate: Date | null;
   estimatedCost: Prisma.Decimal | number | string | null;
@@ -496,14 +500,15 @@ type ProjectEditableValues = {
   expectedOutcomes: string | null;
   deliverables: string[];
 };
-
 /** Campos auditables, en el orden en que se registran en el historial. */
+
 const EDITABLE_PROJECT_FIELDS = [
   'name',
   'description',
   'context',
   'location',
   'source',
+  'sourceDetails',
   'startDate',
   'endDate',
   'estimatedCost',
@@ -530,7 +535,6 @@ function serializeProjectChangeValue(
   if (value === null || value === undefined) {
     return null;
   }
-
   if (field === 'deliverables') {
     const list = Array.isArray(value) ? value : [];
     return JSON.stringify(
@@ -539,46 +543,37 @@ function serializeProjectChangeValue(
         .filter(Boolean),
     );
   }
-
   if (field === 'estimatedCost') {
     return new Prisma.Decimal(value as string | number).toString();
   }
-
   if (field === 'startDate' || field === 'endDate') {
     return new Date(value as string).toISOString();
   }
-
   if (typeof value === 'boolean') {
     return value ? 'true' : 'false';
   }
-
   if (typeof value === 'string') {
     return value;
   }
-
   if (typeof value === 'number') {
     return String(value);
   }
-
   return null;
 }
-
 /** Compara los valores previos y nuevos y devuelve una fila por campo cambiado. */
+
 export function diffProjectUpdate(
   previous: ProjectEditableValues,
   next: ProjectEditableValues,
 ): ProjectChangeRow[] {
   const rows: ProjectChangeRow[] = [];
-
   for (const field of EDITABLE_PROJECT_FIELDS) {
     const previousValue = serializeProjectChangeValue(field, previous[field]);
     const newValue = serializeProjectChangeValue(field, next[field]);
-
     if (previousValue !== newValue) {
       rows.push({ field, previousValue, newValue });
     }
   }
-
   return rows;
 }
 
@@ -588,7 +583,6 @@ export class ProjectsService {
     readonly prisma: PrismaService,
     private readonly authorization: AuthorizationService,
   ) {}
-
   async project(
     projectWhereUniqueInput: Prisma.ProjectWhereUniqueInput,
     viewer?: AuthenticatedUser,
@@ -600,7 +594,6 @@ export class ProjectsService {
       },
       include: projectInclude,
     });
-
     return project
       ? mapProjectDetailResponse(
           project,
@@ -609,7 +602,6 @@ export class ProjectsService {
         )
       : null;
   }
-
   async projects(
     params: {
       skip?: number;
@@ -632,7 +624,6 @@ export class ProjectsService {
       orderBy,
       include: projectInclude,
     });
-
     return projects.map((project) =>
       mapProjectListResponse(
         project,
@@ -640,7 +631,6 @@ export class ProjectsService {
       ),
     );
   }
-
   /**
    * Los miembros pueden leer los datos sensibles del proyecto: admins,
    * evaluators, coordinators, el proponente y los actores asignados.
@@ -652,7 +642,6 @@ export class ProjectsService {
     if (!viewer) {
       return false;
     }
-
     if (
       viewer.roles.includes(UserRole.admin) ||
       viewer.roles.includes(UserRole.evaluator) ||
@@ -660,16 +649,13 @@ export class ProjectsService {
     ) {
       return true;
     }
-
     if (project.proposerUserId === viewer.id) {
       return true;
     }
-
     return project.actorAssignments.some(
       (assignment) => assignment.userId === viewer.id,
     );
   }
-
   /**
    * Proyectos que el usuario puede seguir desde su perfil: los que propuso y
    * los que tiene asignados. Los duplicados se fusionan, dando prioridad al rol
@@ -687,9 +673,7 @@ export class ProjectsService {
         orderBy: { createdAt: 'desc' },
       }),
     ]);
-
     const visible = new Map<number, MyProjectResponse>();
-
     for (const project of proposed) {
       visible.set(project.id, {
         id: project.id,
@@ -702,10 +686,8 @@ export class ProjectsService {
         isProposer: true,
       });
     }
-
     for (const { project, role } of assignments) {
       const existing = visible.get(project.id);
-
       visible.set(project.id, {
         id: project.id,
         name: project.name,
@@ -717,10 +699,8 @@ export class ProjectsService {
         isProposer: existing?.isProposer ?? false,
       });
     }
-
     return [...visible.values()];
   }
-
   async createProject(
     user: AuthenticatedUser,
     data: Prisma.ProjectCreateInput,
@@ -736,7 +716,6 @@ export class ProjectsService {
       rethrowProjectCreateError(error);
     }
   }
-
   private createProjectRecord(
     data: Prisma.ProjectCreateInput,
   ): Promise<ProjectWithRelations> {
@@ -745,7 +724,6 @@ export class ProjectsService {
       include: projectInclude,
     });
   }
-
   /**
    * Edita los datos del proyecto y registra una fila de historial por cada
    * campo que cambió. Solo administradores y evaluadores; un proyecto cerrado
@@ -757,7 +735,6 @@ export class ProjectsService {
     fields: ProjectUpdateFields;
   }): Promise<ProjectDetailResponse> {
     const { user, projectId, fields } = params;
-
     const current = await this.prisma.project.findUnique({
       where: { id: projectId },
       select: {
@@ -769,6 +746,7 @@ export class ProjectsService {
         context: true,
         location: true,
         source: true,
+        sourceDetails: true,
         startDate: true,
         endDate: true,
         estimatedCost: true,
@@ -783,17 +761,14 @@ export class ProjectsService {
         },
       },
     });
-
     if (!current) {
       throw new NotFoundException(`Project ${projectId} not found`);
     }
-
     await this.authorization.assertCanEditProjectDetails(user, {
       id: current.id,
       proposerUserId: current.proposerUserId,
       status: current.status,
     });
-
     if (
       current.status === ProjectStatus.closed ||
       current.status === ProjectStatus.rejected
@@ -802,13 +777,13 @@ export class ProjectsService {
         'Projects cannot be edited once closed or rejected',
       );
     }
-
     const currentValues: ProjectEditableValues = {
       name: current.name,
       description: current.description,
       context: current.context,
       location: current.location,
       source: current.source,
+      sourceDetails: current.sourceDetails,
       startDate: current.startDate,
       endDate: current.endDate,
       estimatedCost: current.estimatedCost,
@@ -821,20 +796,17 @@ export class ProjectsService {
         (deliverable) => deliverable.description,
       ),
     };
-
     const changeRows = diffProjectUpdate(
       currentValues,
       this.mergeUpdateFields(currentValues, fields),
     );
     const data = this.buildProjectUpdateData(fields);
-
     const project = await this.prisma.$transaction(async (transaction) => {
       const updated = await transaction.project.update({
         where: { id: projectId },
         data,
         include: projectInclude,
       });
-
       if (changeRows.length > 0) {
         await transaction.projectChangeHistory.createMany({
           data: changeRows.map((row) => ({
@@ -846,13 +818,10 @@ export class ProjectsService {
           })),
         });
       }
-
       return updated;
     });
-
     return mapProjectDetailResponse(project, true, user);
   }
-
   /** Aplica los campos enviados sobre los valores actuales del proyecto. */
   private mergeUpdateFields(
     current: ProjectEditableValues,
@@ -865,6 +834,10 @@ export class ProjectsService {
       location:
         fields.location !== undefined ? fields.location : current.location,
       source: fields.source ?? current.source,
+      sourceDetails:
+        fields.sourceDetails !== undefined
+          ? fields.sourceDetails
+          : current.sourceDetails,
       startDate:
         fields.startDate !== undefined ? fields.startDate : current.startDate,
       endDate: fields.endDate !== undefined ? fields.endDate : current.endDate,
@@ -890,17 +863,17 @@ export class ProjectsService {
       deliverables: fields.deliverables ?? current.deliverables,
     };
   }
-
   private buildProjectUpdateData(
     fields: ProjectUpdateFields,
   ): Prisma.ProjectUpdateInput {
     const data: Prisma.ProjectUpdateInput = {};
-
     if (fields.name !== undefined) data.name = fields.name;
     if (fields.description !== undefined) data.description = fields.description;
     if (fields.context !== undefined) data.context = fields.context;
     if (fields.location !== undefined) data.location = fields.location;
     if (fields.source !== undefined) data.source = fields.source;
+    if (fields.sourceDetails !== undefined)
+      data.sourceDetails = fields.sourceDetails;
     if (fields.startDate !== undefined) data.startDate = fields.startDate;
     if (fields.endDate !== undefined) data.endDate = fields.endDate;
     if (fields.estimatedCost !== undefined)
@@ -914,17 +887,14 @@ export class ProjectsService {
       data.teamRequirements = fields.teamRequirements;
     if (fields.expectedOutcomes !== undefined)
       data.expectedOutcomes = fields.expectedOutcomes;
-
     if (fields.deliverables !== undefined) {
       data.deliverables = {
         deleteMany: {},
         create: fields.deliverables.map((description) => ({ description })),
       };
     }
-
     return data;
   }
-
   async transitionProjectStatus(params: {
     user: AuthenticatedUser;
     projectId: number;
@@ -936,38 +906,31 @@ export class ProjectsService {
       where: { id: projectId },
       select: { id: true, status: true },
     });
-
     if (!currentProject) {
       throw new NotFoundException(`Project ${projectId} not found`);
     }
-
     if (!isValidProjectStatusTransition(currentProject.status, nextStatus)) {
       throw new BadRequestException(
         `Invalid project status transition: ${currentProject.status} -> ${nextStatus}`,
       );
     }
-
     await this.authorization.assertCanTransitionProject(
       user,
       projectId,
       currentProject.status,
       nextStatus,
     );
-
     const trimmedDescription = description?.trim() || null;
-
     if (!trimmedDescription && !user.roles.includes(UserRole.admin)) {
       throw new BadRequestException(
         'A reason is required to change the project status',
       );
     }
-
     await this.prisma.$transaction(async (transaction) => {
       await transaction.project.update({
         where: { id: projectId },
         data: { status: nextStatus },
       });
-
       await transaction.projectStatusHistory.create({
         data: {
           projectId,
@@ -978,15 +941,12 @@ export class ProjectsService {
         },
       });
     });
-
     const project = await this.project({ id: projectId }, user);
     if (!project) {
       throw new NotFoundException(`Project ${projectId} not found`);
     }
-
     return project;
   }
-
   async deleteProject(
     user: AuthenticatedUser,
     where: Prisma.ProjectWhereUniqueInput,
@@ -995,13 +955,11 @@ export class ProjectsService {
     await this.authorization.assertCanManageProject(user, projectId);
     return this.prisma.project.delete({ where });
   }
-
   async assignableUsers(
     user: AuthenticatedUser,
     projectId: number,
   ): Promise<AssignableUserResponse[]> {
     await this.authorization.assertCanAssignActors(user, projectId);
-
     const users = await this.prisma.user.findMany({
       orderBy: { fullName: 'asc' },
       select: {
@@ -1011,7 +969,6 @@ export class ProjectsService {
         roleAssignments: { select: { role: true } },
       },
     });
-
     return users.map((candidate) => ({
       id: candidate.id,
       fullName: candidate.fullName,
@@ -1019,7 +976,6 @@ export class ProjectsService {
       roles: candidate.roleAssignments.map(({ role }) => role),
     }));
   }
-
   async addProjectActorAssignment(params: {
     user: AuthenticatedUser;
     projectId: number;
@@ -1027,10 +983,8 @@ export class ProjectsService {
     role: ActorRole;
   }): Promise<ProjectActorAssignmentResponse> {
     const { user: actingUser, projectId, userId, role } = params;
-
     await this.authorization.assertCanAssignActors(actingUser, projectId);
     await this.authorization.assertAssignableUser(userId, role);
-
     const [project, user, existingAssignment] = await Promise.all([
       this.prisma.project.findUnique({
         where: { id: projectId },
@@ -1049,19 +1003,15 @@ export class ProjectsService {
         },
       }),
     ]);
-
     if (!project) {
       throw new NotFoundException(`Project ${projectId} not found`);
     }
-
     if (!user) {
       throw new NotFoundException(`User ${userId} not found`);
     }
-
     if (existingAssignment) {
       throw new ConflictException('User is already assigned to this project');
     }
-
     const assignment = await this.prisma.projectActorAssignment.create({
       data: {
         role,
@@ -1093,15 +1043,12 @@ export class ProjectsService {
         },
       },
     });
-
     return assignment;
   }
-
   private projectIdFromWhere(where: Prisma.ProjectWhereUniqueInput): number {
     if (typeof where.id !== 'number') {
       throw new BadRequestException('A numeric project id is required');
     }
-
     return where.id;
   }
 }
