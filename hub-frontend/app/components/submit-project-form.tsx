@@ -49,7 +49,6 @@ import { RiAddLine, RiDeleteBinLine } from "@remixicon/react";
 const MAX_NAME_LENGTH = 100;
 const MAX_TEXT_LENGTH = 250;
 
-const emailPattern = /^[^\s@]+@[^.\s@]+(?:\.[^.\s@]+)+$/;
 
 const projectSources: ReadonlyArray<{
   value: ProjectSource;
@@ -89,7 +88,6 @@ type FormState = {
   source: ProjectSource;
   sourceDetails: string;
   namep: string;
-  correo: string;
   description: string;
   context: string;
   hasFacultyAdvisor: boolean;
@@ -113,7 +111,6 @@ const initialForm: FormState = {
   source: "external_entity",
   sourceDetails: "",
   namep: "",
-  correo: "",
   description: "",
   context: "",
   hasFacultyAdvisor: false,
@@ -146,14 +143,6 @@ function CharacterCounter({
 function validateStepOne(form: FormState): string | null {
   if (!form.namep.trim()) {
     return "Ingresa el nombre del responsable.";
-  }
-
-  if (!form.correo.trim()) {
-    return "Ingresa el correo electrónico.";
-  }
-
-  if (!emailPattern.test(form.correo.trim())) {
-    return "Ingresa un correo electrónico válido.";
   }
 
   if (
@@ -201,7 +190,8 @@ const stepValidators: Record<number, StepValidator> = {
 };
 
 export default function SubmitProjectForm() {
-  const { isAuthenticated, ready } = useAuth();
+  const { session, isAuthenticated, ready } = useAuth();
+  const userEmail = session?.user?.email ?? "";
 
   const [form, setForm] = useState<FormState>(initialForm);
   const [currentStep, setCurrentStep] = useState(1);
@@ -347,6 +337,14 @@ export default function SubmitProjectForm() {
       return;
     }
 
+    if (!userEmail.trim()) {
+      setStatus("error");
+      setErrorMessage(
+        "No se pudo obtener el correo electrónico de la cuenta.",
+      );
+      return;
+    }
+
     setStatus("saving");
     setErrorMessage(null);
     setStepError(null);
@@ -355,7 +353,7 @@ export default function SubmitProjectForm() {
       await createProject({
         name: form.name.trim(),
         namep: form.namep.trim(),
-        correo: form.correo.trim(),
+        correo: userEmail.trim(),
         description: form.description.trim(),
         context: form.context.trim(),
         source: form.source,
@@ -563,15 +561,19 @@ export default function SubmitProjectForm() {
                 <Input
                   type="email"
                   id="correo"
-                  name="correo"
-                  value={form.correo}
-                  onChange={handleChange}
+                  value={userEmail}
+                  readOnly
+                  aria-readonly="true"
                   maxLength={MAX_TEXT_LENGTH}
-                  required
                 />
 
+                <FieldDescription>
+                  Este correo se obtiene automáticamente de la cuenta con la que
+                  iniciaste sesión.
+                </FieldDescription>
+
                 <CharacterCounter
-                  value={form.correo}
+                  value={userEmail}
                   maxLength={MAX_TEXT_LENGTH}
                 />
               </Field>
@@ -814,6 +816,11 @@ export default function SubmitProjectForm() {
 
               <Field>
                 <FieldLabel>Entregables esperados</FieldLabel>
+
+                <FieldDescription>
+                  Indica los productos, documentos, resultados o componentes que
+                  deberán entregarse al finalizar el proyecto.
+                </FieldDescription>
 
                 <div className="flex flex-col gap-2">
                   {form.deliverables.map((deliverable, index) => (
