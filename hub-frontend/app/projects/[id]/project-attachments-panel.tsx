@@ -8,7 +8,7 @@ import {
   deleteProjectAttachment,
   downloadProjectAttachment,
   uploadProjectAttachment,
-} from "../../services/projects";
+} from "../../services/attachments";
 import { ProjectAttachmentItem } from "../../services/schemas";
 import { useAuth } from "../../components/auth-provider";
 import AccessNotice from "../../components/access-notice";

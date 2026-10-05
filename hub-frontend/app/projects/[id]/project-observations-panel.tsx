@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
-import { createProjectObservation } from "../../services/projects";
+import { createProjectObservation } from "../../services/observations";
 import { ProjectObservationItem } from "../../services/schemas";
 import { getInitials } from "../../services/utils";
 import { useAuth } from "../../components/auth-provider";

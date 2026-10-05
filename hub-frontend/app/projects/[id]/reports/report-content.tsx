@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getReportContentStreamUrl } from "../../../services/projects";
+import { getReportContentStreamUrl } from "../../../services/report-contents";
 import {
   ProjectAttachmentItem,
   ProjectReportContentItem,

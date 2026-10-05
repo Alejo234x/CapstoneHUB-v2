@@ -6,7 +6,7 @@ import {
   createProjectMilestone,
   deleteProjectMilestone,
   updateProjectMilestone,
-} from "../../services/projects";
+} from "../../services/milestones";
 import { ProjectMilestoneItem } from "../../services/schemas";
 import { formatDate, toDateTimeLocal } from "../../services/utils";
 import { useAuth } from "../../components/auth-provider";

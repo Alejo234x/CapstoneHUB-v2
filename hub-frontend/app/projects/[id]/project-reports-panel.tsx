@@ -4,19 +4,21 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   confirmReportContentFile,
-  createProjectReport,
   createReportContent,
-  deleteProjectReport,
   deleteReportContent,
-  downloadProjectAttachment,
-  getProjectReports,
   presignReportContentFile,
+  updateReportContent,
+  uploadFileToStorage,
+} from "../../services/report-contents";
+import {
+  createProjectReport,
+  deleteProjectReport,
+  getProjectReports,
   reviewProjectReport,
   submitProjectReport,
   updateProjectReport,
-  updateReportContent,
-  uploadFileToStorage,
-} from "../../services/projects";
+} from "../../services/reports";
+import { downloadProjectAttachment } from "../../services/attachments";
 import {
   ProjectAttachmentItem,
   ProjectReportContentItem,
