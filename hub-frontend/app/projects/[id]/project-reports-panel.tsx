@@ -901,6 +901,15 @@ export default function ProjectReportsPanel({
             <AlertDialogDescription>
               ¿Eliminar la entrega &quot;{deleteTarget?.title}&quot;? Esta acción
               no se puede deshacer.
+              {(deleteTarget?.milestones ?? []).length > 0 ? (
+                <span className="mt-2 block text-destructive">
+                  Está vinculada a los hitos:{" "}
+                  {deleteTarget?.milestones
+                    ?.map((milestone) => milestone.title)
+                    .join(", ")}
+                  . Se desvinculará de ellos.
+                </span>
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

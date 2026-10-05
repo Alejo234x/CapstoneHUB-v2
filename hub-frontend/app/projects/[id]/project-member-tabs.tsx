@@ -57,6 +57,7 @@ export default function ProjectMemberTabs({
             milestones={project.milestones ?? []}
             actorAssignments={assignments}
             projectPhase={project.phase ?? null}
+            reports={project.reports ?? []}
             onProjectChange={onProjectChange}
           />
         </div>

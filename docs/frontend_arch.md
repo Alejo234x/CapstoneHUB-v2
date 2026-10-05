@@ -74,11 +74,14 @@ junto al historial de estados, una entrada por cada campo modificado con su
 valor anterior y nuevo. Al desmarcar «Proyecto privado» se muestra una
 advertencia y una confirmación antes de publicarlo.
 
-La pestaña **Hitos** permite marcar hitos como **mínimos** y asignarles una fase
-(semestre). Los administradores y coordinadores asignados ven además una tarjeta
-**Fase del proyecto** para avanzar de semestre; se habilita cuando los hitos
-mínimos de la fase actual están completos. Al elegir el estado «Cerrado» se
-avisa si aún quedan hitos mínimos pendientes.
+La pestaña **Hitos** permite marcar hitos como **mínimos**, asignarles una fase
+(semestre) y vincularles entregas del proyecto; un hito con entregas vinculadas
+no se puede completar hasta que todas estén aceptadas. Los administradores y
+coordinadores asignados ven además una tarjeta **Fase del proyecto** para avanzar
+de semestre; se habilita cuando los hitos mínimos de la fase actual están
+completos. Al elegir el estado «Cerrado» se avisa si aún quedan hitos mínimos
+pendientes. En las entregas se muestra a qué hitos están vinculadas y se advierte
+antes de eliminar hitos o entregas que tienen vínculos.
 
 ## Autenticación
 

@@ -53,6 +53,12 @@ export type ProjectCategory = {
   color?: string | null;
 };
 
+export type ProjectMilestoneReport = {
+  id: number;
+  title: string;
+  status: ProjectReportStatus;
+};
+
 export type ProjectMilestoneItem = {
   id: number;
   projectId: number;
@@ -62,6 +68,7 @@ export type ProjectMilestoneItem = {
   completed: boolean;
   isMinimum: boolean;
   phase: ProjectPhase | null;
+  reports?: ProjectMilestoneReport[];
   createdAt?: string;
 };
 
@@ -134,6 +141,7 @@ export type ProjectReportItem = {
     fullName: string;
     email: string;
   } | null;
+  milestones?: { id: number; title: string }[];
   contents: ProjectReportContentItem[];
 };
 

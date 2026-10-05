@@ -6,7 +6,11 @@ import {
   deleteProjectMilestone,
   updateProjectMilestone,
 } from "../../services/milestones";
-import { ProjectMilestoneItem, ProjectPhase } from "../../services/schemas";
+import {
+  ProjectMilestoneItem,
+  ProjectPhase,
+  ProjectReportItem,
+} from "../../services/schemas";
 import {
   PROJECT_PHASES,
   formatDate,
@@ -79,6 +83,7 @@ import {
   RiCheckboxCircleLine,
   RiDeleteBinLine,
   RiErrorWarningLine,
+  RiLinksLine,
   RiPencilLine,
 } from "@remixicon/react";
 
@@ -92,6 +97,8 @@ type ProjectMilestonesPanelProps = {
   }[];
   /** Fase (semestre) actual del proyecto; se usa como valor por defecto. */
   projectPhase: ProjectPhase | null;
+  /** Entregas del proyecto disponibles para vincular a un hito. */
+  reports: ProjectReportItem[];
   /** Recarga el detalle del proyecto tras una mutación. */
   onProjectChange: () => Promise<void>;
 };
@@ -102,9 +109,32 @@ type MilestoneFormState = {
   dueDate: string;
   isMinimum: boolean;
   phase: ProjectPhase;
+  reportIds: number[];
 };
 
 const DEFAULT_PHASE: ProjectPhase = "semester_1";
+
+const REPORT_STATUS_LABELS: Record<string, string> = {
+  pending: "Pendiente",
+  submitted: "Enviada",
+  accepted: "Aceptada",
+  rejected: "Rechazada",
+};
+
+function reportStatusLabel(status: string): string {
+  return REPORT_STATUS_LABELS[status] ?? status;
+}
+
+/** Una entrega está "lista" cuando fue aceptada. */
+function isReportDone(status: string): boolean {
+  return status === "accepted";
+}
+
+function hasPendingReports(milestone: ProjectMilestoneItem): boolean {
+  return (milestone.reports ?? []).some(
+    (report) => !isReportDone(report.status),
+  );
+}
 
 function createEmptyForm(phase: ProjectPhase | null): MilestoneFormState {
   return {
@@ -113,6 +143,7 @@ function createEmptyForm(phase: ProjectPhase | null): MilestoneFormState {
     dueDate: "",
     isMinimum: false,
     phase: phase ?? DEFAULT_PHASE,
+    reportIds: [],
   };
 }
 
@@ -129,6 +160,7 @@ export default function ProjectMilestonesPanel({
   milestones,
   actorAssignments,
   projectPhase,
+  reports,
   onProjectChange,
 }: ProjectMilestonesPanelProps) {
   const { session, isAuthenticated, ready } = useAuth();
@@ -221,6 +253,7 @@ export default function ProjectMilestonesPanel({
       dueDate: toDateTimeLocal(milestone.dueDate),
       isMinimum: milestone.isMinimum,
       phase: milestone.phase ?? projectPhase ?? DEFAULT_PHASE,
+      reportIds: (milestone.reports ?? []).map((report) => report.id),
     });
     setErrorMessage(null);
     setDialogOpen(true);
@@ -254,6 +287,7 @@ export default function ProjectMilestonesPanel({
       dueDate: new Date(dueDate).toISOString(),
       isMinimum: form.isMinimum,
       phase: form.phase,
+      reportIds: form.reportIds,
     };
 
     startTransition(async () => {
@@ -408,7 +442,11 @@ export default function ProjectMilestonesPanel({
                           : "Marcar como completado"
                       }
                       onClick={() => handleToggle(milestone)}
-                      disabled={!canManage || isPending}
+                      disabled={
+                        !canManage ||
+                        isPending ||
+                        (!milestone.completed && hasPendingReports(milestone))
+                      }
                     >
                       {milestone.completed ? (
                         <RiCheckboxCircleLine className="text-success" />
@@ -444,7 +482,35 @@ export default function ProjectMilestonesPanel({
                       {milestone.isMinimum ? (
                         <Badge variant="secondary">Hito mínimo</Badge>
                       ) : null}
+                      {(milestone.reports ?? []).length > 0 ? (
+                        <Badge variant="outline">
+                          <RiLinksLine className="size-3.5" />
+                          {(milestone.reports ?? []).length} entrega(s)
+                        </Badge>
+                      ) : null}
                     </div>
+                    {(milestone.reports ?? []).length > 0 ? (
+                      <div className="mt-2 flex flex-col gap-1">
+                        {(milestone.reports ?? []).map((report) => (
+                          <span
+                            key={report.id}
+                            className="inline-flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"
+                          >
+                            <RiLinksLine className="size-3.5" />
+                            {report.title}
+                            <Badge
+                              variant={
+                                isReportDone(report.status)
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                            >
+                              {reportStatusLabel(report.status)}
+                            </Badge>
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     <div className="text-muted-foreground">
@@ -623,6 +689,62 @@ export default function ProjectMilestonesPanel({
                 </FieldContent>
               </Field>
 
+              <Field>
+                <FieldLabel>Entregas vinculadas</FieldLabel>
+
+                {reports.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    El proyecto no tiene entregas todavía.
+                  </p>
+                ) : (
+                  <div className="flex max-h-52 flex-col gap-1 overflow-y-auto rounded-lg border border-border p-2">
+                    {reports.map((report) => (
+                      <div
+                        key={report.id}
+                        className="flex items-center gap-2 rounded-md px-1 py-1"
+                      >
+                        <Checkbox
+                          id={`milestone-report-${report.id}`}
+                          checked={form.reportIds.includes(report.id)}
+                          onCheckedChange={(next) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              reportIds:
+                                next === true
+                                  ? [...new Set([...prev.reportIds, report.id])]
+                                  : prev.reportIds.filter(
+                                      (id) => id !== report.id,
+                                    ),
+                            }))
+                          }
+                          disabled={isPending}
+                        />
+                        <label
+                          htmlFor={`milestone-report-${report.id}`}
+                          className="flex-1 cursor-pointer text-sm"
+                        >
+                          {report.title}
+                        </label>
+                        <Badge
+                          variant={
+                            isReportDone(report.status)
+                              ? "secondary"
+                              : "outline"
+                          }
+                        >
+                          {reportStatusLabel(report.status)}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <FieldDescription>
+                  El hito no se podrá completar hasta que todas las entregas
+                  vinculadas estén aceptadas.
+                </FieldDescription>
+              </Field>
+
               {errorMessage ? (
                 <Alert variant="destructive">
                   <AlertDescription>{errorMessage}</AlertDescription>
@@ -716,6 +838,45 @@ export default function ProjectMilestonesPanel({
                     </p>
                   </div>
                 ) : null}
+
+                {(activeDetailMilestone.reports ?? []).length > 0 ? (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Entregas vinculadas
+                    </p>
+                    <div className="mt-1 flex flex-col gap-1">
+                      {(activeDetailMilestone.reports ?? []).map((report) => (
+                        <span
+                          key={report.id}
+                          className="inline-flex flex-wrap items-center gap-1.5 text-sm"
+                        >
+                          <RiLinksLine className="size-3.5 text-muted-foreground" />
+                          {report.title}
+                          <Badge
+                            variant={
+                              isReportDone(report.status)
+                                ? "secondary"
+                                : "outline"
+                            }
+                          >
+                            {reportStatusLabel(report.status)}
+                          </Badge>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {!activeDetailMilestone.completed &&
+                hasPendingReports(activeDetailMilestone) ? (
+                  <Alert variant="destructive">
+                    <RiErrorWarningLine />
+                    <AlertDescription>
+                      No puedes completar este hito hasta que sus entregas
+                      vinculadas estén aceptadas.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
               </div>
 
               {canManage ? (
@@ -725,7 +886,11 @@ export default function ProjectMilestonesPanel({
                       activeDetailMilestone.completed ? "outline" : "default"
                     }
                     onClick={() => handleToggle(activeDetailMilestone)}
-                    disabled={isPending}
+                    disabled={
+                      isPending ||
+                      (!activeDetailMilestone.completed &&
+                        hasPendingReports(activeDetailMilestone))
+                    }
                   >
                     {isPending ? (
                       <Spinner data-icon="inline-start" />
@@ -754,6 +919,13 @@ export default function ProjectMilestonesPanel({
             <AlertDialogDescription>
               ¿Eliminar el hito &quot;{deleteTarget?.title}&quot;? Esta acción no
               se puede deshacer.
+              {(deleteTarget?.reports ?? []).length > 0 ? (
+                <span className="mt-2 block text-destructive">
+                  Se desvincularán {deleteTarget?.reports?.length} entrega(s):{" "}
+                  {deleteTarget?.reports?.map((report) => report.title).join(", ")}
+                  .
+                </span>
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

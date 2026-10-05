@@ -9,6 +9,7 @@ export type CreateProjectMilestonePayload = {
   completed?: boolean;
   isMinimum?: boolean;
   phase?: ProjectPhase;
+  reportIds?: number[];
 };
 
 export type UpdateProjectMilestonePayload = Partial<

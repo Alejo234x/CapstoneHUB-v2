@@ -12,6 +12,7 @@ import {
   ProjectPhase,
   ProjectSource,
   ProjectStatus,
+  ReportContentKind,
   UserRole,
 } from '../generated/prisma/client';
 
@@ -78,6 +79,14 @@ function formatPendingMilestones(
 }
 
 export const DEFAULT_FINAL_MILESTONE_TITLE = 'Documento final';
+
+export const DEFAULT_FINAL_REPORT_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
+
+export const DEFAULT_FINAL_REPORT_MAX_FILES = 1;
 
 /**
  * Fecha por defecto del hito "Documento final": un año después del inicio del
@@ -368,24 +377,53 @@ export class ProjectsService {
   private createProjectRecord(
     data: Prisma.ProjectCreateInput,
   ): Promise<ProjectWithRelations> {
-    return this.prisma.project.create({
-      data: {
-        ...data,
-        // Todo proyecto nace con el hito mínimo "Documento final" del segundo
-        // semestre, obligatorio para cerrarlo.
-        milestones: {
-          create: [
-            {
-              title: DEFAULT_FINAL_MILESTONE_TITLE,
-              phase: ProjectPhase.semester_2,
-              isMinimum: true,
-              completed: false,
-              dueDate: defaultFinalMilestoneDueDate(data.startDate),
-            },
-          ],
+    const dueDate = defaultFinalMilestoneDueDate(data.startDate);
+
+    return this.prisma.$transaction(async (transaction) => {
+      // Todo proyecto nace con el hito mínimo "Documento final" del segundo
+      // semestre y su entrega asociada para adjuntar el documento.
+      const project = await transaction.project.create({
+        data: {
+          ...data,
+          milestones: {
+            create: [
+              {
+                title: DEFAULT_FINAL_MILESTONE_TITLE,
+                phase: ProjectPhase.semester_2,
+                isMinimum: true,
+                completed: false,
+                dueDate,
+              },
+            ],
+          },
         },
-      },
-      include: projectInclude,
+        select: { id: true, milestones: { select: { id: true } } },
+      });
+
+      const milestoneId = project.milestones[0]?.id;
+
+      if (milestoneId !== undefined) {
+        const report = await transaction.projectReport.create({
+          data: {
+            projectId: project.id,
+            title: DEFAULT_FINAL_MILESTONE_TITLE,
+            dueDate,
+            type: ReportContentKind.file,
+            allowedMimeTypes: DEFAULT_FINAL_REPORT_MIME_TYPES,
+            maxFiles: DEFAULT_FINAL_REPORT_MAX_FILES,
+          },
+          select: { id: true },
+        });
+
+        await transaction.milestoneReportLink.create({
+          data: { milestoneId, reportId: report.id },
+        });
+      }
+
+      return transaction.project.findUniqueOrThrow({
+        where: { id: project.id },
+        include: projectInclude,
+      });
     });
   }
   /**

@@ -163,11 +163,24 @@ también responde `409` mientras quede algún hito mínimo sin completar. La reg
 es un bloqueo duro, sin excepción para `admin`. Rechazar un proyecto nunca se
 bloquea.
 
+### Hitos y entregas
+
+Un hito se puede vincular con una o varias **entregas** (`ProjectReport`) y una
+entrega con varios hitos (tabla intermedia `MilestoneReportLink`). Al crear o
+editar un hito se envía `reportIds` con las entregas a vincular (solo del mismo
+proyecto). **Un hito no se puede completar** mientras alguna entrega vinculada
+no esté `accepted`; la API responde `409` con las entregas pendientes. Volver a
+marcarlo como pendiente siempre está permitido.
+
+Eliminar un hito o una entrega solo borra sus enlaces: la otra parte no se toca.
+La interfaz avisa antes de eliminarlos indicando qué se desvinculará.
+
 Todo proyecto nuevo nace con el hito mínimo **«Documento final»** en
 `semester_2`, con vencimiento a un año de la fecha de inicio (o de la fecha de
-creación si no se indicó inicio). Es el artículo/documento final que cada grupo
-debe entregar para cerrar el proyecto; se puede editar o eliminar como cualquier
-otro hito.
+creación si no se indicó inicio), **más una entrega «Documento final»** de tipo
+Archivo (PDF/Word, máximo 1 archivo) vinculada a él. Es el artículo/documento
+final que cada grupo debe adjuntar y que debe ser aceptado para cerrar el
+proyecto; el hito y la entrega se pueden editar o eliminar como cualquier otro.
 
 ```mermaid
 stateDiagram-v2
@@ -201,7 +214,8 @@ El esquema Prisma completo está documentado en
 - **Proyecto**: `Project`, `ProjectSchool`, `ProjectNaturalProposer`,
   `ProjectDeliverable`.
 - **Equipo y seguimiento**: `ProjectActorAssignment`, `ProjectObservation`,
-  `ProjectStatusHistory`, `ProjectChangeHistory`, `ProjectMilestones`.
+  `ProjectStatusHistory`, `ProjectChangeHistory`, `ProjectMilestones`,
+  `MilestoneReportLink`.
 - **Archivos**: `ProjectAttachment` (solo metadatos; el binario vive en
   S3/MinIO).
 
@@ -230,6 +244,10 @@ guardan en la propia fila (`textContent`, `url`, `label`); los archivos
 por tanto el mismo almacenamiento S3. El contenido solo se puede modificar
 mientras la entrega esté `pending` o `rejected`; al enviarla se valida que tenga
 al menos una pieza.
+
+Cada entrega expone en la API los hitos a los que está vinculada
+(`milestones`), y cada hito expone sus entregas vinculadas (`reports`) con su
+estado. Ver [Hitos y entregas](#hitos-y-entregas).
 
 `POST .../contents/files/presign` acepta documentos (PDF, Word, Excel), imágenes
 (PNG, JPEG, WebP, GIF) y videos (MP4, WebM, OGG) hasta
@@ -323,7 +341,7 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 | `POST` | `/projects/:id/phase/advance` | Avanzar de fase (semestre) si los hitos mínimos de la fase actual están completos (`409` si no). |
 | `POST` | `/projects/:id/actors` | Asignar un usuario a un proyecto. |
 | `GET/POST` | `/projects/:id/observations` | Listar / agregar observaciones. |
-| `GET/POST/PATCH/DELETE` | `/projects/:id/milestones` | Gestionar hitos, incluida la marca de hito mínimo (`isMinimum`) y su fase. |
+| `GET/POST/PATCH/DELETE` | `/projects/:id/milestones` | Gestionar hitos: marca de mínimo (`isMinimum`), fase y entregas vinculadas (`reportIds`). |
 | `GET/POST/DELETE` | `/projects/:id/attachments` | Gestionar anexos. |
 | `GET` | `/projects/:id/attachments/:aid/download` | Descargar un anexo. |
 | `GET/POST/PATCH/DELETE` | `/projects/:id/reports` | Gestionar entregas y su contenido. |

@@ -10,7 +10,10 @@ import {
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth.types';
-import { MilestonesService, SelectedMilestone } from './milestones.service';
+import {
+  MilestonesService,
+  ProjectMilestoneResponse,
+} from './milestones.service';
 import { CreateMilestoneDto, UpdateMilestoneDto } from './milestones.dto';
 
 @Controller('projects/:projectId/milestones')
@@ -21,7 +24,7 @@ export class MilestonesController {
   getProjectMilestones(
     @Param('projectId', ParseIntPipe) projectId: number,
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<SelectedMilestone[]> {
+  ): Promise<ProjectMilestoneResponse[]> {
     return this.milestonesService.milestonesByProject(projectId, user);
   }
 
@@ -30,7 +33,7 @@ export class MilestonesController {
     @Param('projectId', ParseIntPipe) projectId: number,
     @Body() data: CreateMilestoneDto,
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<SelectedMilestone> {
+  ): Promise<ProjectMilestoneResponse> {
     return this.milestonesService.createMilestone({
       projectId,
       data,
@@ -44,7 +47,7 @@ export class MilestonesController {
     @Param('milestoneId', ParseIntPipe) milestoneId: number,
     @Body() data: UpdateMilestoneDto,
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<SelectedMilestone> {
+  ): Promise<ProjectMilestoneResponse> {
     return this.milestonesService.updateMilestone({
       projectId,
       milestoneId,
@@ -58,7 +61,7 @@ export class MilestonesController {
     @Param('projectId', ParseIntPipe) projectId: number,
     @Param('milestoneId', ParseIntPipe) milestoneId: number,
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<SelectedMilestone> {
+  ): Promise<ProjectMilestoneResponse> {
     return this.milestonesService.deleteMilestone({
       projectId,
       milestoneId,
