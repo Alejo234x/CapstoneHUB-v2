@@ -6,6 +6,9 @@ La manera recomendada de trabajar en el proyecto es por medio de devcontainers:
 docker compose -f .devcontainer/docker-compose.yml up --build
 ```
 
+> Para CI/CD y el despliegue en un servidor con Dokploy, ver
+> [docs/deployment.md](docs/deployment.md).
+
 Si se utiliza VS Code, el workflow es:
 
 - abrir el proyecto en VS Code
@@ -258,3 +261,27 @@ Notas:
 entorno: credenciales reales, `S3_REGION`, `S3_BUCKET`, `S3_ENDPOINT` vacío y
 `S3_FORCE_PATH_STYLE="false"`. Algunas alternativas compatibles son LocalStack,
 SeaweedFS, Garage o `moto server`.
+
+# Contraseñas de base de datos: usar valores URL-safe
+
+`DATABASE_URL` es una URL, así que la contraseña debe ir **percent-encoded** si
+contiene caracteres reservados (`@ : / ? # %`, espacio, etc.). En el compose de
+producción (`compose.dokploy.yml`) `DB_PASSWORD` se usa a la vez como
+`POSTGRES_PASSWORD` (contraseña cruda) y dentro de la `DATABASE_URL`, por lo que
+un valor con esos caracteres rompe la conexión aunque la codifiques.
+
+Por eso, la forma sencilla es **usar una contraseña URL-safe**: solo
+`A-Z a-z 0-9 - . _ ~`, sin caracteres reservados. Por ejemplo:
+
+```bash
+openssl rand -base64 24 | tr '+/' '-_'
+```
+
+Si necesitas caracteres especiales, no los metas en `DB_PASSWORD`: define una
+variable `DATABASE_URL` aparte (con la contraseña percent-encoded) para el
+backend y deja `DB_PASSWORD` crudo para Postgres. Para codificar:
+
+```bash
+node -e "process.stdout.write(encodeURIComponent('p@ss:word/#') + '\n')"
+# p%40ss%3Aword%2F%23
+```
