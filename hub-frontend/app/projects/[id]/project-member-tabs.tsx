@@ -13,12 +13,18 @@ type ProjectMemberTabsProps = {
   readonly project: ProjectDetails;
   /** Asignaciones del proyecto, ya normalizadas por la vista. */
   readonly assignments: NonNullable<ProjectDetails["actorAssignments"]>;
+  /**
+   * Recarga en segundo plano el detalle del proyecto. Los paneles la llaman tras
+   * una mutación para reflejar los cambios sin recargar la página.
+   */
+  readonly onProjectChange: () => Promise<void>;
 };
 
 /** Pestañas internas: solo se renderizan para miembros del proyecto. */
 export default function ProjectMemberTabs({
   project,
   assignments,
+  onProjectChange,
 }: ProjectMemberTabsProps) {
   return (
     <>
@@ -26,6 +32,7 @@ export default function ProjectMemberTabs({
         <ProjectActorAssignmentPanel
           projectId={project.id}
           assignments={assignments}
+          onProjectChange={onProjectChange}
         />
       </TabsContent>
 
@@ -34,17 +41,23 @@ export default function ProjectMemberTabs({
           projectId={project.id}
           observations={project.observations ?? []}
           assignments={assignments}
+          onProjectChange={onProjectChange}
         />
       </TabsContent>
 
       <TabsContent value="hitos" className="mt-6">
         <div className="flex flex-col gap-6">
-          <ProjectPhaseActions project={project} assignments={assignments} />
+          <ProjectPhaseActions
+            project={project}
+            assignments={assignments}
+            onProjectChange={onProjectChange}
+          />
           <ProjectMilestonesPanel
             projectId={project.id}
             milestones={project.milestones ?? []}
             actorAssignments={assignments}
             projectPhase={project.phase ?? null}
+            onProjectChange={onProjectChange}
           />
         </div>
       </TabsContent>
@@ -54,6 +67,7 @@ export default function ProjectMemberTabs({
           projectId={project.id}
           reports={project.reports ?? []}
           actorAssignments={assignments}
+          onProjectChange={onProjectChange}
         />
       </TabsContent>
 
@@ -62,6 +76,7 @@ export default function ProjectMemberTabs({
           projectId={project.id}
           attachments={project.attachments ?? []}
           assignments={assignments}
+          onProjectChange={onProjectChange}
         />
       </TabsContent>
 

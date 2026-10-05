@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { updateProjectStatus } from "../services/projects";
 import { ProjectMilestoneItem } from "../services/schemas";
 import { formatDate } from "../services/utils";
@@ -46,6 +45,7 @@ type ProjectStatusEditFormProps = {
   currentStatus: string;
   assignments: ProjectAssignment[];
   milestones?: ProjectMilestoneItem[];
+  onProjectChange?: () => Promise<void>;
 };
 
 function canManageStatus(
@@ -109,8 +109,8 @@ export default function ProjectStatusEditForm({
   currentStatus,
   assignments,
   milestones = [],
+  onProjectChange,
 }: ProjectStatusEditFormProps) {
-  const router = useRouter();
   const { session, isAuthenticated, ready } = useAuth();
 
   const [status, setStatus] = useState(currentStatus);
@@ -176,7 +176,7 @@ export default function ProjectStatusEditForm({
       try {
         await updateProjectStatus(String(projectId), status, trimmedReason);
         setReason("");
-        router.refresh();
+        await onProjectChange?.();
       } catch (error) {
         setErrorMessage(
           error instanceof Error

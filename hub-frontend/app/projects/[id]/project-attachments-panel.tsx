@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import {
   deleteProjectAttachment,
@@ -71,6 +70,7 @@ type ProjectAttachmentsPanelProps = {
   projectId: number;
   attachments: ProjectAttachmentItem[];
   assignments: ProjectActorAssignment[];
+  onProjectChange: () => Promise<void>;
 };
 
 function getPermissionMessage(isAuthenticated: boolean): string {
@@ -530,8 +530,8 @@ export default function ProjectAttachmentsPanel({
   projectId,
   attachments,
   assignments,
+  onProjectChange,
 }: ProjectAttachmentsPanelProps) {
-  const router = useRouter();
   const { session, isAuthenticated, ready } = useAuth();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -618,7 +618,7 @@ export default function ProjectAttachmentsPanel({
         await uploadProjectAttachment(String(projectId), selectedFile);
         setSelectedFile(null);
         form.reset();
-        router.refresh();
+        await onProjectChange();
       } catch (error) {
         setErrorMessage(
           error instanceof Error ? error.message : "No se pudo subir el anexo",
@@ -684,7 +684,7 @@ export default function ProjectAttachmentsPanel({
     startTransition(async () => {
       try {
         await deleteProjectAttachment(String(projectId), attachment.id);
-        router.refresh();
+        await onProjectChange();
       } catch (error) {
         setListError(
           error instanceof Error

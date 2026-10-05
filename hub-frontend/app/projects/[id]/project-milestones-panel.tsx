@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   createProjectMilestone,
   deleteProjectMilestone,
@@ -91,6 +90,8 @@ type ProjectMilestonesPanelProps = {
   }[];
   /** Fase (semestre) actual del proyecto; se usa como valor por defecto. */
   projectPhase: ProjectPhase | null;
+  /** Recarga el detalle del proyecto tras una mutación. */
+  onProjectChange: () => Promise<void>;
 };
 
 type MilestoneFormState = {
@@ -126,8 +127,8 @@ export default function ProjectMilestonesPanel({
   milestones,
   actorAssignments,
   projectPhase,
+  onProjectChange,
 }: ProjectMilestonesPanelProps) {
-  const router = useRouter();
   const { session, isAuthenticated, ready } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMilestone, setEditingMilestone] =
@@ -258,7 +259,7 @@ export default function ProjectMilestonesPanel({
           await createProjectMilestone(String(projectId), payload);
         }
         setDialogOpen(false);
-        router.refresh();
+        await onProjectChange();
       } catch (error) {
         setErrorMessage(
           error instanceof Error ? error.message : "No se pudo guardar el hito",
@@ -275,7 +276,7 @@ export default function ProjectMilestonesPanel({
         await updateProjectMilestone(String(projectId), milestone.id, {
           completed: !milestone.completed,
         });
-        router.refresh();
+        await onProjectChange();
       } catch (error) {
         setErrorMessage(
           error instanceof Error
@@ -305,7 +306,7 @@ export default function ProjectMilestonesPanel({
     startTransition(async () => {
       try {
         await deleteProjectMilestone(String(projectId), milestone.id);
-        router.refresh();
+        await onProjectChange();
       } catch (error) {
         setErrorMessage(
           error instanceof Error

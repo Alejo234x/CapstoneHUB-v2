@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 
 import { createProjectObservation } from "../../services/observations";
 import { ProjectObservationItem } from "../../services/schemas";
@@ -39,6 +38,7 @@ type ProjectObservationsPanelProps = {
   readonly projectId: number;
   readonly observations: ProjectObservationItem[];
   readonly assignments: ProjectActorAssignment[];
+  readonly onProjectChange: () => Promise<void>;
 };
 
 function canCreateObservation(
@@ -59,8 +59,8 @@ export default function ProjectObservationsPanel({
   projectId,
   observations,
   assignments,
+  onProjectChange,
 }: ProjectObservationsPanelProps) {
-  const router = useRouter();
   const { session, isAuthenticated, ready } = useAuth();
 
   const [content, setContent] = useState("");
@@ -89,7 +89,7 @@ export default function ProjectObservationsPanel({
         await createProjectObservation(String(projectId), trimmedContent);
 
         setContent("");
-        router.refresh();
+        await onProjectChange();
       } catch (error) {
         setErrorMessage(
           error instanceof Error

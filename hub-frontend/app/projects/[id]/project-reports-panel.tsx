@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   confirmReportContentFile,
   createReportContent,
@@ -90,6 +89,7 @@ type ProjectReportsPanelProps = {
     readonly userId: number;
     readonly role: string;
   }[];
+  readonly onProjectChange: () => Promise<void>;
 };
 
 type ReportFormState = {
@@ -225,8 +225,8 @@ export default function ProjectReportsPanel({
   projectId,
   reports: initialReports,
   actorAssignments,
+  onProjectChange,
 }: ProjectReportsPanelProps) {
-  const router = useRouter();
   const { session, isAuthenticated, ready } = useAuth();
   const [reports, setReports] = useState<ProjectReportItem[]>(initialReports);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -398,7 +398,7 @@ export default function ProjectReportsPanel({
       }
       setDialogOpen(false);
       await reloadReports();
-      router.refresh();
+      await onProjectChange();
     }, "No se pudo guardar la entrega");
   }
 
@@ -420,7 +420,7 @@ export default function ProjectReportsPanel({
     runTransition(async () => {
       await deleteProjectReport(String(projectId), report.id);
       await reloadReports();
-      router.refresh();
+      await onProjectChange();
     }, "No se pudo eliminar la entrega");
   }
 
@@ -454,7 +454,7 @@ export default function ProjectReportsPanel({
         setReviewOpen(false);
         setReviewTarget(null);
         await reloadReports();
-        router.refresh();
+        await onProjectChange();
       } catch (error) {
         setReviewError(
           error instanceof Error
@@ -572,7 +572,7 @@ export default function ProjectReportsPanel({
         );
         setContentEdit(null);
         await reloadReports();
-        router.refresh();
+        await onProjectChange();
       } catch (error) {
         setEditError(
           error instanceof Error ? error.message : "No se pudo guardar",

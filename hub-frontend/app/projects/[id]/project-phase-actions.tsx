@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { ProjectDetails } from "../../services/schemas";
 import { formatDate, formatPhase } from "../../services/utils";
 import { advanceProjectPhase } from "../../services/projects";
@@ -32,6 +31,7 @@ import { RiArrowRightLine, RiErrorWarningLine } from "@remixicon/react";
 type ProjectPhaseActionsProps = {
   readonly project: ProjectDetails;
   readonly assignments: NonNullable<ProjectDetails["actorAssignments"]>;
+  readonly onProjectChange: () => Promise<void>;
 };
 
 /**
@@ -42,8 +42,8 @@ type ProjectPhaseActionsProps = {
 export default function ProjectPhaseActions({
   project,
   assignments,
+  onProjectChange,
 }: ProjectPhaseActionsProps) {
-  const router = useRouter();
   const { session } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -97,7 +97,7 @@ export default function ProjectPhaseActions({
     startTransition(async () => {
       try {
         await advanceProjectPhase(String(project.id));
-        router.refresh();
+        await onProjectChange();
       } catch (error) {
         setErrorMessage(
           error instanceof Error
