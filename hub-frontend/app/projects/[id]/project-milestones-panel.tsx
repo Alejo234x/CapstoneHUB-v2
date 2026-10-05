@@ -136,6 +136,17 @@ function hasPendingReports(milestone: ProjectMilestoneItem): boolean {
   );
 }
 
+/** Mensaje que explica por qué un hito no se puede completar. */
+function blockedCompletionMessage(milestone: ProjectMilestoneItem): string {
+  const pending = (milestone.reports ?? []).filter(
+    (report) => !isReportDone(report.status),
+  );
+  const details = pending
+    .map((report) => `${report.title} (${reportStatusLabel(report.status)})`)
+    .join(", ");
+  return `No puedes completar este hito: sus entregas vinculadas no están aceptadas: ${details}.`;
+}
+
 function createEmptyForm(phase: ProjectPhase | null): MilestoneFormState {
   return {
     title: "",
@@ -261,6 +272,7 @@ export default function ProjectMilestonesPanel({
 
   function openDetailDialog(milestone: ProjectMilestoneItem) {
     setDetailMilestone(milestone);
+    setErrorMessage(null);
     setDetailOpen(true);
   }
 
@@ -312,6 +324,11 @@ export default function ProjectMilestonesPanel({
   }
 
   function handleToggle(milestone: ProjectMilestoneItem) {
+    if (!milestone.completed && hasPendingReports(milestone)) {
+      setErrorMessage(blockedCompletionMessage(milestone));
+      return;
+    }
+
     setErrorMessage(null);
 
     startTransition(async () => {
@@ -442,11 +459,7 @@ export default function ProjectMilestonesPanel({
                           : "Marcar como completado"
                       }
                       onClick={() => handleToggle(milestone)}
-                      disabled={
-                        !canManage ||
-                        isPending ||
-                        (!milestone.completed && hasPendingReports(milestone))
-                      }
+                      disabled={!canManage || isPending}
                     >
                       {milestone.completed ? (
                         <RiCheckboxCircleLine className="text-success" />
@@ -877,6 +890,13 @@ export default function ProjectMilestonesPanel({
                     </AlertDescription>
                   </Alert>
                 ) : null}
+
+                {errorMessage ? (
+                  <Alert variant="destructive">
+                    <RiErrorWarningLine />
+                    <AlertDescription>{errorMessage}</AlertDescription>
+                  </Alert>
+                ) : null}
               </div>
 
               {canManage ? (
@@ -886,11 +906,7 @@ export default function ProjectMilestonesPanel({
                       activeDetailMilestone.completed ? "outline" : "default"
                     }
                     onClick={() => handleToggle(activeDetailMilestone)}
-                    disabled={
-                      isPending ||
-                      (!activeDetailMilestone.completed &&
-                        hasPendingReports(activeDetailMilestone))
-                    }
+                    disabled={isPending}
                   >
                     {isPending ? (
                       <Spinner data-icon="inline-start" />
