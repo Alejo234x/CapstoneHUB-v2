@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { RiEditLine } from "@remixicon/react";
 import ProjectStatusEditForm from "../../components/project-status-edit-form";
 import ProjectCategoriesPanel from "./project-categories-panel";
 import ProjectDetailsBadges from "./project-details-badges";
@@ -8,12 +10,14 @@ import ProjectDetailsSkeleton from "./project-details-skeleton";
 import ProjectGeneralTab from "./project-general-tab";
 import ProjectMemberTabs from "./project-member-tabs";
 import ProjectMissingState from "./project-missing-state";
+import ProjectPhaseActions from "./project-phase-actions";
 import ProjectTabs from "./project-tabs";
 import { visibleProjectTabs } from "./project-tabs-config";
 import { useCanEditProject } from "./use-can-edit-project";
 import { useIsProjectMember } from "./use-is-project-member";
 import { useProjectDetails } from "./use-project-details";
 import ServiceUnavailable from "../../components/service-unavailable";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isServiceUnavailableStatus } from "@/lib/http";
@@ -73,8 +77,30 @@ export default function ProjectDetailsView({ id }: { readonly id: string }) {
             >
               <ProjectTabsList isMember={isMember} />
 
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <ProjectPhaseActions
+                  project={project}
+                  assignments={assignments}
+                  onProjectChange={refresh}
+                />
+
+                {canEdit ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={
+                      <Link href={`/projects/${project.id}/edit`}>
+                        <RiEditLine data-icon="inline-start" />
+                        Editar proyecto
+                      </Link>
+                    }
+                  />
+                ) : null}
+              </div>
+
               <TabsContent value="general" className="mt-6 flex flex-col gap-6">
-                <ProjectGeneralTab project={project} canEdit={canEdit} />
+                <ProjectGeneralTab project={project} />
               </TabsContent>
 
               <TabsContent value="categorias" className="mt-6">

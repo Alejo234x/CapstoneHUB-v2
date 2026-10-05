@@ -2,10 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { ProjectDetails } from "../../services/schemas";
-import { formatDate, formatPhase } from "../../services/utils";
+import { formatPhase } from "../../services/utils";
 import { advanceProjectPhase } from "../../services/projects";
 import { useAuth } from "../../components/auth-provider";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,15 +17,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { RiArrowRightLine, RiErrorWarningLine } from "@remixicon/react";
+import { RiArrowRightLine } from "@remixicon/react";
 
 type ProjectPhaseActionsProps = {
   readonly project: ProjectDetails;
@@ -35,9 +27,9 @@ type ProjectPhaseActionsProps = {
 };
 
 /**
- * Acción para avanzar el proyecto al siguiente semestre. Solo se muestra a
- * administradores y coordinadores asignados mientras el proyecto está en
- * progreso; exige que los hitos mínimos de la fase actual estén completos.
+ * Control compacto para avanzar el proyecto al siguiente semestre. Solo se
+ * muestra a administradores y coordinadores asignados mientras el proyecto está
+ * en progreso; exige que los hitos mínimos de la fase actual estén completos.
  */
 export default function ProjectPhaseActions({
   project,
@@ -86,9 +78,22 @@ export default function ProjectPhaseActions({
   }
 
   const isFinalPhase = currentPhase === "semester_2";
-  const isBlocked = pendingMinimums.length > 0;
   const nextLabel =
     currentPhase === "semester_1" ? "Semestre 2" : "siguiente fase";
+
+  function handleAdvanceClick() {
+    if (pendingMinimums.length > 0) {
+      setErrorMessage(
+        `No puedes avanzar de fase: hay hitos mínimos pendientes (${pendingMinimums
+          .map((milestone) => milestone.title)
+          .join(", ")}).`,
+      );
+      return;
+    }
+
+    setErrorMessage(null);
+    setConfirmOpen(true);
+  }
 
   function handleAdvance() {
     setConfirmOpen(false);
@@ -109,69 +114,33 @@ export default function ProjectPhaseActions({
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Fase del proyecto</CardTitle>
-        <CardDescription>
-          Fase actual:{" "}
-          <Badge variant="outline">{formatPhase(currentPhase)}</Badge>
-        </CardDescription>
-      </CardHeader>
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-sm text-muted-foreground">Fase</span>
+      <Badge variant="outline">{formatPhase(currentPhase)}</Badge>
 
-      <CardContent className="flex flex-col gap-4">
-        {isFinalPhase ? (
-          <Alert>
-            <AlertDescription>
-              El proyecto se encuentra en su última fase. Para finalizarlo,
-              cambia el estado a «Cerrado».
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <>
-            {isBlocked ? (
-              <Alert variant="destructive">
-                <RiErrorWarningLine />
-                <AlertDescription>
-                  Completa los hitos mínimos de la fase actual antes de avanzar:
-                  <ul className="mt-2 list-disc pl-5">
-                    {pendingMinimums.map((milestone) => (
-                      <li key={milestone.id}>
-                        {milestone.title} · vence{" "}
-                        {formatDate(milestone.dueDate)}
-                      </li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Los hitos mínimos de la fase actual están completos. Puedes
-                avanzar al {nextLabel}.
-              </p>
-            )}
+      {isFinalPhase ? (
+        <span className="text-xs text-muted-foreground">Fase final</span>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleAdvanceClick}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <RiArrowRightLine data-icon="inline-start" />
+          )}
+          {isPending ? "Avanzando..." : `Avanzar a ${nextLabel}`}
+        </Button>
+      )}
 
-            <div>
-              <Button
-                onClick={() => setConfirmOpen(true)}
-                disabled={isPending || isBlocked}
-              >
-                {isPending ? (
-                  <Spinner data-icon="inline-start" />
-                ) : (
-                  <RiArrowRightLine data-icon="inline-start" />
-                )}
-                {isPending ? "Avanzando..." : `Avanzar a ${nextLabel}`}
-              </Button>
-            </div>
-          </>
-        )}
-
-        {errorMessage ? (
-          <Alert variant="destructive">
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-      </CardContent>
+      {errorMessage ? (
+        <span className="text-xs font-medium text-destructive">
+          {errorMessage}
+        </span>
+      ) : null}
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
@@ -190,6 +159,6 @@ export default function ProjectPhaseActions({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </div>
   );
 }

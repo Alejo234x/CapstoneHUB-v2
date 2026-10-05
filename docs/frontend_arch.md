@@ -65,23 +65,26 @@ proxy `stream`, que reenvía `Range`.
 Cada petición autenticada lee el token de `auth.ts` y agrega
 `Authorization: Bearer <token>`.
 
-En la pestaña **General** del detalle, quienes pueden editar (administradores,
-evaluadores, coordinadores/asesores asignados al proyecto y el proponente
-mientras esté en revisión) ven un botón **Editar proyecto** que abre la pantalla
-dedicada `/projects/[id]/edit` (los mismos campos de la propuesta, salvo el
-proponente). Los cambios se envían por `PUT` y la pestaña **Historial** muestra,
-junto al historial de estados, una entrada por cada campo modificado con su
-valor anterior y nuevo. Al desmarcar «Proyecto privado» se muestra una
-advertencia y una confirmación antes de publicarlo.
+En el detalle del proyecto, debajo de las pestañas, hay una barra persistente
+visible desde cualquier pestaña. A la izquierda, los administradores y
+coordinadores asignados ven el control compacto **Fase** con el botón para
+avanzar de semestre; se habilita cuando los hitos mínimos de la fase actual
+están completos (al pulsarlo con pendientes, avisa cuáles faltan). A la derecha,
+quienes pueden editar (administradores, evaluadores, coordinadores/asesores
+asignados al proyecto y el proponente mientras esté en revisión) ven el botón
+**Editar proyecto** que abre la pantalla dedicada `/projects/[id]/edit` (los
+mismos campos de la propuesta, salvo el proponente). Los cambios se envían por
+`PUT` y la pestaña **Historial** muestra, junto al historial de estados, una
+entrada por cada campo modificado con su valor anterior y nuevo. Al desmarcar
+«Proyecto privado» se muestra una advertencia y una confirmación antes de
+publicarlo.
 
 La pestaña **Hitos** permite marcar hitos como **mínimos**, asignarles una fase
 (semestre) y vincularles entregas del proyecto; un hito con entregas vinculadas
-no se puede completar hasta que todas estén aceptadas. Los administradores y
-coordinadores asignados ven además una tarjeta **Fase del proyecto** para avanzar
-de semestre; se habilita cuando los hitos mínimos de la fase actual están
-completos. Al elegir el estado «Cerrado» se avisa si aún quedan hitos mínimos
-pendientes. En las entregas se muestra a qué hitos están vinculadas y se advierte
-antes de eliminar hitos o entregas que tienen vínculos.
+no se puede completar hasta que todas estén aceptadas. Al elegir el estado
+«Cerrado» se avisa si aún quedan hitos mínimos pendientes. En las entregas se
+muestra a qué hitos están vinculadas y se advierte antes de eliminar hitos o
+entregas que tienen vínculos.
 
 ## Autenticación
 
