@@ -2,6 +2,7 @@ import { ProjectDetails } from "../../services/schemas";
 import ProjectActorAssignmentPanel from "./project-actor-assignment-panel";
 import ProjectObservationsPanel from "./project-observations-panel";
 import ProjectMilestonesPanel from "./project-milestones-panel";
+import ProjectPhaseActions from "./project-phase-actions";
 import ProjectReportsPanel from "./project-reports-panel";
 import ProjectAttachmentsPanel from "./project-attachments-panel";
 import ProjectStatusHistoryPanel from "./project-status-history-panel";
@@ -37,11 +38,15 @@ export default function ProjectMemberTabs({
       </TabsContent>
 
       <TabsContent value="hitos" className="mt-6">
-        <ProjectMilestonesPanel
-          projectId={project.id}
-          milestones={project.milestones ?? []}
-          actorAssignments={assignments}
-        />
+        <div className="flex flex-col gap-6">
+          <ProjectPhaseActions project={project} assignments={assignments} />
+          <ProjectMilestonesPanel
+            projectId={project.id}
+            milestones={project.milestones ?? []}
+            actorAssignments={assignments}
+            projectPhase={project.phase ?? null}
+          />
+        </div>
       </TabsContent>
 
       <TabsContent value="entregas" className="mt-6">

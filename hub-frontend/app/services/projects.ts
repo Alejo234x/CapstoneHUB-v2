@@ -139,6 +139,19 @@ export async function updateProjectStatus(
   return (await response.json()) as ProjectDetails;
 }
 
+export async function advanceProjectPhase(
+  id: string,
+): Promise<ProjectDetails> {
+  const response = await fetch(getApiUrl(`/api/projects/${id}/phase/advance`), {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+
+  await ensureOk(response, { action: "avanzar la fase del proyecto" });
+
+  return (await response.json()) as ProjectDetails;
+}
+
 export async function updateProject(
   id: string,
   payload: UpdateProjectPayload,

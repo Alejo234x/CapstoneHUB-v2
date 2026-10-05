@@ -14,6 +14,7 @@ Ver también: [Arquitectura del backend](./backend_arch.md).
 - `ActorRole`: `advisor`, `coordinator`, `student`, `evaluator`.
 - `ProjectSource`: `external_entity`, `research`, `internal_need`,
   `social_impact`.
+- `ProjectPhase`: `semester_1`, `semester_2`.
 
 ## Entidades
 
@@ -37,6 +38,12 @@ interna o impacto social). Incluye además el asesor de facultad recomendado
 (`facultyAdvisor`), el equipo requerido (`teamRequirements`), las expectativas
 finales (`expectedOutcomes`) y una lista de entregables. `startDate` es opcional.
 Es dueña de todos los registros relacionados mediante borrado en cascada.
+
+#### Fase (semestre)
+
+`phase` (`ProjectPhase`) indica el semestre en el que cursa el proyecto. Empieza
+en `semester_1` y solo puede avanzar a `semester_2`; cada avance se registra en
+`ProjectChangeHistory` con `field = "phase"`.
 
 #### Privacidad y visibilidad
 
@@ -100,7 +107,9 @@ estado se siguen registrando en `ProjectStatusHistory`.
 ### ProjectMilestones
 
 Entregables programados con `title`, `description` opcional, `dueDate` y un
-flag `completed`.
+flag `completed`. `isMinimum` marca los **hitos mínimos**: los obligatorios para
+avanzar de fase o cerrar el proyecto. `phase` (`ProjectPhase` opcional) indica a
+qué semestre pertenece el hito; un hito mínimo sin fase se considera global.
 
 ### ProjectAttachment
 
@@ -166,6 +175,7 @@ classDiagram
         +Boolean requiresLegalization
         +Boolean isPrivate
         +ProjectSource source
+        +ProjectPhase phase
         +String facultyAdvisor
         +String teamRequirements
         +String expectedOutcomes
@@ -238,6 +248,8 @@ classDiagram
         +String description
         +DateTime dueDate
         +Boolean completed
+        +Boolean isMinimum
+        +ProjectPhase phase
         +DateTime createdAt
     }
 
@@ -292,6 +304,12 @@ classDiagram
         in_progress
         closed
         rejected
+    }
+
+    class ProjectPhase {
+        <<enumeration>>
+        semester_1
+        semester_2
     }
 
     class UserRole {
@@ -355,7 +373,9 @@ classDiagram
     UserRoleAssignment ..> UserRole
     ProjectActorAssignment ..> ActorRole
     Project ..> ProjectStatus
+    Project ..> ProjectPhase
     ProjectStatusHistory ..> ProjectStatus
+    ProjectMilestones ..> ProjectPhase
     ProjectReport ..> ReportStatus
     ProjectReportContent ..> ReportContentKind
 ```

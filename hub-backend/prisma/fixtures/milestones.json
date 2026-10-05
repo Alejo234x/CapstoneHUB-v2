@@ -4,25 +4,32 @@
       "title": "Levantamiento de requisitos",
       "description": "Entrevistas con productores y definición de variables a monitorear.",
       "dueDate": "2026-02-01",
-      "completed": true
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_1"
     },
     {
       "title": "Diseño del nodo sensor",
       "description": "Selección de microcontrolador, sensores y protocolo de comunicación.",
       "dueDate": "2026-03-15",
-      "completed": true
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_1"
     },
     {
       "title": "Desarrollo del backend e ingesta",
       "description": "API de ingesta de lecturas y tablero de visualización.",
       "dueDate": "2026-05-10",
-      "completed": false
+      "completed": false,
+      "phase": "semester_2"
     },
     {
       "title": "Pruebas de campo",
       "description": "Despliegue piloto en dos fincas durante cuatro semanas.",
       "dueDate": "2026-07-01",
-      "completed": false
+      "completed": false,
+      "isMinimum": true,
+      "phase": "semester_2"
     }
   ],
   "Optimización de Cadena de Frío con Sensores": [
@@ -30,19 +37,24 @@
       "title": "Análisis de la cadena logística",
       "description": "Mapeo de puntos críticos de temperatura por ruta.",
       "dueDate": "2025-12-01",
-      "completed": true
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_1"
     },
     {
       "title": "Prototipo del registrador",
       "description": "Firmware del registrador con memoria local y transmisión GSM.",
       "dueDate": "2026-02-20",
-      "completed": false
+      "completed": false,
+      "isMinimum": true,
+      "phase": "semester_1"
     },
     {
       "title": "Integración con el sistema de trazabilidad",
       "description": "API de sincronización con la plataforma de la empresa.",
       "dueDate": "2026-05-30",
-      "completed": false
+      "completed": false,
+      "phase": "semester_2"
     }
   ],
   "App de Movilidad Inclusiva para Ambato": [
@@ -50,13 +62,16 @@
       "title": "Estudio de accesibilidad urbana",
       "description": "Recolección de datos de aceras, rampas y semáforos.",
       "dueDate": "2026-04-01",
-      "completed": false
+      "completed": false,
+      "isMinimum": true,
+      "phase": "semester_1"
     },
     {
       "title": "Prototipo de la aplicación móvil",
       "description": "Diseño de la experiencia y cálculo de rutas inclusivas.",
       "dueDate": "2026-06-15",
-      "completed": false
+      "completed": false,
+      "phase": "semester_2"
     }
   ],
   "Sistema de Telemedicina para Zonas Rurales": [
@@ -64,19 +79,25 @@
       "title": "Definición funcional de historias clínicas",
       "description": "Requerimientos de la historia clínica mínima y consentimiento informado.",
       "dueDate": "2025-10-15",
-      "completed": true
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_1"
     },
     {
       "title": "Módulo de sincronización offline",
       "description": "Resolución de conflictos y cifrado en reposo.",
       "dueDate": "2026-01-30",
-      "completed": true
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_1"
     },
     {
       "title": "Validación con personal médico",
       "description": "Piloto de teleconsulta en dos centros de salud.",
       "dueDate": "2026-04-20",
-      "completed": false
+      "completed": false,
+      "isMinimum": true,
+      "phase": "semester_2"
     }
   ],
   "Reciclaje Inteligente de Residuos Electrónicos": [
@@ -84,7 +105,9 @@
       "title": "Piloto de clasificación",
       "description": "Entrenamiento del modelo de visión con imágenes del punto de acopio.",
       "dueDate": "2025-09-01",
-      "completed": true
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_1"
     }
   ],
   "Plataforma de Riego Automatizado": [
@@ -92,7 +115,9 @@
       "title": "Borrador de propuesta",
       "description": "Alcance inicial y estimación de costos del controlador.",
       "dueDate": "2026-04-10",
-      "completed": false
+      "completed": false,
+      "isMinimum": true,
+      "phase": "semester_1"
     }
   ]
 }

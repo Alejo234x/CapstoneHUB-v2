@@ -96,6 +96,7 @@ export default function ProjectDetailsView({ id }: { readonly id: string }) {
               projectId={project.id}
               currentStatus={project.status}
               assignments={assignments}
+              milestones={project.milestones ?? []}
             />
           </div>
         ) : null}

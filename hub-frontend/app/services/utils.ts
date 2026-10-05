@@ -34,6 +34,19 @@ export function formatProjectSource(source: string): string {
   }
 }
 
+export const PROJECT_PHASES = ["semester_1", "semester_2"] as const;
+
+export function formatPhase(phase: string | null | undefined): string {
+  switch (phase) {
+    case "semester_1":
+      return "Semestre 1";
+    case "semester_2":
+      return "Semestre 2";
+    default:
+      return phase ?? "";
+  }
+}
+
 export function formatRole(role: string): string {
   switch (role) {
     case "admin":

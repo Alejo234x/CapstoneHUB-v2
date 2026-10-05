@@ -1,6 +1,7 @@
 import {
   ActorRole,
   Prisma,
+  ProjectPhase,
   ProjectSource,
   ProjectStatus,
   UserRole,
@@ -91,6 +92,7 @@ export type ProjectListResponse = {
   id: number;
   name: string;
   status: ProjectStatus;
+  phase: ProjectPhase;
   startDate: Date | null;
   location: string | null;
   requiresLegalization: boolean;
@@ -177,6 +179,8 @@ export type ProjectDetailResponse = ProjectListResponse & {
     description: string | null;
     dueDate: Date;
     completed: boolean;
+    isMinimum: boolean;
+    phase: ProjectPhase | null;
     createdAt: Date;
   }[];
   statusHistory: {
@@ -301,6 +305,7 @@ export function mapProjectListResponse(
     id: project.id,
     name: project.name,
     status: project.status,
+    phase: project.phase,
     startDate: project.startDate,
     location: project.location,
     requiresLegalization: project.requiresLegalization,

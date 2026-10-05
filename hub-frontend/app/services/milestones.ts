@@ -1,4 +1,4 @@
-import { ProjectMilestoneItem } from "./schemas";
+import { ProjectMilestoneItem, ProjectPhase } from "./schemas";
 import { getApiUrl, getAuthHeaders } from "@/lib/api";
 import { ensureOk } from "@/lib/http";
 
@@ -7,6 +7,8 @@ export type CreateProjectMilestonePayload = {
   description?: string | null;
   dueDate: string;
   completed?: boolean;
+  isMinimum?: boolean;
+  phase?: ProjectPhase;
 };
 
 export type UpdateProjectMilestonePayload = Partial<

@@ -293,6 +293,17 @@ export class ProjectsController {
     });
   }
 
+  @Post(':id/phase/advance')
+  async advanceProjectPhase(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ProjectDetailResponse> {
+    return this.projectService.advanceProjectPhase({
+      user,
+      projectId: id,
+    });
+  }
+
   @Delete(':id')
   async deleteProject(
     @Param('id', ParseIntPipe) id: number,

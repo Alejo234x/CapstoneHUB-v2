@@ -8,7 +8,12 @@ import {
 import { AuthorizationService } from '../auth/authorization.service';
 import { PrismaService } from '../prisma.service';
 import { ProjectStatus } from '../generated/prisma/client';
-import { ActorRole, ProjectSource, UserRole } from '../generated/prisma/client';
+import {
+  ActorRole,
+  ProjectPhase,
+  ProjectSource,
+  UserRole,
+} from '../generated/prisma/client';
 
 const ADMIN_USER = {
   id: 1,
@@ -29,6 +34,7 @@ function createProjectDetail() {
     id: 10,
     name: 'Project',
     status: ProjectStatus.under_review,
+    phase: ProjectPhase.semester_1,
     proposer: null,
     actors: [],
     description: 'Description',
@@ -74,20 +80,23 @@ function createPrismaMock() {
   const findUnique = jest
     .fn()
     .mockResolvedValue({ id: 10, status: ProjectStatus.proposed });
+  const milestoneFindMany = jest.fn().mockResolvedValue([]);
 
   const prisma = {
     project: { findUnique },
+    projectMilestones: { findMany: milestoneFindMany },
     $transaction: jest.fn((callback: (transaction: Transaction) => unknown) =>
       callback(transaction),
     ),
   };
 
-  return { prisma, projectUpdate, historyCreate };
+  return { prisma, projectUpdate, historyCreate, milestoneFindMany };
 }
 
 function createAuthorizationMock() {
   return {
     assertCanTransitionProject: jest.fn().mockResolvedValue(undefined),
+    assertCanManageProject: jest.fn().mockResolvedValue(undefined),
     assertCanAssignActors: jest.fn().mockResolvedValue(undefined),
     assertAssignableUser: jest.fn().mockResolvedValue(undefined),
     assertCanEditProjectDetails: jest.fn().mockResolvedValue(undefined),
@@ -100,6 +109,33 @@ function createService(
   authorization: unknown,
 ): ProjectsService {
   return new ProjectsService(prisma as never, authorization as never);
+}
+
+function createAdvancePrismaMock(options?: {
+  status?: ProjectStatus;
+  phase?: ProjectPhase;
+}) {
+  const projectUpdate = jest.fn().mockResolvedValue(undefined);
+  const changeCreate = jest.fn().mockResolvedValue(undefined);
+  const transaction = {
+    project: { update: projectUpdate },
+    projectChangeHistory: { create: changeCreate },
+  };
+  const findUnique = jest.fn().mockResolvedValue({
+    id: 10,
+    status: options?.status ?? ProjectStatus.in_progress,
+    phase: options?.phase ?? ProjectPhase.semester_1,
+  });
+  const milestoneFindMany = jest.fn().mockResolvedValue([]);
+  const prisma = {
+    project: { findUnique },
+    projectMilestones: { findMany: milestoneFindMany },
+    $transaction: jest.fn((callback: (value: unknown) => unknown) =>
+      callback(transaction),
+    ),
+  };
+
+  return { prisma, projectUpdate, changeCreate, milestoneFindMany };
 }
 
 describe('ProjectsService', () => {
@@ -228,6 +264,109 @@ describe('ProjectsService', () => {
       }),
     ).rejects.toThrow('Invalid project status transition');
     expect(authorization.assertCanTransitionProject).not.toHaveBeenCalled();
+  });
+
+  it('blocks closing a project while minimum milestones are incomplete', async () => {
+    const { prisma, projectUpdate, milestoneFindMany } = createPrismaMock();
+    prisma.project.findUnique.mockResolvedValue({
+      id: 10,
+      status: ProjectStatus.in_progress,
+    });
+    milestoneFindMany.mockResolvedValue([{ id: 1, title: 'Informe final' }]);
+    const service = createService(prisma, createAuthorizationMock());
+
+    await expect(
+      service.transitionProjectStatus({
+        user: EVALUATOR_USER,
+        projectId: 10,
+        nextStatus: ProjectStatus.closed,
+        description: 'Cerrar el proyecto',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(projectUpdate).not.toHaveBeenCalled();
+  });
+
+  it('closes a project when its minimum milestones are complete', async () => {
+    const { prisma, projectUpdate } = createPrismaMock();
+    prisma.project.findUnique.mockResolvedValue({
+      id: 10,
+      status: ProjectStatus.in_progress,
+    });
+    const service = createService(prisma, createAuthorizationMock());
+    jest.spyOn(service, 'project').mockResolvedValue(createProjectDetail());
+
+    await service.transitionProjectStatus({
+      user: EVALUATOR_USER,
+      projectId: 10,
+      nextStatus: ProjectStatus.closed,
+      description: 'Cerrar el proyecto',
+    });
+
+    expect(projectUpdate).toHaveBeenCalledWith({
+      where: { id: 10 },
+      data: { status: ProjectStatus.closed },
+    });
+  });
+
+  it('advances the project phase and records it in the change history', async () => {
+    const { prisma, projectUpdate, changeCreate } = createAdvancePrismaMock();
+    const authorization = createAuthorizationMock();
+    const service = createService(prisma, authorization);
+    jest.spyOn(service, 'project').mockResolvedValue(createProjectDetail());
+
+    await service.advanceProjectPhase({ user: ADMIN_USER, projectId: 10 });
+
+    expect(authorization.assertCanManageProject).toHaveBeenCalledWith(
+      ADMIN_USER,
+      10,
+    );
+    expect(projectUpdate).toHaveBeenCalledWith({
+      where: { id: 10 },
+      data: { phase: ProjectPhase.semester_2 },
+    });
+    expect(changeCreate).toHaveBeenCalledWith({
+      data: {
+        projectId: 10,
+        authorUserId: ADMIN_USER.id,
+        field: 'phase',
+        previousValue: ProjectPhase.semester_1,
+        newValue: ProjectPhase.semester_2,
+      },
+    });
+  });
+
+  it('blocks advancing the phase while the current phase minimums are incomplete', async () => {
+    const { prisma, projectUpdate, milestoneFindMany } =
+      createAdvancePrismaMock();
+    milestoneFindMany.mockResolvedValue([{ id: 1, title: 'Prototipo' }]);
+    const service = createService(prisma, createAuthorizationMock());
+
+    await expect(
+      service.advanceProjectPhase({ user: ADMIN_USER, projectId: 10 }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(projectUpdate).not.toHaveBeenCalled();
+  });
+
+  it('rejects advancing the phase when the project is not in progress', async () => {
+    const { prisma } = createAdvancePrismaMock({
+      status: ProjectStatus.assigned,
+    });
+    const service = createService(prisma, createAuthorizationMock());
+
+    await expect(
+      service.advanceProjectPhase({ user: ADMIN_USER, projectId: 10 }),
+    ).rejects.toThrow('must be in progress');
+  });
+
+  it('rejects advancing the phase from the final phase', async () => {
+    const { prisma } = createAdvancePrismaMock({
+      phase: ProjectPhase.semester_2,
+    });
+    const service = createService(prisma, createAuthorizationMock());
+
+    await expect(
+      service.advanceProjectPhase({ user: ADMIN_USER, projectId: 10 }),
+    ).rejects.toThrow('final phase');
   });
 
   it('preserves duplicate-assignment protection', async () => {
