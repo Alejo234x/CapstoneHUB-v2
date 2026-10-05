@@ -28,6 +28,8 @@ export async function seedMilestones({
         description: milestone.description ?? null,
         dueDate: new Date(milestone.dueDate),
         completed: milestone.completed ?? false,
+        isMinimum: milestone.isMinimum ?? false,
+        phase: milestone.phase ?? null,
       };
 
       if (existing) {

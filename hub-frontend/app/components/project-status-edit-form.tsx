@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { updateProjectStatus } from "../services/projects";
+import { ProjectMilestoneItem } from "../services/schemas";
+import { formatDate } from "../services/utils";
 import { useAuth } from "./auth-provider";
 import AccessNotice from "./access-notice";
 import {
@@ -43,6 +44,8 @@ type ProjectStatusEditFormProps = {
   projectId: number;
   currentStatus: string;
   assignments: ProjectAssignment[];
+  milestones?: ProjectMilestoneItem[];
+  onProjectChange?: () => Promise<void>;
 };
 
 function canManageStatus(
@@ -105,8 +108,9 @@ export default function ProjectStatusEditForm({
   projectId,
   currentStatus,
   assignments,
+  milestones = [],
+  onProjectChange,
 }: ProjectStatusEditFormProps) {
-  const router = useRouter();
   const { session, isAuthenticated, ready } = useAuth();
 
   const [status, setStatus] = useState(currentStatus);
@@ -147,8 +151,13 @@ export default function ProjectStatusEditForm({
   const isAdmin = session.user.roles.includes("admin");
   const isReasonRequired = !isAdmin;
   const trimmedReason = reason.trim();
+  const pendingMinimums = milestones.filter(
+    (milestone) => milestone.isMinimum && !milestone.completed,
+  );
+  const isCloseBlocked = status === "closed" && pendingMinimums.length > 0;
   const isSubmitDisabled =
     isPending ||
+    isCloseBlocked ||
     status === currentStatus ||
     (isReasonRequired && trimmedReason.length === 0);
 
@@ -167,7 +176,7 @@ export default function ProjectStatusEditForm({
       try {
         await updateProjectStatus(String(projectId), status, trimmedReason);
         setReason("");
-        router.refresh();
+        await onProjectChange?.();
       } catch (error) {
         setErrorMessage(
           error instanceof Error
@@ -241,6 +250,23 @@ export default function ProjectStatusEditForm({
                   : "Opcional para administradores; se registrará en el historial."}
               </FieldDescription>
             </Field>
+
+            {isCloseBlocked ? (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  No puedes cerrar el proyecto hasta completar sus hitos
+                  mínimos:
+                  <ul className="mt-2 list-disc pl-5">
+                    {pendingMinimums.map((milestone) => (
+                      <li key={milestone.id}>
+                        {milestone.title} · vence{" "}
+                        {formatDate(milestone.dueDate)}
+                      </li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            ) : null}
 
             <div className="flex flex-wrap gap-3">
               <Button type="submit" disabled={isSubmitDisabled}>

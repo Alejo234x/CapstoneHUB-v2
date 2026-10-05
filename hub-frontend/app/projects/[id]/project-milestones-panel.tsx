@@ -1,18 +1,24 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   createProjectMilestone,
   deleteProjectMilestone,
   updateProjectMilestone,
 } from "../../services/milestones";
-import { ProjectMilestoneItem } from "../../services/schemas";
-import { formatDate, toDateTimeLocal } from "../../services/utils";
+import { ProjectMilestoneItem, ProjectPhase } from "../../services/schemas";
+import {
+  PROJECT_PHASES,
+  formatDate,
+  formatPhase,
+  toDateTimeLocal,
+} from "../../services/utils";
 import { useAuth } from "../../components/auth-provider";
 import AccessNotice from "../../components/access-notice";
 import FormActions from "@/app/components/form-actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,16 +42,27 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Field,
+  FieldContent,
+  FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -73,19 +90,31 @@ type ProjectMilestonesPanelProps = {
     userId: number;
     role: string;
   }[];
+  /** Fase (semestre) actual del proyecto; se usa como valor por defecto. */
+  projectPhase: ProjectPhase | null;
+  /** Recarga el detalle del proyecto tras una mutación. */
+  onProjectChange: () => Promise<void>;
 };
 
 type MilestoneFormState = {
   title: string;
   description: string;
   dueDate: string;
+  isMinimum: boolean;
+  phase: ProjectPhase;
 };
 
-const emptyForm: MilestoneFormState = {
-  title: "",
-  description: "",
-  dueDate: "",
-};
+const DEFAULT_PHASE: ProjectPhase = "semester_1";
+
+function createEmptyForm(phase: ProjectPhase | null): MilestoneFormState {
+  return {
+    title: "",
+    description: "",
+    dueDate: "",
+    isMinimum: false,
+    phase: phase ?? DEFAULT_PHASE,
+  };
+}
 
 function isOverdue(milestone: ProjectMilestoneItem): boolean {
   if (milestone.completed) {
@@ -99,13 +128,16 @@ export default function ProjectMilestonesPanel({
   projectId,
   milestones,
   actorAssignments,
+  projectPhase,
+  onProjectChange,
 }: ProjectMilestonesPanelProps) {
-  const router = useRouter();
   const { session, isAuthenticated, ready } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMilestone, setEditingMilestone] =
     useState<ProjectMilestoneItem | null>(null);
-  const [form, setForm] = useState<MilestoneFormState>(emptyForm);
+  const [form, setForm] = useState<MilestoneFormState>(() =>
+    createEmptyForm(projectPhase),
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [detailMilestone, setDetailMilestone] =
     useState<ProjectMilestoneItem | null>(null);
@@ -149,6 +181,16 @@ export default function ProjectMilestonesPanel({
     [milestones],
   );
 
+  const minimumMilestones = useMemo(
+    () => milestones.filter((milestone) => milestone.isMinimum),
+    [milestones],
+  );
+
+  const completedMinimumCount = useMemo(
+    () => minimumMilestones.filter((milestone) => milestone.completed).length,
+    [minimumMilestones],
+  );
+
   const completionPercentage = useMemo(
     () =>
       milestones.length === 0
@@ -157,9 +199,16 @@ export default function ProjectMilestonesPanel({
     [completedCount, milestones.length],
   );
 
+  // Se deriva del listado actual para que el diálogo refleje los cambios tras
+  // completar o reabrir un hito sin cerrarse.
+  const activeDetailMilestone = detailMilestone
+    ? (milestones.find((milestone) => milestone.id === detailMilestone.id) ??
+      detailMilestone)
+    : null;
+
   function openCreateDialog() {
     setEditingMilestone(null);
-    setForm(emptyForm);
+    setForm(createEmptyForm(projectPhase));
     setErrorMessage(null);
     setDialogOpen(true);
   }
@@ -170,6 +219,8 @@ export default function ProjectMilestonesPanel({
       title: milestone.title,
       description: milestone.description ?? "",
       dueDate: toDateTimeLocal(milestone.dueDate),
+      isMinimum: milestone.isMinimum,
+      phase: milestone.phase ?? projectPhase ?? DEFAULT_PHASE,
     });
     setErrorMessage(null);
     setDialogOpen(true);
@@ -201,6 +252,8 @@ export default function ProjectMilestonesPanel({
       title,
       description: form.description.trim() || null,
       dueDate: new Date(dueDate).toISOString(),
+      isMinimum: form.isMinimum,
+      phase: form.phase,
     };
 
     startTransition(async () => {
@@ -215,7 +268,7 @@ export default function ProjectMilestonesPanel({
           await createProjectMilestone(String(projectId), payload);
         }
         setDialogOpen(false);
-        router.refresh();
+        await onProjectChange();
       } catch (error) {
         setErrorMessage(
           error instanceof Error ? error.message : "No se pudo guardar el hito",
@@ -232,7 +285,7 @@ export default function ProjectMilestonesPanel({
         await updateProjectMilestone(String(projectId), milestone.id, {
           completed: !milestone.completed,
         });
-        router.refresh();
+        await onProjectChange();
       } catch (error) {
         setErrorMessage(
           error instanceof Error
@@ -262,7 +315,7 @@ export default function ProjectMilestonesPanel({
     startTransition(async () => {
       try {
         await deleteProjectMilestone(String(projectId), milestone.id);
-        router.refresh();
+        await onProjectChange();
       } catch (error) {
         setErrorMessage(
           error instanceof Error
@@ -276,7 +329,7 @@ export default function ProjectMilestonesPanel({
   const columnCount = canManage ? 4 : 3;
 
   return (
-    <Card className="mt-6">
+    <Card>
       <CardHeader>
         <CardTitle>Hitos</CardTitle>
         <CardDescription>
@@ -286,9 +339,21 @@ export default function ProjectMilestonesPanel({
         </CardDescription>
 
         {milestones.length > 0 ? (
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center gap-3">
             <Progress value={completionPercentage} className="w-40" />
             <span className="text-sm font-medium">{completionPercentage}%</span>
+            {minimumMilestones.length > 0 ? (
+              <Badge
+                variant={
+                  completedMinimumCount === minimumMilestones.length
+                    ? "secondary"
+                    : "destructive"
+                }
+              >
+                Hitos mínimos: {completedMinimumCount}/
+                {minimumMilestones.length}
+              </Badge>
+            ) : null}
           </div>
         ) : null}
 
@@ -370,6 +435,16 @@ export default function ProjectMilestonesPanel({
                         {milestone.description}
                       </p>
                     ) : null}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {milestone.phase ? (
+                        <Badge variant="outline">
+                          {formatPhase(milestone.phase)}
+                        </Badge>
+                      ) : null}
+                      {milestone.isMinimum ? (
+                        <Badge variant="secondary">Hito mínimo</Badge>
+                      ) : null}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="text-muted-foreground">
@@ -486,6 +561,68 @@ export default function ProjectMilestonesPanel({
                 />
               </Field>
 
+              <Field>
+                <FieldLabel htmlFor="milestone-phase">
+                  Fase (semestre)
+                </FieldLabel>
+
+                <Select
+                  value={form.phase}
+                  onValueChange={(value) => {
+                    if (value) {
+                      setForm((prev) => ({
+                        ...prev,
+                        phase: value as ProjectPhase,
+                      }));
+                    }
+                  }}
+                  disabled={isPending}
+                >
+                  <SelectTrigger id="milestone-phase" className="w-full">
+                    <SelectValue>{formatPhase(form.phase)}</SelectValue>
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    {PROJECT_PHASES.map((phase) => (
+                      <SelectItem key={phase} value={phase}>
+                        {formatPhase(phase)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <FieldDescription>
+                  Semestre en el que se espera completar el hito.
+                </FieldDescription>
+              </Field>
+
+              <Field orientation="horizontal">
+                <Checkbox
+                  id="milestone-minimum"
+                  checked={form.isMinimum}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      isMinimum: checked === true,
+                    }))
+                  }
+                  disabled={isPending}
+                />
+
+                <FieldContent>
+                  <FieldLabel
+                    htmlFor="milestone-minimum"
+                    className="font-normal"
+                  >
+                    Hito mínimo
+                  </FieldLabel>
+
+                  <FieldDescription>
+                    Obligatorio para avanzar de semestre y cerrar el proyecto.
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+
               {errorMessage ? (
                 <Alert variant="destructive">
                   <AlertDescription>{errorMessage}</AlertDescription>
@@ -506,63 +643,106 @@ export default function ProjectMilestonesPanel({
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{detailMilestone?.title}</DialogTitle>
+            <DialogTitle>{activeDetailMilestone?.title}</DialogTitle>
             <DialogDescription>Detalles del hito</DialogDescription>
           </DialogHeader>
 
-          {detailMilestone ? (
-            <div className="flex flex-col gap-4">
-              {isOverdue(detailMilestone) ? (
-                <Alert variant="destructive">
-                  <RiErrorWarningLine />
-                  <AlertDescription>Este hito ya venció.</AlertDescription>
-                </Alert>
-              ) : null}
+          {activeDetailMilestone ? (
+            <>
+              <div className="flex flex-col gap-4">
+                {isOverdue(activeDetailMilestone) ? (
+                  <Alert variant="destructive">
+                    <RiErrorWarningLine />
+                    <AlertDescription>Este hito ya venció.</AlertDescription>
+                  </Alert>
+                ) : null}
 
-              <div className="flex items-center gap-2">
-                {detailMilestone.completed ? (
-                  <RiCheckboxCircleLine className="text-success" />
-                ) : (
-                  <RiCheckboxBlankCircleLine />
-                )}
-                <span className="text-sm font-medium">
-                  {detailMilestone.completed ? "Completado" : "Pendiente"}
-                </span>
-              </div>
+                <div className="flex items-center gap-2">
+                  {activeDetailMilestone.completed ? (
+                    <RiCheckboxCircleLine className="text-success" />
+                  ) : (
+                    <RiCheckboxBlankCircleLine />
+                  )}
+                  <span className="text-sm font-medium">
+                    {activeDetailMilestone.completed ? "Completado" : "Pendiente"}
+                  </span>
+                </div>
 
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Vence
-                </p>
-                <p className="mt-1 text-sm">{formatDate(detailMilestone.dueDate)}</p>
-              </div>
+                {activeDetailMilestone.phase ||
+                activeDetailMilestone.isMinimum ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {activeDetailMilestone.phase ? (
+                      <Badge variant="outline">
+                        {formatPhase(activeDetailMilestone.phase)}
+                      </Badge>
+                    ) : null}
+                    {activeDetailMilestone.isMinimum ? (
+                      <Badge variant="secondary">Hito mínimo</Badge>
+                    ) : null}
+                  </div>
+                ) : null}
 
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Descripción
-                </p>
-                {detailMilestone.description ? (
-                  <p className="mt-1 whitespace-pre-line text-sm">
-                    {detailMilestone.description}
-                  </p>
-                ) : (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Sin descripción.
-                  </p>
-                )}
-              </div>
-
-              {detailMilestone.createdAt ? (
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Creado
+                    Vence
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {formatDate(detailMilestone.createdAt)}
+                  <p className="mt-1 text-sm">
+                    {formatDate(activeDetailMilestone.dueDate)}
                   </p>
                 </div>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Descripción
+                  </p>
+                  {activeDetailMilestone.description ? (
+                    <p className="mt-1 whitespace-pre-line text-sm">
+                      {activeDetailMilestone.description}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Sin descripción.
+                    </p>
+                  )}
+                </div>
+
+                {activeDetailMilestone.createdAt ? (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Creado
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {formatDate(activeDetailMilestone.createdAt)}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
+              {canManage ? (
+                <DialogFooter>
+                  <Button
+                    variant={
+                      activeDetailMilestone.completed ? "outline" : "default"
+                    }
+                    onClick={() => handleToggle(activeDetailMilestone)}
+                    disabled={isPending}
+                  >
+                    {isPending ? (
+                      <Spinner data-icon="inline-start" />
+                    ) : activeDetailMilestone.completed ? (
+                      <RiCheckboxBlankCircleLine data-icon="inline-start" />
+                    ) : (
+                      <RiCheckboxCircleLine data-icon="inline-start" />
+                    )}
+                    {isPending
+                      ? "Guardando..."
+                      : activeDetailMilestone.completed
+                        ? "Marcar como pendiente"
+                        : "Marcar como completado"}
+                  </Button>
+                </DialogFooter>
               ) : null}
-            </div>
+            </>
           ) : null}
         </DialogContent>
       </Dialog>

@@ -3,10 +3,12 @@ import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDate,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
 } from '@nestjs/class-validator';
+import { ProjectPhase } from '../generated/prisma/client';
 
 export class CreateMilestoneDto {
   @ApiProperty({ description: 'Milestone title' })
@@ -32,6 +34,23 @@ export class CreateMilestoneDto {
   @IsBoolean()
   @IsOptional()
   completed?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Whether the milestone is a minimum milestone required to advance the project phase or close it',
+  })
+  @IsBoolean()
+  @IsOptional()
+  isMinimum?: boolean;
+
+  @ApiPropertyOptional({
+    enum: ProjectPhase,
+    description:
+      'Semester phase the milestone belongs to (defaults to the project current phase)',
+  })
+  @IsEnum(ProjectPhase)
+  @IsOptional()
+  phase?: ProjectPhase;
 }
 
 export class UpdateMilestoneDto {
@@ -60,4 +79,20 @@ export class UpdateMilestoneDto {
   @IsBoolean()
   @IsOptional()
   completed?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Whether the milestone is a minimum milestone required to advance the project phase or close it',
+  })
+  @IsBoolean()
+  @IsOptional()
+  isMinimum?: boolean;
+
+  @ApiPropertyOptional({
+    enum: ProjectPhase,
+    description: 'Semester phase the milestone belongs to',
+  })
+  @IsEnum(ProjectPhase)
+  @IsOptional()
+  phase?: ProjectPhase;
 }

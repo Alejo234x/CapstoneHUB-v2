@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 
 import {
   addProjectActorAssignment,
@@ -64,6 +63,7 @@ type ProjectActorAssignment = {
 type ProjectActorAssignmentPanelProps = {
   projectId: number;
   assignments: ProjectActorAssignment[];
+  onProjectChange: () => Promise<void>;
 };
 
 function canAssignActors(
@@ -160,6 +160,7 @@ type AssignmentFormProps = {
   users: UserSummary[];
   initialError: string | null;
   onErrorChange: (message: string | null) => void;
+  onProjectChange: () => Promise<void>;
 };
 
 function AssignmentForm({
@@ -167,9 +168,8 @@ function AssignmentForm({
   users,
   initialError,
   onErrorChange,
+  onProjectChange,
 }: Readonly<AssignmentFormProps>) {
-  const router = useRouter();
-
   const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null);
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -232,7 +232,7 @@ function AssignmentForm({
 
         setSelectedUser(null);
         setSearch("");
-        router.refresh();
+        await onProjectChange();
       } catch (error) {
         onErrorChange(
           error instanceof Error
@@ -484,6 +484,7 @@ function AssignedUsersList({
 export default function ProjectActorAssignmentPanel({
   projectId,
   assignments,
+  onProjectChange,
 }: ProjectActorAssignmentPanelProps) {
   const { session, isAuthenticated, ready } = useAuth();
 
@@ -517,6 +518,7 @@ export default function ProjectActorAssignmentPanel({
           users={users}
           initialError={errorMessage}
           onErrorChange={setErrorMessage}
+          onProjectChange={onProjectChange}
         />
       ) : null}
 

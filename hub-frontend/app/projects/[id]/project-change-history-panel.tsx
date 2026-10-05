@@ -1,5 +1,5 @@
 import { ProjectChangeHistoryItem } from "../../services/schemas";
-import { formatProjectSource } from "../../services/utils";
+import { formatPhase, formatProjectSource } from "../../services/utils";
 import { formatCurrency, formatDate } from "./project-formatters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,6 +15,7 @@ const FIELD_LABELS: Record<string, string> = {
   context: "Contexto",
   location: "Ubicación",
   source: "Fuente del proyecto",
+  phase: "Fase (semestre)",
   startDate: "Fecha de inicio",
   endDate: "Fecha de finalización",
   estimatedCost: "Costo estimado",
@@ -44,6 +45,10 @@ function formatFieldValue(field: string, value: string | null): string {
 
   if (field === "source") {
     return formatProjectSource(value);
+  }
+
+  if (field === "phase") {
+    return formatPhase(value);
   }
 
   if (field === "startDate" || field === "endDate") {

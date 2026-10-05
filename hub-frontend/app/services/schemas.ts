@@ -13,6 +13,8 @@ export type ProjectSource =
   | "internal_need"
   | "social_impact";
 
+export type ProjectPhase = "semester_1" | "semester_2";
+
 type ProjectActor = {
   id: number;
   projectId: number;
@@ -58,6 +60,8 @@ export type ProjectMilestoneItem = {
   description: string | null;
   dueDate: string;
   completed: boolean;
+  isMinimum: boolean;
+  phase: ProjectPhase | null;
   createdAt?: string;
 };
 
@@ -219,6 +223,7 @@ export type ProjectDetails = {
   context: string;
   location?: string | null;
   status: string;
+  phase?: ProjectPhase;
   requiresLegalization?: boolean;
   isPrivate?: boolean;
   canViewSensitiveData?: boolean;

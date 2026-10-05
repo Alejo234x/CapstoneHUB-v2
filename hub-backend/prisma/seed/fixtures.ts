@@ -1,5 +1,6 @@
 import {
   ActorRole,
+  ProjectPhase,
   ProjectSource,
   ProjectStatus,
   ReportContentKind,
@@ -71,6 +72,8 @@ export interface MilestoneFixture {
   description?: string;
   dueDate: string;
   completed?: boolean;
+  isMinimum?: boolean;
+  phase?: ProjectPhase;
 }
 
 export type MilestonesFixture = Record<string, MilestoneFixture[]>;

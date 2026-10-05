@@ -9,6 +9,7 @@ import {
   ActorRole,
   Prisma,
   Project,
+  ProjectPhase,
   ProjectSource,
   ProjectStatus,
   UserRole,
@@ -54,6 +55,42 @@ export function isValidProjectStatusTransition(
     [ProjectStatus.rejected]: [],
   };
   return transitions[previousStatus].includes(nextStatus);
+}
+
+/**
+ * Siguiente fase (semestre) de un proyecto, o `null` si ya está en la última.
+ */
+export function nextProjectPhase(phase: ProjectPhase): ProjectPhase | null {
+  switch (phase) {
+    case ProjectPhase.semester_1:
+      return ProjectPhase.semester_2;
+    case ProjectPhase.semester_2:
+      return null;
+  }
+}
+
+type PendingMinimumMilestone = { id: number; title: string };
+
+function formatPendingMilestones(
+  milestones: PendingMinimumMilestone[],
+): string {
+  return milestones.map((milestone) => milestone.title).join(', ');
+}
+
+export const DEFAULT_FINAL_MILESTONE_TITLE = 'Documento final';
+
+/**
+ * Fecha por defecto del hito "Documento final": un año después del inicio del
+ * proyecto (o un año desde hoy si no hay fecha de inicio).
+ */
+export function defaultFinalMilestoneDueDate(
+  startDate: Date | string | null | undefined,
+): Date {
+  const parsed = startDate ? new Date(startDate) : new Date();
+  const base = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  const dueDate = new Date(base);
+  dueDate.setMonth(dueDate.getMonth() + 12);
+  return dueDate;
 }
 
 function rethrowProjectCreateError(error: unknown): never {
@@ -332,7 +369,22 @@ export class ProjectsService {
     data: Prisma.ProjectCreateInput,
   ): Promise<ProjectWithRelations> {
     return this.prisma.project.create({
-      data,
+      data: {
+        ...data,
+        // Todo proyecto nace con el hito mínimo "Documento final" del segundo
+        // semestre, obligatorio para cerrarlo.
+        milestones: {
+          create: [
+            {
+              title: DEFAULT_FINAL_MILESTONE_TITLE,
+              phase: ProjectPhase.semester_2,
+              isMinimum: true,
+              completed: false,
+              dueDate: defaultFinalMilestoneDueDate(data.startDate),
+            },
+          ],
+        },
+      },
       include: projectInclude,
     });
   }
@@ -538,6 +590,14 @@ export class ProjectsService {
         'A reason is required to change the project status',
       );
     }
+    if (nextStatus === ProjectStatus.closed) {
+      const pendingMinimums = await this.incompleteMinimumMilestones(projectId);
+      if (pendingMinimums.length > 0) {
+        throw new ConflictException(
+          `Cannot close the project while minimum milestones are incomplete: ${formatPendingMilestones(pendingMinimums)}`,
+        );
+      }
+    }
     await this.prisma.$transaction(async (transaction) => {
       await transaction.project.update({
         where: { id: projectId },
@@ -558,6 +618,90 @@ export class ProjectsService {
       throw new NotFoundException(`Project ${projectId} not found`);
     }
     return project;
+  }
+  /**
+   * Avanza el proyecto al siguiente semestre (fase) cuando todos sus hitos
+   * mínimos de la fase actual están completos.
+   */
+  async advanceProjectPhase(params: {
+    user: AuthenticatedUser;
+    projectId: number;
+  }): Promise<ProjectDetailResponse> {
+    const { user, projectId } = params;
+    const currentProject = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, status: true, phase: true },
+    });
+    if (!currentProject) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+    if (currentProject.status !== ProjectStatus.in_progress) {
+      throw new BadRequestException(
+        'The project must be in progress to advance its phase',
+      );
+    }
+    await this.authorization.assertCanManageProject(user, projectId);
+
+    const nextPhase = nextProjectPhase(currentProject.phase);
+    if (!nextPhase) {
+      throw new BadRequestException(
+        'The project is already in its final phase',
+      );
+    }
+
+    const pendingMinimums = await this.incompleteMinimumMilestones(projectId, [
+      currentProject.phase,
+    ]);
+    if (pendingMinimums.length > 0) {
+      throw new ConflictException(
+        `Cannot advance to the next phase while minimum milestones are incomplete: ${formatPendingMilestones(pendingMinimums)}`,
+      );
+    }
+
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.project.update({
+        where: { id: projectId },
+        data: { phase: nextPhase },
+      });
+      await transaction.projectChangeHistory.create({
+        data: {
+          projectId,
+          authorUserId: user.id,
+          field: 'phase',
+          previousValue: currentProject.phase,
+          newValue: nextPhase,
+        },
+      });
+    });
+
+    const project = await this.project({ id: projectId }, user);
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+    return project;
+  }
+  /**
+   * Hitos mínimos sin completar. Si se pasan fases, solo se consideran los de
+   * esas fases más los que no tienen fase (globales).
+   */
+  private async incompleteMinimumMilestones(
+    projectId: number,
+    phases?: ProjectPhase[],
+  ): Promise<PendingMinimumMilestone[]> {
+    const phaseFilter =
+      phases && phases.length > 0
+        ? { OR: [{ phase: { in: phases } }, { phase: null }] }
+        : {};
+    return this.prisma.projectMilestones.findMany({
+      where: {
+        projectId,
+        isMinimum: true,
+        completed: false,
+        ...phaseFilter,
+      },
+      select: { id: true, title: true },
+      orderBy: [{ dueDate: 'asc' }, { id: 'asc' }],
+    });
   }
   async deleteProject(
     user: AuthenticatedUser,

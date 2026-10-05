@@ -17,6 +17,8 @@ const milestoneSelect = {
   description: true,
   dueDate: true,
   completed: true,
+  isMinimum: true,
+  phase: true,
   createdAt: true,
 } as const;
 
@@ -74,7 +76,13 @@ export class MilestonesService {
     data: CreateMilestoneDto;
     user: AuthenticatedUser;
   }): Promise<SelectedMilestone> {
-    await assertProjectExists(this.prisma, params.projectId);
+    const project = await this.prisma.project.findUnique({
+      where: { id: params.projectId },
+      select: { id: true, phase: true },
+    });
+    if (!project) {
+      throw new NotFoundException(`Project ${params.projectId} not found`);
+    }
     await this.authorization.assertCanManageMilestone(
       params.user,
       params.projectId,
@@ -101,6 +109,8 @@ export class MilestonesService {
         description: params.data.description?.trim() || null,
         dueDate: params.data.dueDate,
         completed: params.data.completed ?? false,
+        isMinimum: params.data.isMinimum ?? false,
+        phase: params.data.phase ?? project.phase,
       },
       select: milestoneSelect,
     };
@@ -141,6 +151,12 @@ export class MilestonesService {
     }
     if (params.data.completed !== undefined) {
       updateData.completed = params.data.completed;
+    }
+    if (params.data.isMinimum !== undefined) {
+      updateData.isMinimum = params.data.isMinimum;
+    }
+    if (params.data.phase !== undefined) {
+      updateData.phase = params.data.phase;
     }
 
     if (Object.keys(updateData).length === 0) {

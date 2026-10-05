@@ -32,7 +32,8 @@ function ProjectTabsList({ isMember }: { readonly isMember: boolean }) {
 }
 
 export default function ProjectDetailsView({ id }: { readonly id: string }) {
-  const { project, loading, status, error, reload } = useProjectDetails(id);
+  const { project, loading, status, error, reload, refresh } =
+    useProjectDetails(id);
   const isMember = useIsProjectMember(project);
   const canEdit = useCanEditProject(project);
 
@@ -84,6 +85,7 @@ export default function ProjectDetailsView({ id }: { readonly id: string }) {
                 <ProjectMemberTabs
                   project={project}
                   assignments={assignments}
+                  onProjectChange={refresh}
                 />
               ) : null}
             </ProjectTabs>
@@ -96,6 +98,8 @@ export default function ProjectDetailsView({ id }: { readonly id: string }) {
               projectId={project.id}
               currentStatus={project.status}
               assignments={assignments}
+              milestones={project.milestones ?? []}
+              onProjectChange={refresh}
             />
           </div>
         ) : null}

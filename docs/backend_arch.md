@@ -105,6 +105,7 @@ proyecto. El `admin` siempre pasa.
 | Editar datos del proyecto | no | sí | miembro | sí | miembro | no† |
 | Gestionar proyecto / asignar actores | no | sí | miembro | no | no | no |
 | Gestionar hitos | no | sí | miembro | miembro | miembro | no |
+| Avanzar fase (semestre) | no | sí | miembro | no | no | no |
 | Cambiar estado | no | sí | miembro | miembro* | no | no |
 | Ver observaciones / hitos / anexos | no | sí | miembro | miembro | miembro | miembro |
 | Comentar un proyecto | no | sí | miembro | miembro | miembro | miembro |
@@ -146,6 +147,27 @@ transiciones se validan en `ProjectsService`; cada cambio se registra en
 | `assigned` | `in_progress`, `rejected` |
 | `in_progress` | `closed`, `rejected` |
 | `closed` / `rejected` | — (terminal) |
+
+### Fases (semestres) e hitos mínimos
+
+La **fase** (`phase`, `semester_1` → `semester_2`) es independiente del estado:
+un proyecto puede estar `in_progress` y avanzar de semestre sin cambiar de
+estado. `POST /projects/:id/phase/advance` avanza la fase solo cuando el
+proyecto está `in_progress` y todos los **hitos mínimos** de la fase actual (más
+los globales, sin fase) están completos; si no, responde `409` con los hitos
+pendientes. El avance se registra en `ProjectChangeHistory` (`field = "phase"`).
+
+Los **hitos mínimos** son los marcados con `isMinimum`. Son obligatorios para
+avanzar de fase y para cerrar el proyecto: la transición `in_progress → closed`
+también responde `409` mientras quede algún hito mínimo sin completar. La regla
+es un bloqueo duro, sin excepción para `admin`. Rechazar un proyecto nunca se
+bloquea.
+
+Todo proyecto nuevo nace con el hito mínimo **«Documento final»** en
+`semester_2`, con vencimiento a un año de la fecha de inicio (o de la fecha de
+creación si no se indicó inicio). Es el artículo/documento final que cada grupo
+debe entregar para cerrar el proyecto; se puede editar o eliminar como cualquier
+otro hito.
 
 ```mermaid
 stateDiagram-v2
@@ -298,9 +320,10 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 | `PUT` | `/projects/:id` | Editar los datos (admin, evaluador, coordinador/asesor asignado o proponente en revisión; `409` si está cerrado/rechazado). Registra historial por campo. |
 | `DELETE` | `/projects/:id` | Borrar (admin o coordinador asignado). |
 | `PATCH` | `/projects/:id/status` | Cambiar estado (registra historial). |
+| `POST` | `/projects/:id/phase/advance` | Avanzar de fase (semestre) si los hitos mínimos de la fase actual están completos (`409` si no). |
 | `POST` | `/projects/:id/actors` | Asignar un usuario a un proyecto. |
 | `GET/POST` | `/projects/:id/observations` | Listar / agregar observaciones. |
-| `GET/POST/PATCH/DELETE` | `/projects/:id/milestones` | Gestionar hitos. |
+| `GET/POST/PATCH/DELETE` | `/projects/:id/milestones` | Gestionar hitos, incluida la marca de hito mínimo (`isMinimum`) y su fase. |
 | `GET/POST/DELETE` | `/projects/:id/attachments` | Gestionar anexos. |
 | `GET` | `/projects/:id/attachments/:aid/download` | Descargar un anexo. |
 | `GET/POST/PATCH/DELETE` | `/projects/:id/reports` | Gestionar entregas y su contenido. |

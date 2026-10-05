@@ -1,5 +1,6 @@
 import { MilestonesService } from './milestones.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { ProjectPhase } from '../generated/prisma/client';
 
 describe('MilestonesService', () => {
   const user = {
@@ -63,6 +64,8 @@ describe('MilestonesService', () => {
       description: 'Details',
       dueDate: new Date('2026-10-01'),
       completed: false,
+      isMinimum: false,
+      phase: ProjectPhase.semester_1,
       createdAt: new Date('2026-09-12'),
     };
     const createMilestone = jest
@@ -76,13 +79,18 @@ describe('MilestonesService', () => {
               description: string | null;
               dueDate: Date;
               completed: boolean;
+              isMinimum: boolean;
+              phase: ProjectPhase | null;
             };
             select: unknown;
           },
         ]
       >()
       .mockResolvedValue(milestone);
-    prisma.project.findUnique.mockResolvedValue({ id: 10 });
+    prisma.project.findUnique.mockResolvedValue({
+      id: 10,
+      phase: ProjectPhase.semester_1,
+    });
     prisma.projectMilestones.create = createMilestone;
 
     await expect(
@@ -110,6 +118,47 @@ describe('MilestonesService', () => {
       title: 'Plan',
       description: 'Details',
       completed: false,
+      isMinimum: false,
+      phase: ProjectPhase.semester_1,
+    });
+  });
+
+  it('stores the minimum flag and phase sent when creating a milestone', async () => {
+    const { service, prisma } = createService();
+    const milestone = {
+      id: 3,
+      projectId: 10,
+      title: 'Prototipo',
+      description: null,
+      dueDate: new Date('2026-11-01'),
+      completed: false,
+      isMinimum: true,
+      phase: ProjectPhase.semester_2,
+      createdAt: new Date('2026-09-12'),
+    };
+    const createMilestone = jest
+      .fn<Promise<typeof milestone>, [{ data: Record<string, unknown> }]>()
+      .mockResolvedValue(milestone);
+    prisma.project.findUnique.mockResolvedValue({
+      id: 10,
+      phase: ProjectPhase.semester_1,
+    });
+    prisma.projectMilestones.create = createMilestone;
+
+    await service.createMilestone({
+      projectId: 10,
+      user,
+      data: {
+        title: 'Prototipo',
+        dueDate: milestone.dueDate,
+        isMinimum: true,
+        phase: ProjectPhase.semester_2,
+      },
+    });
+
+    expect(createMilestone.mock.calls[0][0].data).toMatchObject({
+      isMinimum: true,
+      phase: ProjectPhase.semester_2,
     });
   });
 

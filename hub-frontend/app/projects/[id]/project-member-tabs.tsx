@@ -2,6 +2,7 @@ import { ProjectDetails } from "../../services/schemas";
 import ProjectActorAssignmentPanel from "./project-actor-assignment-panel";
 import ProjectObservationsPanel from "./project-observations-panel";
 import ProjectMilestonesPanel from "./project-milestones-panel";
+import ProjectPhaseActions from "./project-phase-actions";
 import ProjectReportsPanel from "./project-reports-panel";
 import ProjectAttachmentsPanel from "./project-attachments-panel";
 import ProjectStatusHistoryPanel from "./project-status-history-panel";
@@ -12,12 +13,18 @@ type ProjectMemberTabsProps = {
   readonly project: ProjectDetails;
   /** Asignaciones del proyecto, ya normalizadas por la vista. */
   readonly assignments: NonNullable<ProjectDetails["actorAssignments"]>;
+  /**
+   * Recarga en segundo plano el detalle del proyecto. Los paneles la llaman tras
+   * una mutación para reflejar los cambios sin recargar la página.
+   */
+  readonly onProjectChange: () => Promise<void>;
 };
 
 /** Pestañas internas: solo se renderizan para miembros del proyecto. */
 export default function ProjectMemberTabs({
   project,
   assignments,
+  onProjectChange,
 }: ProjectMemberTabsProps) {
   return (
     <>
@@ -25,6 +32,7 @@ export default function ProjectMemberTabs({
         <ProjectActorAssignmentPanel
           projectId={project.id}
           assignments={assignments}
+          onProjectChange={onProjectChange}
         />
       </TabsContent>
 
@@ -33,15 +41,25 @@ export default function ProjectMemberTabs({
           projectId={project.id}
           observations={project.observations ?? []}
           assignments={assignments}
+          onProjectChange={onProjectChange}
         />
       </TabsContent>
 
       <TabsContent value="hitos" className="mt-6">
-        <ProjectMilestonesPanel
-          projectId={project.id}
-          milestones={project.milestones ?? []}
-          actorAssignments={assignments}
-        />
+        <div className="flex flex-col gap-6">
+          <ProjectPhaseActions
+            project={project}
+            assignments={assignments}
+            onProjectChange={onProjectChange}
+          />
+          <ProjectMilestonesPanel
+            projectId={project.id}
+            milestones={project.milestones ?? []}
+            actorAssignments={assignments}
+            projectPhase={project.phase ?? null}
+            onProjectChange={onProjectChange}
+          />
+        </div>
       </TabsContent>
 
       <TabsContent value="entregas" className="mt-6">
@@ -49,6 +67,7 @@ export default function ProjectMemberTabs({
           projectId={project.id}
           reports={project.reports ?? []}
           actorAssignments={assignments}
+          onProjectChange={onProjectChange}
         />
       </TabsContent>
 
@@ -57,6 +76,7 @@ export default function ProjectMemberTabs({
           projectId={project.id}
           attachments={project.attachments ?? []}
           assignments={assignments}
+          onProjectChange={onProjectChange}
         />
       </TabsContent>
 
