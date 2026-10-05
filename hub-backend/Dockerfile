@@ -21,6 +21,10 @@ RUN if [ -f package-lock.json ]; then \
 
 COPY . .
 
+# Genera el cliente Prisma, necesario para compilar. No se conecta a la base de
+# datos, así que no requiere DATABASE_URL.
+RUN npx prisma generate
+
 RUN npm run build
 
 EXPOSE 3001
