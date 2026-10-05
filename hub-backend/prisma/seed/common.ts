@@ -50,6 +50,7 @@ export interface SeedOptions {
   strict: boolean;
   dryRun: boolean;
   help: boolean;
+  force: boolean;
 }
 
 export interface SeedContext {
@@ -64,6 +65,7 @@ export function parseArgs(argv: string[]): SeedOptions {
     strict: false,
     dryRun: false,
     help: false,
+    force: false,
   };
   const only = new Set<SeedSection>();
 
@@ -74,6 +76,8 @@ export function parseArgs(argv: string[]): SeedOptions {
       options.strict = true;
     } else if (arg === '--dry-run') {
       options.dryRun = true;
+    } else if (arg === '--force') {
+      options.force = true;
     } else if (arg === '--help' || arg === '-h') {
       options.help = true;
     } else if (arg.startsWith('--only=')) {
@@ -217,6 +221,7 @@ Options:
   --reset            Remove seeded data (scoped to the selected sections)
                      before creating it again.
   --dry-run          Log what would happen without writing to the database.
+  --force            Allow seeding when NODE_ENV=production (use with care).
   --strict           Fail instead of warning when attachments cannot be
                      uploaded (S3/MinIO unavailable).
   -h, --help         Show this help.

@@ -39,6 +39,16 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (
+    process.env.NODE_ENV === 'production' &&
+    !options.force &&
+    !options.dryRun
+  ) {
+    throw new Error(
+      'Refusing to seed with NODE_ENV=production. Re-run with --force to override, or --dry-run to preview.',
+    );
+  }
+
   const prisma = createPrismaClient();
   const context: SeedContext = { prisma, options };
 

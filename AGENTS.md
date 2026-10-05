@@ -25,6 +25,7 @@ Read the relevant document before changing an area:
 - [docs/database_arch.md](docs/database_arch.md) — Prisma schema and data model.
 - [docs/frontend_arch.md](docs/frontend_arch.md) — routes, BFF proxy, services, server/client split.
 - [docs/frontend_design_system.md](docs/frontend_design_system.md) — **UI source of truth**: tokens, utilities, components.
+- [docs/deployment.md](docs/deployment.md) — CI (GitHub Actions) and Dokploy deployment.
 - [docs/sso-plan.md](docs/sso-plan.md) — SSO plan.
 
 `hub-frontend/AGENTS.md` holds frontend-specific agent rules (the pinned Next.js
