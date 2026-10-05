@@ -77,6 +77,22 @@ function formatPendingMilestones(
   return milestones.map((milestone) => milestone.title).join(', ');
 }
 
+export const DEFAULT_FINAL_MILESTONE_TITLE = 'Documento final';
+
+/**
+ * Fecha por defecto del hito "Documento final": un año después del inicio del
+ * proyecto (o un año desde hoy si no hay fecha de inicio).
+ */
+export function defaultFinalMilestoneDueDate(
+  startDate: Date | string | null | undefined,
+): Date {
+  const parsed = startDate ? new Date(startDate) : new Date();
+  const base = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  const dueDate = new Date(base);
+  dueDate.setMonth(dueDate.getMonth() + 12);
+  return dueDate;
+}
+
 function rethrowProjectCreateError(error: unknown): never {
   if (
     error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -353,7 +369,22 @@ export class ProjectsService {
     data: Prisma.ProjectCreateInput,
   ): Promise<ProjectWithRelations> {
     return this.prisma.project.create({
-      data,
+      data: {
+        ...data,
+        // Todo proyecto nace con el hito mínimo "Documento final" del segundo
+        // semestre, obligatorio para cerrarlo.
+        milestones: {
+          create: [
+            {
+              title: DEFAULT_FINAL_MILESTONE_TITLE,
+              phase: ProjectPhase.semester_2,
+              isMinimum: true,
+              completed: false,
+              dueDate: defaultFinalMilestoneDueDate(data.startDate),
+            },
+          ],
+        },
+      },
       include: projectInclude,
     });
   }

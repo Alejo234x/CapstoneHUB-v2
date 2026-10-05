@@ -163,6 +163,12 @@ también responde `409` mientras quede algún hito mínimo sin completar. La reg
 es un bloqueo duro, sin excepción para `admin`. Rechazar un proyecto nunca se
 bloquea.
 
+Todo proyecto nuevo nace con el hito mínimo **«Documento final»** en
+`semester_2`, con vencimiento a un año de la fecha de inicio (o de la fecha de
+creación si no se indicó inicio). Es el artículo/documento final que cada grupo
+debe entregar para cerrar el proyecto; se puede editar o eliminar como cualquier
+otro hito.
+
 ```mermaid
 stateDiagram-v2
     direction LR

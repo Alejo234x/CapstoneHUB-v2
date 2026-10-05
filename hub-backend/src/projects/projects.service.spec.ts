@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import {
+  DEFAULT_FINAL_MILESTONE_TITLE,
   diffProjectUpdate,
   isValidProjectStatusTransition,
   ProjectsService,
@@ -574,13 +575,40 @@ describe('ProjectsService', () => {
       name: 'New project',
       description: 'Description',
       context: 'Context',
+      startDate: new Date('2026-01-15T00:00:00.000Z'),
     });
 
     expect(create).toHaveBeenCalledTimes(1);
-    expect(create.mock.calls[0][0].data).toEqual(
+    const data = create.mock.calls[0][0].data as {
+      proposer: unknown;
+      milestones: {
+        create: {
+          title: string;
+          phase: ProjectPhase;
+          isMinimum: boolean;
+          completed: boolean;
+          dueDate: Date;
+        }[];
+      };
+    };
+    expect(data).toEqual(
       expect.objectContaining({
         proposer: { connect: { id: EVALUATOR_USER.id } },
       }),
+    );
+    expect(data.milestones.create[0]).toEqual(
+      expect.objectContaining({
+        title: DEFAULT_FINAL_MILESTONE_TITLE,
+        phase: ProjectPhase.semester_2,
+        isMinimum: true,
+        completed: false,
+      }),
+    );
+    expect(data.milestones.create[0].dueDate).toBeInstanceOf(Date);
+
+    const dueDate = data.milestones.create[0].dueDate;
+    expect((dueDate.getFullYear() - 2026) * 12 + (dueDate.getMonth() - 0)).toBe(
+      12,
     );
   });
 

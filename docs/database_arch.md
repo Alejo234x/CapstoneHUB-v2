@@ -395,3 +395,5 @@ classDiagram
 - Hay índices declarados para los filtros comunes: `status`, `startDate` y
   `createdAt` del proyecto, además de claves foráneas y fechas usadas en los
   listados.
+- Todo proyecto nuevo incluye por defecto un hito mínimo «Documento final» en
+  `semester_2` (ver [Arquitectura del backend](./backend_arch.md)).
