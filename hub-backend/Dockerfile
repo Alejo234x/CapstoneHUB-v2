@@ -21,7 +21,9 @@ RUN if [ -f package-lock.json ]; then \
 
 COPY . .
 
-RUN npm run build
+# Genera el cliente Prisma (necesario para compilar) y compila. `generate` no se
+# conecta a la base de datos; se usa el binario local en lugar de npx.
+RUN node_modules/.bin/prisma generate && npm run build
 
 EXPOSE 3001
 
