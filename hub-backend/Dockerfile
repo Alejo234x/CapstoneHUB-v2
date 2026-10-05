@@ -25,6 +25,10 @@ COPY . .
 # conecta a la base de datos; se usa el binario local en lugar de npx.
 RUN node_modules/.bin/prisma generate && npm run build
 
+# `NODE_ENV=production` solo desde aquí: durante `npm ci` y el build se necesita
+# instalar devDependencies (prisma CLI, nest, typescript).
+ENV NODE_ENV=production
+
 EXPOSE 3001
 
 CMD ["sh", "-c",  "npm run db:deploy && node dist/src/main"]

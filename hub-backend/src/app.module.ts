@@ -30,7 +30,6 @@ import { APP_FILTER } from '@nestjs/core';
     ReportsModule,
     AuthModule,
     HealthModule,
-    ConfigModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [
