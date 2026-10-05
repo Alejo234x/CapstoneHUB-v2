@@ -46,6 +46,9 @@ services:
     build: ./hub-frontend
     env_file:
       - ./hub-frontend/.env
+    environment:
+      # debería estar en ./hub-frontend/.env, se puede usar aquí también
+      BACKEND_URL: http://backend:3001
     restart: unless-stopped
     ports:
       - "3000:3000"
