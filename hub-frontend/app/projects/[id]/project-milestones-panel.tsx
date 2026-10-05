@@ -42,6 +42,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -61,6 +62,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -196,6 +198,13 @@ export default function ProjectMilestonesPanel({
         : Math.round((completedCount / milestones.length) * 100),
     [completedCount, milestones.length],
   );
+
+  // Se deriva del listado actual para que el diálogo refleje los cambios tras
+  // completar o reabrir un hito sin cerrarse.
+  const activeDetailMilestone = detailMilestone
+    ? (milestones.find((milestone) => milestone.id === detailMilestone.id) ??
+      detailMilestone)
+    : null;
 
   function openCreateDialog() {
     setEditingMilestone(null);
@@ -634,76 +643,106 @@ export default function ProjectMilestonesPanel({
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{detailMilestone?.title}</DialogTitle>
+            <DialogTitle>{activeDetailMilestone?.title}</DialogTitle>
             <DialogDescription>Detalles del hito</DialogDescription>
           </DialogHeader>
 
-          {detailMilestone ? (
-            <div className="flex flex-col gap-4">
-              {isOverdue(detailMilestone) ? (
-                <Alert variant="destructive">
-                  <RiErrorWarningLine />
-                  <AlertDescription>Este hito ya venció.</AlertDescription>
-                </Alert>
-              ) : null}
+          {activeDetailMilestone ? (
+            <>
+              <div className="flex flex-col gap-4">
+                {isOverdue(activeDetailMilestone) ? (
+                  <Alert variant="destructive">
+                    <RiErrorWarningLine />
+                    <AlertDescription>Este hito ya venció.</AlertDescription>
+                  </Alert>
+                ) : null}
 
-              <div className="flex items-center gap-2">
-                {detailMilestone.completed ? (
-                  <RiCheckboxCircleLine className="text-success" />
-                ) : (
-                  <RiCheckboxBlankCircleLine />
-                )}
-                <span className="text-sm font-medium">
-                  {detailMilestone.completed ? "Completado" : "Pendiente"}
-                </span>
-              </div>
-
-              {detailMilestone.phase || detailMilestone.isMinimum ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  {detailMilestone.phase ? (
-                    <Badge variant="outline">
-                      {formatPhase(detailMilestone.phase)}
-                    </Badge>
-                  ) : null}
-                  {detailMilestone.isMinimum ? (
-                    <Badge variant="secondary">Hito mínimo</Badge>
-                  ) : null}
+                <div className="flex items-center gap-2">
+                  {activeDetailMilestone.completed ? (
+                    <RiCheckboxCircleLine className="text-success" />
+                  ) : (
+                    <RiCheckboxBlankCircleLine />
+                  )}
+                  <span className="text-sm font-medium">
+                    {activeDetailMilestone.completed ? "Completado" : "Pendiente"}
+                  </span>
                 </div>
-              ) : null}
 
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Vence
-                </p>
-                <p className="mt-1 text-sm">{formatDate(detailMilestone.dueDate)}</p>
-              </div>
+                {activeDetailMilestone.phase ||
+                activeDetailMilestone.isMinimum ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {activeDetailMilestone.phase ? (
+                      <Badge variant="outline">
+                        {formatPhase(activeDetailMilestone.phase)}
+                      </Badge>
+                    ) : null}
+                    {activeDetailMilestone.isMinimum ? (
+                      <Badge variant="secondary">Hito mínimo</Badge>
+                    ) : null}
+                  </div>
+                ) : null}
 
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Descripción
-                </p>
-                {detailMilestone.description ? (
-                  <p className="mt-1 whitespace-pre-line text-sm">
-                    {detailMilestone.description}
-                  </p>
-                ) : (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Sin descripción.
-                  </p>
-                )}
-              </div>
-
-              {detailMilestone.createdAt ? (
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Creado
+                    Vence
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {formatDate(detailMilestone.createdAt)}
+                  <p className="mt-1 text-sm">
+                    {formatDate(activeDetailMilestone.dueDate)}
                   </p>
                 </div>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Descripción
+                  </p>
+                  {activeDetailMilestone.description ? (
+                    <p className="mt-1 whitespace-pre-line text-sm">
+                      {activeDetailMilestone.description}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Sin descripción.
+                    </p>
+                  )}
+                </div>
+
+                {activeDetailMilestone.createdAt ? (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Creado
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {formatDate(activeDetailMilestone.createdAt)}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
+              {canManage ? (
+                <DialogFooter>
+                  <Button
+                    variant={
+                      activeDetailMilestone.completed ? "outline" : "default"
+                    }
+                    onClick={() => handleToggle(activeDetailMilestone)}
+                    disabled={isPending}
+                  >
+                    {isPending ? (
+                      <Spinner data-icon="inline-start" />
+                    ) : activeDetailMilestone.completed ? (
+                      <RiCheckboxBlankCircleLine data-icon="inline-start" />
+                    ) : (
+                      <RiCheckboxCircleLine data-icon="inline-start" />
+                    )}
+                    {isPending
+                      ? "Guardando..."
+                      : activeDetailMilestone.completed
+                        ? "Marcar como pendiente"
+                        : "Marcar como completado"}
+                  </Button>
+                </DialogFooter>
               ) : null}
-            </div>
+            </>
           ) : null}
         </DialogContent>
       </Dialog>
