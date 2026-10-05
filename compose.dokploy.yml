@@ -1,31 +1,19 @@
 # Compose para desplegar CapstoneHUB en Dokploy (Docker Compose service).
 #
+# Nota: se usa el servicio de base de datos de
+# Dokploy. Para eso se define DATABASE_URL en
+# Dokploy > Environment apuntando a su host interno, por ejemplo
+# `postgresql://usuario:<contrasena>@<servicio-db>:5432/capstonehub`. El backend
+# se une a `dokploy-network` para poder hacer reach.
+#
 # Las imágenes se publican en GHCR por .github/workflows/release.yml. Configura
 # las variables en Dokploy > Environment y los dominios en la pestaña Domains
-# (Dokploy agrega las etiquetas de Traefik y la red dokploy-network solo).
+# (Dokploy agrega las etiquetas de Traefik al servicio con dominio).
 #
 # No se define `container_name`: Dokploy lo desaconseja (rompe logs y métricas).
 # Los puertos se exponen con `expose` y Dokploy los enruta vía Traefik.
 
 services:
-  db:
-    image: postgres:15-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - capstone
-
   minio:
     image: quay.io/minio/minio:latest
     restart: unless-stopped
@@ -73,7 +61,8 @@ services:
       PORT: "3001"
       NODE_ENV: production
       SWAGGER_ENABLED: "false"
-      DATABASE_URL: postgresql://${DB_USERNAME}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      # Cadena de conexión al servicio de base de datos de Dokploy (host interno).
+      DATABASE_URL: ${DATABASE_URL}
       AUTH_SECRET: ${AUTH_SECRET}
       INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD}
@@ -90,14 +79,14 @@ services:
       S3_FORCE_PATH_STYLE: "true"
       S3_UPLOAD_URL_TTL_SECONDS: ${S3_UPLOAD_URL_TTL_SECONDS:-3600}
     depends_on:
-      db:
-        condition: service_healthy
       minio:
         condition: service_started
     expose:
       - "3001"
     networks:
       - capstone
+      # Necesaria para alcanzar el servicio de base de datos de Dokploy.
+      - dokploy-network
 
   frontend:
     image: ${FRONTEND_IMAGE:-ghcr.io/iscoutb/capstonehub-frontend:latest}
@@ -112,8 +101,9 @@ services:
       - capstone
 
 volumes:
-  db_data:
   minio_data:
 
 networks:
   capstone:
+  dokploy-network:
+    external: true
