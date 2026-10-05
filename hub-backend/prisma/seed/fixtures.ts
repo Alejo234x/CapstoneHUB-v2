@@ -95,6 +95,8 @@ export interface ReportFixture {
   status?: 'pending' | 'submitted' | 'accepted' | 'rejected';
   submittedAt?: string | null;
   reviewComment?: string | null;
+  /** Títulos de los hitos del mismo proyecto a los que se vincula la entrega. */
+  milestoneTitles?: string[];
 }
 
 export type ReportsFixture = Record<string, ReportFixture[]>;

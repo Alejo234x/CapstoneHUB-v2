@@ -13,6 +13,7 @@ import {
   ActorRole,
   ProjectPhase,
   ProjectSource,
+  ReportContentKind,
   UserRole,
 } from '../generated/prisma/client';
 
@@ -532,11 +533,12 @@ describe('ProjectsService', () => {
     ]);
   });
 
-  it('connects the acting user as the project proposer', async () => {
+  it('creates the project with the default final milestone and report', async () => {
     const createdProject = {
       id: 11,
       name: 'New project',
       status: ProjectStatus.proposed,
+      phase: ProjectPhase.semester_1,
       startDate: null,
       location: null,
       requiresLegalization: false,
@@ -561,10 +563,29 @@ describe('ProjectsService', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    const create = jest
-      .fn<Promise<typeof createdProject>, [{ data: unknown }]>()
-      .mockResolvedValue(createdProject);
-    const prisma = { project: { create } };
+    const projectCreate = jest
+      .fn<
+        Promise<{ id: number; milestones: { id: number }[] }>,
+        [{ data: unknown }]
+      >()
+      .mockResolvedValue({ id: 11, milestones: [{ id: 100 }] });
+    const reportCreate = jest
+      .fn<Promise<{ id: number }>, [{ data: Record<string, unknown> }]>()
+      .mockResolvedValue({ id: 200 });
+    const linkCreate = jest
+      .fn<Promise<unknown>, [{ data: Record<string, unknown> }]>()
+      .mockResolvedValue({});
+    const findUniqueOrThrow = jest.fn().mockResolvedValue(createdProject);
+    const transaction = {
+      project: { create: projectCreate, findUniqueOrThrow },
+      projectReport: { create: reportCreate },
+      milestoneReportLink: { create: linkCreate },
+    };
+    const prisma = {
+      $transaction: jest.fn((callback: (value: unknown) => unknown) =>
+        callback(transaction),
+      ),
+    };
     const authorization = {
       ...createAuthorizationMock(),
       assertCanCreateProject: jest.fn(),
@@ -578,8 +599,7 @@ describe('ProjectsService', () => {
       startDate: new Date('2026-01-15T00:00:00.000Z'),
     });
 
-    expect(create).toHaveBeenCalledTimes(1);
-    const data = create.mock.calls[0][0].data as {
+    const data = projectCreate.mock.calls[0][0].data as {
       proposer: unknown;
       milestones: {
         create: {
@@ -596,7 +616,8 @@ describe('ProjectsService', () => {
         proposer: { connect: { id: EVALUATOR_USER.id } },
       }),
     );
-    expect(data.milestones.create[0]).toEqual(
+    const milestone = data.milestones.create[0];
+    expect(milestone).toEqual(
       expect.objectContaining({
         title: DEFAULT_FINAL_MILESTONE_TITLE,
         phase: ProjectPhase.semester_2,
@@ -604,12 +625,23 @@ describe('ProjectsService', () => {
         completed: false,
       }),
     );
-    expect(data.milestones.create[0].dueDate).toBeInstanceOf(Date);
+    expect(milestone.dueDate).toBeInstanceOf(Date);
+    expect(
+      (milestone.dueDate.getFullYear() - 2026) * 12 +
+        (milestone.dueDate.getMonth() - 0),
+    ).toBe(12);
 
-    const dueDate = data.milestones.create[0].dueDate;
-    expect((dueDate.getFullYear() - 2026) * 12 + (dueDate.getMonth() - 0)).toBe(
-      12,
-    );
+    expect(reportCreate).toHaveBeenCalledTimes(1);
+    expect(reportCreate.mock.calls[0][0].data).toMatchObject({
+      projectId: 11,
+      title: DEFAULT_FINAL_MILESTONE_TITLE,
+      type: ReportContentKind.file,
+      maxFiles: 1,
+    });
+    expect(linkCreate).toHaveBeenCalledWith({
+      data: { milestoneId: 100, reportId: 200 },
+    });
+    expect(findUniqueOrThrow).toHaveBeenCalled();
   });
 
   it('applies the viewer visibility filter to project listings', async () => {

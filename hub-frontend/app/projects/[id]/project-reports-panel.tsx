@@ -221,6 +221,50 @@ function ReportsAccessNotice({
   return null;
 }
 
+type ReportDeleteDialogProps = {
+  readonly report: ProjectReportItem | null;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly onConfirm: () => void;
+};
+
+function ReportDeleteDialog({
+  report,
+  open,
+  onOpenChange,
+  onConfirm,
+}: ReportDeleteDialogProps) {
+  const milestoneTitles = (report?.milestones ?? [])
+    .map((milestone) => milestone.title)
+    .join(", ");
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Eliminar entrega</AlertDialogTitle>
+          <AlertDialogDescription>
+            ¿Eliminar la entrega &quot;{report?.title}&quot;? Esta acción no se
+            puede deshacer.
+            {milestoneTitles ? (
+              <span className="mt-2 block text-destructive">
+                Está vinculada a los hitos: {milestoneTitles}. Se desvinculará
+                de ellos.
+              </span>
+            ) : null}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onConfirm}>
+            Eliminar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export default function ProjectReportsPanel({
   projectId,
   reports: initialReports,
@@ -894,26 +938,12 @@ export default function ProjectReportsPanel({
         )}
       </ReportDialogForm>
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar entrega</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Eliminar la entrega &quot;{deleteTarget?.title}&quot;? Esta acción
-              no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={confirmDeleteReport}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ReportDeleteDialog
+        report={deleteTarget}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={confirmDeleteReport}
+      />
     </Card>
   );
 }

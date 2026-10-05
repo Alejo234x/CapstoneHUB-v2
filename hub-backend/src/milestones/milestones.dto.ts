@@ -1,9 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
   IsDate,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -51,6 +53,15 @@ export class CreateMilestoneDto {
   @IsEnum(ProjectPhase)
   @IsOptional()
   phase?: ProjectPhase;
+
+  @ApiPropertyOptional({
+    description: 'Reports (deliveries) linked to this milestone',
+    type: [Number],
+  })
+  @IsArray()
+  @IsInt({ each: true })
+  @IsOptional()
+  reportIds?: number[];
 }
 
 export class UpdateMilestoneDto {
@@ -95,4 +106,13 @@ export class UpdateMilestoneDto {
   @IsEnum(ProjectPhase)
   @IsOptional()
   phase?: ProjectPhase;
+
+  @ApiPropertyOptional({
+    description: 'Reports (deliveries) linked to this milestone',
+    type: [Number],
+  })
+  @IsArray()
+  @IsInt({ each: true })
+  @IsOptional()
+  reportIds?: number[];
 }

@@ -176,6 +176,132 @@
         { "email": "coord.luis@capstonehub.test", "role": "coordinator" }
       ],
       "attachments": []
+    },
+    {
+      "name": "Asistente Virtual de Orientación Vocacional",
+      "description": "Chatbot basado en procesamiento de lenguaje natural para orientar a estudiantes de bachillerato en la elección de carrera.",
+      "context": "Los colegios de la zona reportan alta deserción en el primer año universitario por decisiones vocacionales poco informadas.",
+      "location": "Riobamba, Chimborazo",
+      "estimatedCost": 11000.0,
+      "startDate": "2026-02-01",
+      "endDate": null,
+      "schools": ["Ingeniería en Software", "Psicología Educativa"],
+      "requiresLegalization": false,
+      "isPrivate": true,
+      "source": "research",
+      "proposerUserEmail": "proposer.marco@capstonehub.test",
+      "proposer": {
+        "type": "natural",
+        "fullName": "Marco Villacís",
+        "idNumber": "1802223334",
+        "email": "marco.villacis@example.com"
+      },
+      "facultyAdvisor": "Mg. Paula Aguirre",
+      "teamRequirements": "2 estudiantes de Ingeniería en Software con interés en NLP.",
+      "expectedOutcomes": "Asistente conversacional validado con al menos dos colegios piloto.",
+      "deliverables": ["Modelo de orientación vocacional", "Prototipo del asistente", "Informe de validación"],
+      "targetStatus": "proposed",
+      "actors": [
+        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
+        { "email": "advisor.sofia@capstonehub.test", "role": "advisor" }
+      ],
+      "attachments": []
+    },
+    {
+      "name": "Red de Monitoreo de Calidad del Aire",
+      "description": "Red de nodos de bajo costo que miden material particulado y publican datos abiertos en tiempo casi real.",
+      "context": "El municipio no cuenta con estaciones suficientes para informar a la ciudadanía sobre la calidad del aire.",
+      "location": "Ambato, Tungurahua",
+      "estimatedCost": 27500.0,
+      "startDate": "2025-08-15",
+      "endDate": "2026-07-30",
+      "schools": ["Ingeniería Electrónica", "Ingeniería Ambiental"],
+      "requiresLegalization": false,
+      "isPrivate": true,
+      "source": "social_impact",
+      "proposerUserEmail": "proposer.gabriela@capstonehub.test",
+      "proposer": {
+        "type": "natural",
+        "fullName": "Gabriela Suárez",
+        "idNumber": "1807654321",
+        "email": "gabriela.suarez@example.com"
+      },
+      "facultyAdvisor": "Ing. Andrés Cabrera",
+      "teamRequirements": "2 estudiantes de Ingeniería Electrónica y 1 de Ingeniería Ambiental.",
+      "expectedOutcomes": "Red piloto de al menos cinco nodos con panel de datos abiertos.",
+      "deliverables": ["Diseño de la red de sensores", "Nodos desplegados", "Panel de datos abiertos"],
+      "targetStatus": "in_progress",
+      "actors": [
+        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
+        { "email": "advisor.diego@capstonehub.test", "role": "advisor" },
+        { "email": "student.juan@capstonehub.test", "role": "student" },
+        { "email": "student.lucia@capstonehub.test", "role": "student" }
+      ],
+      "attachments": ["anteproyecto.pdf"]
+    },
+    {
+      "name": "Sistema de Trazabilidad para Productos Agrícolas",
+      "description": "Plataforma de trazabilidad de lotes agrícolas desde la cosecha hasta la exportación con códigos QR.",
+      "context": "Los exportadores necesitan demostrar el origen y las condiciones de los productos para cumplir normativas internacionales.",
+      "location": "Ibarra, Imbabura",
+      "estimatedCost": 19800.0,
+      "startDate": "2025-10-01",
+      "endDate": "2026-09-30",
+      "schools": ["Ingeniería Industrial", "Ingeniería en Software"],
+      "requiresLegalization": true,
+      "source": "external_entity",
+      "proposer": {
+        "type": "natural",
+        "fullName": "AgroExport Cía. Ltda.",
+        "email": "contacto@agroexport.example.com"
+      },
+      "facultyAdvisor": null,
+      "teamRequirements": "1 estudiante de Ingeniería Industrial y 1 de Ingeniería en Software.",
+      "expectedOutcomes": "Sistema de trazabilidad operativo con un exportador piloto.",
+      "deliverables": ["Diseño de la solución", "Prototipo de trazabilidad", "Manual de uso"],
+      "targetStatus": "assigned",
+      "actors": [
+        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
+        { "email": "advisor.sofia@capstonehub.test", "role": "advisor" },
+        { "email": "student.pedro@capstonehub.test", "role": "student" }
+      ],
+      "attachments": []
+    },
+    {
+      "name": "Plataforma de Tutorías Académicas",
+      "description": "Sistema de gestión de tutorías académicas entre estudiantes y docentes con agenda y seguimiento.",
+      "context": "La facultad coordina las tutorías por correo, lo que dificulta el seguimiento y la asignación.",
+      "location": "Ambato, Tungurahua",
+      "estimatedCost": 8000.0,
+      "startDate": "2024-09-01",
+      "endDate": "2025-07-01",
+      "schools": ["Ingeniería en Software"],
+      "requiresLegalization": false,
+      "isPrivate": false,
+      "source": "internal_need",
+      "proposerUserEmail": "proposer.veronica@capstonehub.test",
+      "proposer": {
+        "type": "natural",
+        "fullName": "Verónica Chicaiza",
+        "idNumber": "1805556667",
+        "email": "veronica.chicaiza@example.com"
+      },
+      "facultyAdvisor": "Mg. Carolina Núñez",
+      "teamRequirements": "2 estudiantes de Ingeniería en Software.",
+      "expectedOutcomes": "Plataforma adoptada por al menos tres carreras de la facultad.",
+      "deliverables": ["MVP de tutorías", "Piloto documentado", "Documento final"],
+      "targetStatus": "closed",
+      "actors": [
+        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
+        { "email": "advisor.diego@capstonehub.test", "role": "advisor" },
+        { "email": "student.andrea@capstonehub.test", "role": "student" },
+        { "email": "student.lucia@capstonehub.test", "role": "student" }
+      ],
+      "attachments": ["logo-proyecto.png"]
     }
   ]
 }

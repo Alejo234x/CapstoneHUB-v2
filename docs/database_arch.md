@@ -137,6 +137,14 @@ debe coincidir con el `type` de su entrega. Los tipos de texto y enlace usan
 (`attachmentId`, único) y el binario vive en S3/MinIO. Cada fila guarda su autor
 y su fecha de creación.
 
+### MilestoneReportLink
+
+Tabla intermedia que vincula hitos con entregas (relación muchos a muchos). Un
+hito puede exigir varias entregas y una entrega puede estar vinculada a varios
+hitos. El hito no se puede completar hasta que todas sus entregas vinculadas
+estén `accepted`. Al eliminar el hito o la entrega, sus filas de enlace caen en
+cascada y la otra parte queda intacta (`milestone_report`).
+
 ## Diagrama de clases UML
 
 ```mermaid
@@ -295,6 +303,12 @@ classDiagram
         +DateTime createdAt
     }
 
+    class MilestoneReportLink {
+        +Int milestoneId
+        +Int reportId
+        +DateTime createdAt
+    }
+
     class ProjectStatus {
         <<enumeration>>
         proposed
@@ -369,6 +383,8 @@ classDiagram
     Project "1" *-- "0..*" ProjectReport : reports
     ProjectReport "1" *-- "0..*" ProjectReportContent : contents
     ProjectReportContent "0..1" --> "0..1" ProjectAttachment : attachment
+    ProjectMilestones "1" *-- "0..*" MilestoneReportLink : reportLinks
+    ProjectReport "1" *-- "0..*" MilestoneReportLink : milestoneLinks
 
     UserRoleAssignment ..> UserRole
     ProjectActorAssignment ..> ActorRole
@@ -396,4 +412,5 @@ classDiagram
   `createdAt` del proyecto, además de claves foráneas y fechas usadas en los
   listados.
 - Todo proyecto nuevo incluye por defecto un hito mínimo «Documento final» en
-  `semester_2` (ver [Arquitectura del backend](./backend_arch.md)).
+  `semester_2` y una entrega «Documento final» (tipo Archivo) vinculada a él
+  (ver [Arquitectura del backend](./backend_arch.md)).

@@ -263,7 +263,8 @@ model ProjectMilestones {
   phase       ProjectPhase?
   createdAt   DateTime      @default(now()) @map("created_at")
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project     Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reportLinks MilestoneReportLink[]
 
   @@index([projectId], map: "idx_project_milestones_project_id")
   @@index([dueDate], map: "idx_project_milestones_due_date")
@@ -319,6 +320,7 @@ model ProjectReport {
   reviewedBy  User?                  @relation("ReportReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
   attachments ProjectAttachment[]
   contents    ProjectReportContent[]
+  milestoneLinks MilestoneReportLink[]
 
   @@index([projectId], map: "idx_project_report_project_id")
   @@index([dueDate], map: "idx_project_report_due_date")
@@ -347,4 +349,18 @@ model ProjectReportContent {
   @@index([kind], map: "idx_project_report_content_kind")
   @@index([createdByUserId], map: "idx_project_report_content_created_by_user_id")
   @@map("project_report_content")
+}
+
+model MilestoneReportLink {
+  milestoneId Int      @map("milestone_id")
+  reportId    Int      @map("report_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  milestone ProjectMilestones @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  report    ProjectReport     @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@id([milestoneId, reportId])
+  @@index([reportId], map: "idx_milestone_report_report_id")
+  @@index([milestoneId], map: "idx_milestone_report_milestone_id")
+  @@map("milestone_report")
 }

@@ -1,9 +1,6 @@
-import Link from "next/link";
-import { RiEditLine } from "@remixicon/react";
 import { ProjectDetails } from "../../services/schemas";
 import { formatProjectSource } from "@/app/services/utils";
 import { formatCurrency, formatDate } from "./project-formatters";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -14,8 +11,6 @@ import {
 
 type ProjectGeneralTabProps = {
   readonly project: ProjectDetails;
-  /** Solo administradores y evaluadores ven el acceso a la edición. */
-  readonly canEdit?: boolean;
 };
 
 /** Tarjeta de texto simple, para las secciones descriptivas del proyecto. */
@@ -159,7 +154,6 @@ function DatesAndCostCard({ project }: { readonly project: ProjectDetails }) {
 
 export default function ProjectGeneralTab({
   project,
-  canEdit = false,
 }: ProjectGeneralTabProps) {
   const hasDeliverables = Boolean(
     project.deliverables && project.deliverables.length > 0,
@@ -173,22 +167,6 @@ export default function ProjectGeneralTab({
 
   return (
     <div className="flex flex-col gap-6">
-      {canEdit ? (
-        <div className="flex justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={
-              <Link href={`/projects/${project.id}/edit`}>
-                <RiEditLine data-icon="inline-start" />
-                Editar proyecto
-              </Link>
-            }
-          />
-        </div>
-      ) : null}
-
       <ProposerCard project={project} />
 
       <TextCard title="Descripción" preserveLineBreaks>

@@ -9,7 +9,8 @@
       "maxFiles": 2,
       "status": "accepted",
       "submittedAt": "2026-05-08T17:30:00.000Z",
-      "reviewComment": "Entregable completo y bien documentado."
+      "reviewComment": "Entregable completo y bien documentado.",
+      "milestoneTitles": ["Desarrollo del backend e ingesta"]
     },
     {
       "title": "Pruebas de campo",
@@ -18,7 +19,8 @@
       "type": "file",
       "allowedMimeTypes": ["application/pdf"],
       "maxFiles": 1,
-      "status": "pending"
+      "status": "pending",
+      "milestoneTitles": ["Pruebas de campo"]
     }
   ],
   "Sistema de Telemedicina para Zonas Rurales": [
@@ -30,7 +32,109 @@
       "allowedMimeTypes": ["application/pdf", "image/png", "image/jpeg"],
       "maxFiles": 3,
       "status": "submitted",
-      "submittedAt": "2026-04-18T15:00:00.000Z"
+      "submittedAt": "2026-04-18T15:00:00.000Z",
+      "milestoneTitles": ["Validación con personal médico"]
+    }
+  ],
+  "Asistente Virtual de Orientación Vocacional": [
+    {
+      "title": "Modelo de recomendación",
+      "description": "Documentación del modelo de NLP y sus métricas.",
+      "dueDate": "2026-05-15",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "pending",
+      "milestoneTitles": ["Modelo de recomendación"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2027-02-01",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "pending",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Red de Monitoreo de Calidad del Aire": [
+    {
+      "title": "Informe de la red de sensores",
+      "description": "Resultados del despliegue y calibración de los nodos piloto.",
+      "dueDate": "2025-12-20",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf"],
+      "maxFiles": 2,
+      "status": "accepted",
+      "submittedAt": "2025-12-18T20:00:00.000Z",
+      "reviewComment": "Despliegue verificado y datos consistentes.",
+      "milestoneTitles": ["Despliegue de nodos piloto"]
+    },
+    {
+      "title": "Panel de datos abiertos",
+      "description": "Visualización pública de la calidad del aire.",
+      "dueDate": "2026-04-01",
+      "type": "link",
+      "status": "pending",
+      "milestoneTitles": ["Panel de datos abiertos"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2026-08-15",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "pending",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Sistema de Trazabilidad para Productos Agrícolas": [
+    {
+      "title": "Prototipo de trazabilidad",
+      "description": "Registro de lotes con códigos QR y línea de tiempo.",
+      "dueDate": "2026-01-30",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "image/png", "image/jpeg"],
+      "maxFiles": 3,
+      "status": "submitted",
+      "submittedAt": "2026-01-28T16:45:00.000Z",
+      "milestoneTitles": ["Prototipo de trazabilidad"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2026-10-01",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "pending",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Plataforma de Tutorías Académicas": [
+    {
+      "title": "MVP de tutorías",
+      "description": "Enlace a la demostración del MVP de tutorías.",
+      "dueDate": "2024-12-10",
+      "type": "link",
+      "status": "accepted",
+      "submittedAt": "2024-12-09T14:00:00.000Z",
+      "reviewComment": "MVP funcional y bien presentado.",
+      "milestoneTitles": ["MVP de tutorías"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2025-07-01",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2025-06-28T18:30:00.000Z",
+      "reviewComment": "Documento final aprobado.",
+      "milestoneTitles": ["Documento final"]
     }
   ]
 }

@@ -167,5 +167,139 @@
       "isMinimum": true,
       "phase": "semester_2"
     }
+  ],
+  "Asistente Virtual de Orientación Vocacional": [
+    {
+      "title": "Definición del alcance",
+      "description": "Alcance funcional y fuentes de datos vocacionales.",
+      "dueDate": "2026-03-01",
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_1"
+    },
+    {
+      "title": "Modelo de recomendación",
+      "description": "Modelo de NLP para sugerir carreras afines al perfil del estudiante.",
+      "dueDate": "2026-05-15",
+      "completed": false,
+      "isMinimum": true,
+      "phase": "semester_1"
+    },
+    {
+      "title": "Validación con estudiantes",
+      "description": "Piloto del asistente con estudiantes de bachillerato.",
+      "dueDate": "2026-09-01",
+      "completed": false,
+      "phase": "semester_2"
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto, obligatorio para completarlo.",
+      "dueDate": "2027-02-01",
+      "completed": false,
+      "isMinimum": true,
+      "phase": "semester_2"
+    }
+  ],
+  "Red de Monitoreo de Calidad del Aire": [
+    {
+      "title": "Diseño de la red de sensores",
+      "description": "Selección de sensores de material particulado y topología de la red.",
+      "dueDate": "2025-10-01",
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_1"
+    },
+    {
+      "title": "Despliegue de nodos piloto",
+      "description": "Instalación de cinco nodos en puntos estratégicos de la ciudad.",
+      "dueDate": "2025-12-15",
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_1"
+    },
+    {
+      "title": "Panel de datos abiertos",
+      "description": "Visualización pública de la calidad del aire en tiempo casi real.",
+      "dueDate": "2026-04-01",
+      "completed": false,
+      "isMinimum": true,
+      "phase": "semester_2"
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto, obligatorio para completarlo.",
+      "dueDate": "2026-08-15",
+      "completed": false,
+      "isMinimum": true,
+      "phase": "semester_2"
+    }
+  ],
+  "Sistema de Trazabilidad para Productos Agrícolas": [
+    {
+      "title": "Análisis de la cadena de valor",
+      "description": "Mapeo del proceso desde la cosecha hasta la exportación.",
+      "dueDate": "2025-11-20",
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_1"
+    },
+    {
+      "title": "Prototipo de trazabilidad",
+      "description": "Registro de lotes con códigos QR y línea de tiempo.",
+      "dueDate": "2026-01-30",
+      "completed": false,
+      "isMinimum": true,
+      "phase": "semester_1"
+    },
+    {
+      "title": "Integración con exportadores",
+      "description": "Sincronización con la plataforma de un exportador piloto.",
+      "dueDate": "2026-05-01",
+      "completed": false,
+      "phase": "semester_2"
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto, obligatorio para completarlo.",
+      "dueDate": "2026-10-01",
+      "completed": false,
+      "isMinimum": true,
+      "phase": "semester_2"
+    }
+  ],
+  "Plataforma de Tutorías Académicas": [
+    {
+      "title": "Levantamiento de necesidades",
+      "description": "Entrevistas con coordinadores y docentes de la facultad.",
+      "dueDate": "2024-10-15",
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_1"
+    },
+    {
+      "title": "MVP de tutorías",
+      "description": "Agenda, asignación y seguimiento de tutorías.",
+      "dueDate": "2024-12-10",
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_1"
+    },
+    {
+      "title": "Piloto con facultades",
+      "description": "Uso del sistema en tres carreras durante un semestre.",
+      "dueDate": "2025-03-01",
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_2"
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto, obligatorio para completarlo.",
+      "dueDate": "2025-07-01",
+      "completed": true,
+      "isMinimum": true,
+      "phase": "semester_2"
+    }
   ]
 }

@@ -4,6 +4,7 @@ import {
   ProjectPhase,
   ProjectSource,
   ProjectStatus,
+  ReportStatus,
   UserRole,
 } from '../generated/prisma/client';
 import { AuthenticatedUser } from '../auth/auth.types';
@@ -68,7 +69,15 @@ export const projectInclude = {
   naturalProposer: true,
   observations: { select: projectObservationSelect },
   actorAssignments: { include: { user: true } },
-  milestones: true,
+  milestones: {
+    include: {
+      reportLinks: {
+        select: {
+          report: { select: { id: true, title: true, status: true } },
+        },
+      },
+    },
+  },
   statusHistory: { select: projectStatusHistorySelect },
   changeHistory: { select: projectChangeHistorySelect },
   // Los archivos de una entrega se muestran en su pestaña, no en Anexos.
@@ -182,6 +191,7 @@ export type ProjectDetailResponse = ProjectListResponse & {
     isMinimum: boolean;
     phase: ProjectPhase | null;
     createdAt: Date;
+    reports: { id: number; title: string; status: ReportStatus }[];
   }[];
   statusHistory: {
     id: number;
@@ -364,6 +374,22 @@ export function mapProjectDetailResponse(
       ? project.milestones
           .slice()
           .sort(byDateThenId((milestone) => milestone.dueDate.getTime()))
+          .map((milestone) => ({
+            id: milestone.id,
+            projectId: milestone.projectId,
+            title: milestone.title,
+            description: milestone.description,
+            dueDate: milestone.dueDate,
+            completed: milestone.completed,
+            isMinimum: milestone.isMinimum,
+            phase: milestone.phase,
+            createdAt: milestone.createdAt,
+            reports: milestone.reportLinks.map((link) => ({
+              id: link.report.id,
+              title: link.report.title,
+              status: link.report.status,
+            })),
+          }))
       : [],
     statusHistory: canViewSensitiveData
       ? project.statusHistory
