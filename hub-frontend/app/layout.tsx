@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   title: "CapstoneHUB",
   description:
     "Plataforma de gestión de proyectos Capstone de la Universidad Tecnológica de Bolívar",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
