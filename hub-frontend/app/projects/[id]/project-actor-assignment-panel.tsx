@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 import {
   addProjectActorAssignment,
@@ -11,6 +10,7 @@ import {
 import { UserSummary } from "../../services/schemas";
 import { formatRole, getInitials } from "../../services/utils";
 import { useAuth } from "../../components/auth-provider";
+import AccessNotice from "../../components/access-notice";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -148,20 +148,10 @@ function AccessMessage() {
 
 function LoginMessage() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Equipo del proyecto</CardTitle>
-        <CardDescription>
-          Inicia sesión para gestionar el equipo del proyecto.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Button
-          nativeButton={false}
-          render={<Link href="/login">Iniciar sesión</Link>}
-        />
-      </CardContent>
-    </Card>
+    <AccessNotice
+      title="Equipo del proyecto"
+      message="Inicia sesión para gestionar el equipo del proyecto."
+    />
   );
 }
 

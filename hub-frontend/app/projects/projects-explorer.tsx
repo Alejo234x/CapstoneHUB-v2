@@ -1,14 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
 import { getProjects } from "../services/projects";
 import { ProjectItem } from "../services/schemas";
 import ProjectsTable from "./projects-table";
 import ServiceUnavailable from "../components/service-unavailable";
+import AccessNotice from "../components/access-notice";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Empty,
   EmptyDescription,
@@ -17,48 +14,19 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isServiceUnavailableStatus } from "@/lib/http";
+import { useApiResource } from "@/lib/use-api-resource";
 
 export default function ProjectsExplorer() {
-  const [projects, setProjects] = useState<ProjectItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<number | undefined>(undefined);
-  const [reloadKey, setReloadKey] = useState(0);
+  const {
+    data: projectsResult,
+    loading,
+    error: loadError,
+    reload,
+  } = useApiResource(() => getProjects());
 
-  useEffect(() => {
-    let active = true;
-
-    async function loadProjects() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const {
-          projects: nextProjects,
-          error: nextError,
-          status: nextStatus,
-        } = await getProjects();
-
-        if (!active) {
-          return;
-        }
-
-        setProjects(nextProjects);
-        setError(nextError ?? null);
-        setStatus(nextStatus);
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadProjects();
-
-    return () => {
-      active = false;
-    };
-  }, [reloadKey]);
+  const projects: ProjectItem[] = projectsResult?.projects ?? [];
+  const error = projectsResult?.error ?? loadError ?? null;
+  const status = projectsResult?.status;
 
   if (loading) {
     return (
@@ -74,29 +42,18 @@ export default function ProjectsExplorer() {
       <ServiceUnavailable
         className="mb-6"
         message={error}
-        onRetry={() => setReloadKey((key) => key + 1)}
+        onRetry={reload}
       />
     );
   }
 
   if (status === 401) {
     return (
-      <Card className="rounded-2xl">
-        <CardContent className="flex flex-col items-start gap-4">
-          <div>
-            <p className="font-semibold">Inicia sesión para ver los proyectos</p>
-            <p className="text-sm text-muted-foreground">
-              Solo los proyectos finalizados y públicos se pueden consultar sin
-              cuenta. Inicia sesión para ver tus proyectos propuestos y
-              asignados.
-            </p>
-          </div>
-          <Button
-            nativeButton={false}
-            render={<Link href="/login">Iniciar sesión</Link>}
-          />
-        </CardContent>
-      </Card>
+      <AccessNotice
+        className="rounded-2xl"
+        title="Inicia sesión para ver los proyectos"
+        message="Solo los proyectos finalizados y públicos se pueden consultar sin cuenta. Inicia sesión para ver tus proyectos propuestos y asignados."
+      />
     );
   }
 

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { createProjectObservation } from "../../services/projects";
+import { createProjectObservation } from "../../services/observations";
 import { ProjectObservationItem } from "../../services/schemas";
 import { getInitials } from "../../services/utils";
 import { useAuth } from "../../components/auth-provider";
+import AccessNotice from "../../components/access-notice";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -113,20 +113,10 @@ export default function ProjectObservationsPanel({
   if (!isAuthenticated) {
     return (
       <div className="flex flex-col gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Agregar observación</CardTitle>
-            <CardDescription>
-              Inicia sesión para agregar observaciones al proyecto.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              nativeButton={false}
-              render={<Link href="/login">Iniciar sesión</Link>}
-            />
-          </CardContent>
-        </Card>
+        <AccessNotice
+          title="Agregar observación"
+          message="Inicia sesión para agregar observaciones al proyecto."
+        />
 
         <ObservationsList observations={observations} />
       </div>

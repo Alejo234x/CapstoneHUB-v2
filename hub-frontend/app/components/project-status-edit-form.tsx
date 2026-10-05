@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateProjectStatus } from "../services/projects";
-import Link from "next/link";
 import { useAuth } from "./auth-provider";
+import AccessNotice from "./access-notice";
 import {
   Select,
   SelectContent,
@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -121,20 +120,11 @@ export default function ProjectStatusEditForm({
 
   if (!isAuthenticated || !session) {
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Actualizar estado del proyecto</CardTitle>
-          <CardDescription>
-            Inicia sesión para cambiar el estado de este proyecto.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button
-            nativeButton={false}
-            render={<Link href="/login">Iniciar sesión</Link>}
-          />
-        </CardContent>
-      </Card>
+      <AccessNotice
+        className="w-full"
+        title="Actualizar estado del proyecto"
+        message="Inicia sesión para cambiar el estado de este proyecto."
+      />
     );
   }
 
