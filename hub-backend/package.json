@@ -12,7 +12,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main",
-    "db:deploy": "npx prisma migrate deploy",
+    "db:deploy": "prisma migrate deploy",
     "seed": "ts-node --require ./prisma/register.cjs prisma/seed.ts",
     "seed:users": "ts-node --require ./prisma/register.cjs prisma/seed.ts --only=users",
     "seed:projects": "ts-node --require ./prisma/register.cjs prisma/seed.ts --only=projects",
