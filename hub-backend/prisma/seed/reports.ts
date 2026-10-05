@@ -1,5 +1,5 @@
 import { SeedContext, log, requireProjectId } from './common';
-import { loadReports } from './fixtures';
+import { ReportFixture, loadReports } from './fixtures';
 
 /** MIME por defecto para los fixtures de tipo Archivo que no los especifican. */
 const DEFAULT_FILE_MIME_TYPES: string[] = [
@@ -50,81 +50,96 @@ async function linkReportToMilestones(
   }
 }
 
+/** Crea o actualiza una entrega y, si aplica, sus vínculos con hitos. */
+async function seedReport(
+  prisma: SeedContext['prisma'],
+  projectId: number,
+  projectName: string,
+  report: ReportFixture,
+  options: SeedContext['options'],
+): Promise<void> {
+  const existing = await prisma.projectReport.findFirst({
+    where: { projectId, title: report.title },
+    select: { id: true },
+  });
+
+  if (options.dryRun) {
+    const action = existing ? 'update' : 'create';
+    log.info(
+      `[dry-run] would ${action} report "${report.title}" (${projectName})`,
+    );
+    return;
+  }
+
+  const status = report.status ?? 'pending';
+  const submittedAt =
+    status === 'pending' ? null : new Date(report.submittedAt ?? Date.now());
+  const reviewedAt =
+    status === 'accepted' || status === 'rejected'
+      ? new Date(report.submittedAt ?? Date.now())
+      : null;
+  const reviewComment = report.reviewComment ?? null;
+
+  const type = report.type ?? 'file';
+  const isFileType = type === 'file';
+
+  const data = {
+    description: report.description ?? null,
+    dueDate: new Date(report.dueDate),
+    type,
+    allowedMimeTypes: isFileType
+      ? (report.allowedMimeTypes ?? DEFAULT_FILE_MIME_TYPES)
+      : [],
+    maxFiles: isFileType ? (report.maxFiles ?? 1) : null,
+    status,
+    submittedAt,
+    reviewedAt,
+    reviewComment,
+  };
+
+  let reportId: number;
+
+  if (existing) {
+    await prisma.projectReport.update({
+      where: { id: existing.id },
+      data,
+    });
+    reportId = existing.id;
+    log.info(`Updated report "${report.title}" (${projectName})`);
+  } else {
+    const created = await prisma.projectReport.create({
+      data: { projectId, title: report.title, ...data },
+      select: { id: true },
+    });
+    reportId = created.id;
+    log.ok(`Created report "${report.title}" (${projectName})`);
+  }
+
+  if (report.milestoneTitles !== undefined) {
+    await linkReportToMilestones(
+      prisma,
+      projectId,
+      reportId,
+      report.milestoneTitles,
+    );
+  }
+}
+
 export async function seedReports({
   prisma,
   options,
 }: SeedContext): Promise<void> {
   const reportsByProject = loadReports();
 
-  for (const [projectName, reports] of Object.entries(reportsByProject)) {
-    const projectId = await requireProjectId(prisma, projectName);
+  await Promise.all(
+    Object.entries(reportsByProject).map(async ([projectName, reports]) => {
+      const projectId = await requireProjectId(prisma, projectName);
 
-    for (const report of reports) {
-      const existing = await prisma.projectReport.findFirst({
-        where: { projectId, title: report.title },
-        select: { id: true },
-      });
-
-      if (options.dryRun) {
-        const action = existing ? 'update' : 'create';
-        log.info(
-          `[dry-run] would ${action} report "${report.title}" (${projectName})`,
-        );
-        continue;
-      }
-
-      const status = report.status ?? 'pending';
-      const submittedAt =
-        status === 'pending' ? null : new Date(report.submittedAt ?? Date.now());
-      const reviewedAt =
-        status === 'accepted' || status === 'rejected'
-          ? new Date(report.submittedAt ?? Date.now())
-          : null;
-      const reviewComment = report.reviewComment ?? null;
-
-      const type = report.type ?? 'file';
-      const isFileType = type === 'file';
-
-      const data = {
-        description: report.description ?? null,
-        dueDate: new Date(report.dueDate),
-        type,
-        allowedMimeTypes: isFileType
-          ? (report.allowedMimeTypes ?? DEFAULT_FILE_MIME_TYPES)
-          : [],
-        maxFiles: isFileType ? (report.maxFiles ?? 1) : null,
-        status,
-        submittedAt,
-        reviewedAt,
-        reviewComment,
-      };
-
-      let reportId: number;
-
-      if (existing) {
-        await prisma.projectReport.update({
-          where: { id: existing.id },
-          data,
-        });
-        reportId = existing.id;
-        log.info(`Updated report "${report.title}" (${projectName})`);
-      } else {
-        const created = await prisma.projectReport.create({
-          data: { projectId, title: report.title, ...data },
-          select: { id: true },
-        });
-        reportId = created.id;
-        log.ok(`Created report "${report.title}" (${projectName})`);
-      }
-
-      if (report.milestoneTitles !== undefined) {
-        await linkReportToMilestones(
-          prisma,
-          projectId,
-          reportId,
-          report.milestoneTitles,
-        );
-      }
-    }
-  }
+      await Promise.all(
+        reports.map((report) =>
+          seedReport(prisma, projectId, projectName, report, options),
+        ),
+      );
+    }),
+  );
 }
