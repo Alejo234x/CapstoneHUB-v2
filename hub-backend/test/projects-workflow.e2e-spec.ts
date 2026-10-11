@@ -23,20 +23,32 @@ describe('Projects workflow (e2e)', () => {
 
     const { id: projectId } = await createProject(app, proposerToken);
 
-    // El admin impulsa el ciclo: proposed -> under_review -> approved -> in_progress.
-    for (const nextStatus of [
+    // El admin impulsa el ciclo de forma secuencial (cada transición depende
+    // de la anterior): proposed -> under_review -> approved -> in_progress.
+    const toUnderReview = await request(app.getHttpServer())
+      .patch(`/projects/${projectId}/status`)
+      .set(bearer(admin.accessToken))
+      .send({ status: 'under_review' })
+      .expect(200);
+    expect((toUnderReview.body as { status: string }).status).toBe(
       'under_review',
-      'approved',
-      'in_progress',
-    ] as const) {
-      const updated = await request(app.getHttpServer())
-        .patch(`/projects/${projectId}/status`)
-        .set(bearer(admin.accessToken))
-        .send({ status: nextStatus })
-        .expect(200);
+    );
 
-      expect((updated.body as { status: string }).status).toBe(nextStatus);
-    }
+    const toApproved = await request(app.getHttpServer())
+      .patch(`/projects/${projectId}/status`)
+      .set(bearer(admin.accessToken))
+      .send({ status: 'approved' })
+      .expect(200);
+    expect((toApproved.body as { status: string }).status).toBe('approved');
+
+    const toInProgress = await request(app.getHttpServer())
+      .patch(`/projects/${projectId}/status`)
+      .set(bearer(admin.accessToken))
+      .send({ status: 'in_progress' })
+      .expect(200);
+    expect((toInProgress.body as { status: string }).status).toBe(
+      'in_progress',
+    );
 
     // Evaluador con rol global, asignado al proyecto.
     const evaluator = await userWithRole(app, UserRole.evaluator);
