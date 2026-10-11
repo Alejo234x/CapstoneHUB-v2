@@ -10,18 +10,7 @@ import {
   userWithRole,
 } from './helpers/auth';
 import { ActorRole, UserRole } from '../src/generated/prisma/client';
-
-function projectPayload() {
-  return {
-    name: 'Proyecto Workflow E2E',
-    description: 'Descripción del proyecto',
-    context: 'Contexto del proyecto',
-    namep: 'Proponente E2E',
-    correo: uniqueEmail('proponente'),
-    isPrivate: true,
-    submissionConsentAt: new Date().toISOString(),
-  };
-}
+import { createProject } from './helpers/projects';
 
 describe('Projects workflow (e2e)', () => {
   let app: INestApplication<App>;
@@ -41,12 +30,7 @@ describe('Projects workflow (e2e)', () => {
       uniqueEmail('propietario'),
     );
 
-    const created = await request(app.getHttpServer())
-      .post('/projects')
-      .set(bearer(proposerToken))
-      .send(projectPayload())
-      .expect(201);
-    const projectId = (created.body as { id: number }).id;
+    const { id: projectId } = await createProject(app, proposerToken);
 
     // El admin impulsa el ciclo: proposed -> under_review -> approved -> in_progress.
     for (const nextStatus of [
@@ -106,12 +90,7 @@ describe('Projects workflow (e2e)', () => {
       app,
       uniqueEmail('propietario'),
     );
-    const created = await request(app.getHttpServer())
-      .post('/projects')
-      .set(bearer(proposerToken))
-      .send(projectPayload())
-      .expect(201);
-    const projectId = (created.body as { id: number }).id;
+    const { id: projectId } = await createProject(app, proposerToken);
 
     // Un proponente no puede mover el proyecto a revisión (esa transición es
     // de evaluador/admin).

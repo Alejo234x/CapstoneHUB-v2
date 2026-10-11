@@ -3,18 +3,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { closeTestApp, createTestApp } from './helpers/e2e';
 import { bearer, registerUser, uniqueEmail } from './helpers/auth';
-
-function projectPayload() {
-  return {
-    name: 'Proyecto E2E',
-    description: 'Descripción del proyecto de pruebas',
-    context: 'Contexto del proyecto de pruebas',
-    namep: 'Proponente E2E',
-    correo: uniqueEmail('proponente'),
-    isPrivate: true,
-    submissionConsentAt: new Date().toISOString(),
-  };
-}
+import { createProject } from './helpers/projects';
 
 describe('Projects (e2e)', () => {
   let app: INestApplication<App>;
@@ -29,14 +18,7 @@ describe('Projects (e2e)', () => {
 
   it('crea un proyecto privado, lo lista y lee su detalle', async () => {
     const { accessToken } = await registerUser(app, uniqueEmail('owner'));
-
-    const created = await request(app.getHttpServer())
-      .post('/projects')
-      .set(bearer(accessToken))
-      .send(projectPayload())
-      .expect(201);
-
-    const { id } = created.body as { id: number };
+    const { id } = await createProject(app, accessToken);
     expect(id).toBeGreaterThan(0);
 
     const list = await request(app.getHttpServer())
@@ -58,14 +40,7 @@ describe('Projects (e2e)', () => {
 
   it('oculta un proyecto privado a visitantes anónimos', async () => {
     const { accessToken } = await registerUser(app, uniqueEmail('owner'));
-
-    const created = await request(app.getHttpServer())
-      .post('/projects')
-      .set(bearer(accessToken))
-      .send(projectPayload())
-      .expect(201);
-
-    const { id } = created.body as { id: number };
+    const { id } = await createProject(app, accessToken);
 
     await request(app.getHttpServer()).get(`/projects/${id}`).expect(404);
   });
