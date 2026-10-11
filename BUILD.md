@@ -150,7 +150,19 @@ DATABASE_URL="postgresql://<usuario>:<contraseña>@localhost:5432/capstonehub_te
   npm run test:e2e
 ```
 
-Los specs están en `e2e/` (`auth.spec.ts`, `project-detail.spec.ts`).
+Los specs están en `e2e/` (`auth.spec.ts`, `project-detail.spec.ts`,
+`register.spec.ts`).
+
+Para depurar con el navegador visible o la interfaz interactiva:
+
+```bash
+npx playwright test --headed                    # navegador visible
+npx playwright test --ui                        # interfaz interactiva (watch + inspector)
+npx playwright test --debug                     # inspector paso a paso
+npx playwright test --project=mobile --headed   # solo el viewport móvil
+npx playwright test --grep "registro" --ui      # filtrar por nombre de test
+npx playwright show-report                      # trace/snapshot tras una corrida
+```
 
 En CI, el job `e2e` de `.github/workflows/ci.yml` levanta un Postgres efímero
 (`capstonehub_test`), aplica las migraciones, compila backend y frontend y corre
