@@ -1,22 +1,13 @@
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { closeTestApp, createTestApp } from './helpers/e2e';
+import { useTestApp } from './helpers/e2e';
 import { bearer, registerUser, uniqueEmail } from './helpers/auth';
 import { createProject } from './helpers/projects';
 
 describe('Projects (e2e)', () => {
-  let app: INestApplication<App>;
-
-  beforeAll(async () => {
-    app = await createTestApp();
-  });
-
-  afterAll(async () => {
-    await closeTestApp(app);
-  });
+  const getApp = useTestApp();
 
   it('crea un proyecto privado, lo lista y lee su detalle', async () => {
+    const app = getApp();
     const { accessToken } = await registerUser(app, uniqueEmail('owner'));
     const { id } = await createProject(app, accessToken);
     expect(id).toBeGreaterThan(0);
@@ -39,6 +30,7 @@ describe('Projects (e2e)', () => {
   });
 
   it('oculta un proyecto privado a visitantes anónimos', async () => {
+    const app = getApp();
     const { accessToken } = await registerUser(app, uniqueEmail('owner'));
     const { id } = await createProject(app, accessToken);
 

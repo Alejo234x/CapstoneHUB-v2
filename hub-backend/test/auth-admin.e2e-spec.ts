@@ -1,7 +1,5 @@
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { closeTestApp, createTestApp } from './helpers/e2e';
+import { useTestApp } from './helpers/e2e';
 import {
   adminSession,
   bearer,
@@ -11,17 +9,10 @@ import {
 import { UserRole } from '../src/generated/prisma/client';
 
 describe('Auth admin (e2e)', () => {
-  let app: INestApplication<App>;
-
-  beforeAll(async () => {
-    app = await createTestApp();
-  });
-
-  afterAll(async () => {
-    await closeTestApp(app);
-  });
+  const getApp = useTestApp();
 
   it('rechaza registrar un correo ya existente', async () => {
+    const app = getApp();
     const email = uniqueEmail();
     await registerUser(app, email);
 
@@ -32,6 +23,7 @@ describe('Auth admin (e2e)', () => {
   });
 
   it('permite al admin listar usuarios', async () => {
+    const app = getApp();
     const admin = await adminSession(app);
 
     const response = await request(app.getHttpServer())
@@ -46,6 +38,7 @@ describe('Auth admin (e2e)', () => {
   });
 
   it('permite al admin crear un usuario y cambiar sus roles', async () => {
+    const app = getApp();
     const admin = await adminSession(app);
     const email = uniqueEmail('creado');
 
@@ -77,6 +70,7 @@ describe('Auth admin (e2e)', () => {
   });
 
   it('rechaza operaciones de admin a un usuario normal', async () => {
+    const app = getApp();
     const { accessToken } = await registerUser(app, uniqueEmail());
 
     await request(app.getHttpServer())

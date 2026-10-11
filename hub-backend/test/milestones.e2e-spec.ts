@@ -1,7 +1,5 @@
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { closeTestApp, createTestApp } from './helpers/e2e';
+import { useTestApp } from './helpers/e2e';
 import {
   adminSession,
   bearer,
@@ -11,17 +9,10 @@ import {
 import { createProject, futureIsoDate } from './helpers/projects';
 
 describe('Milestones (e2e)', () => {
-  let app: INestApplication<App>;
-
-  beforeAll(async () => {
-    app = await createTestApp();
-  });
-
-  afterAll(async () => {
-    await closeTestApp(app);
-  });
+  const getApp = useTestApp();
 
   it('gestiona hitos como admin y los lista el proponente', async () => {
+    const app = getApp();
     const admin = await adminSession(app);
     const { accessToken: proposerToken } = await registerUser(
       app,
@@ -69,6 +60,7 @@ describe('Milestones (e2e)', () => {
   });
 
   it('rechaza a un proponente crear hitos', async () => {
+    const app = getApp();
     const { accessToken } = await registerUser(app, uniqueEmail('prop'));
     const { id: projectId } = await createProject(app, accessToken);
 

@@ -1,7 +1,5 @@
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { closeTestApp, createTestApp } from './helpers/e2e';
+import { useTestApp } from './helpers/e2e';
 import {
   adminSession,
   bearer,
@@ -13,17 +11,10 @@ import { ActorRole, UserRole } from '../src/generated/prisma/client';
 import { createProject } from './helpers/projects';
 
 describe('Projects workflow (e2e)', () => {
-  let app: INestApplication<App>;
-
-  beforeAll(async () => {
-    app = await createTestApp();
-  });
-
-  afterAll(async () => {
-    await closeTestApp(app);
-  });
+  const getApp = useTestApp();
 
   it('recorre los estados y avanza de fase tras las aprobaciones', async () => {
+    const app = getApp();
     const admin = await adminSession(app);
     const { accessToken: proposerToken } = await registerUser(
       app,
@@ -86,6 +77,7 @@ describe('Projects workflow (e2e)', () => {
   });
 
   it('rechaza cambiar el estado a un usuario no autorizado', async () => {
+    const app = getApp();
     const { accessToken: proposerToken } = await registerUser(
       app,
       uniqueEmail('propietario'),

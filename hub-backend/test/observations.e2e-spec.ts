@@ -1,7 +1,5 @@
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { closeTestApp, createTestApp } from './helpers/e2e';
+import { useTestApp } from './helpers/e2e';
 import {
   adminSession,
   bearer,
@@ -13,17 +11,10 @@ import { createProject } from './helpers/projects';
 import { ActorRole, UserRole } from '../src/generated/prisma/client';
 
 describe('Observations (e2e)', () => {
-  let app: INestApplication<App>;
-
-  beforeAll(async () => {
-    app = await createTestApp();
-  });
-
-  afterAll(async () => {
-    await closeTestApp(app);
-  });
+  const getApp = useTestApp();
 
   it('agrega y lista observaciones de un proyecto', async () => {
+    const app = getApp();
     const admin = await adminSession(app);
     const { accessToken: proposerToken } = await registerUser(
       app,
@@ -65,6 +56,7 @@ describe('Observations (e2e)', () => {
   });
 
   it('rechaza a un usuario ajeno listar las observaciones', async () => {
+    const app = getApp();
     const { accessToken } = await registerUser(app, uniqueEmail('prop'));
     const { id: projectId } = await createProject(app, accessToken);
 

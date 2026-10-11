@@ -1,7 +1,5 @@
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { closeTestApp, createTestApp } from './helpers/e2e';
+import { useTestApp } from './helpers/e2e';
 import {
   bearer,
   loginUser,
@@ -12,17 +10,10 @@ import {
 } from './helpers/auth';
 
 describe('Auth (e2e)', () => {
-  let app: INestApplication<App>;
-
-  beforeAll(async () => {
-    app = await createTestApp();
-  });
-
-  afterAll(async () => {
-    await closeTestApp(app);
-  });
+  const getApp = useTestApp();
 
   it('registra un proponente y lee su perfil en /auth/me', async () => {
+    const app = getApp();
     const email = uniqueEmail();
     const { user, accessToken } = await registerUser(app, email);
 
@@ -38,10 +29,13 @@ describe('Auth (e2e)', () => {
   });
 
   it('exige token en /auth/me', async () => {
+    const app = getApp();
+
     await request(app.getHttpServer()).get('/auth/me').expect(401);
   });
 
   it('rechaza una contraseña incorrecta en el login', async () => {
+    const app = getApp();
     const email = uniqueEmail();
     await registerUser(app, email);
 
@@ -52,6 +46,7 @@ describe('Auth (e2e)', () => {
   });
 
   it('cambia la contraseña y entra con la nueva', async () => {
+    const app = getApp();
     const email = uniqueEmail();
     const { accessToken } = await registerUser(app, email);
 

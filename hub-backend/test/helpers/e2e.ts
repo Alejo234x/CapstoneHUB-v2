@@ -33,3 +33,21 @@ export async function closeTestApp(app: INestApplication<App>): Promise<void> {
   await prisma.$disconnect();
   await app.close();
 }
+
+/**
+ * Registra el arranque/cierre de la app para una suite y devuelve un getter del
+ * `app`. Evita repetir el `beforeAll`/`afterAll` en cada spec.
+ */
+export function useTestApp(): () => INestApplication<App> {
+  let app: INestApplication<App>;
+
+  beforeAll(async () => {
+    app = await createTestApp();
+  });
+
+  afterAll(async () => {
+    await closeTestApp(app);
+  });
+
+  return () => app;
+}
