@@ -2,6 +2,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { randomUUID } from 'node:crypto';
+import { PrismaService } from '../../src/prisma.service';
+import { UserRole } from '../../src/generated/prisma/client';
 
 export type AuthUser = {
   id: number;
@@ -55,4 +57,33 @@ export async function loginUser(
 /** Cabecera `Authorization: Bearer <token>`. */
 export function bearer(token: string): { Authorization: string } {
   return { Authorization: `Bearer ${token}` };
+}
+
+/** Añade un rol global al usuario directamente en la base de datos. */
+export async function promoteRole(
+  app: INestApplication<App>,
+  userId: number,
+  role: UserRole,
+): Promise<void> {
+  const prisma = app.get(PrismaService);
+
+  await prisma.userRoleAssignment.create({ data: { userId, role } });
+}
+
+/** Registra un usuario y le asigna el rol global indicado (re-login incluido). */
+export async function userWithRole(
+  app: INestApplication<App>,
+  role: UserRole,
+): Promise<AuthSession> {
+  const { user } = await registerUser(app, uniqueEmail(role));
+  await promoteRole(app, user.id, role);
+
+  return loginUser(app, user.email, TEST_PASSWORD);
+}
+
+/** Crea un usuario administrador (registro + promoción a `admin`). */
+export async function adminSession(
+  app: INestApplication<App>,
+): Promise<AuthSession> {
+  return userWithRole(app, UserRole.admin);
 }
