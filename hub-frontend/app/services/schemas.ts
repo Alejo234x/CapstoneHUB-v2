@@ -2,7 +2,7 @@ type ProjectNaturalProposer = {
   type: "natural_person";
   fullName: string;
   idNumber: string | null;
-  email: string;
+  email: string | null;
 };
 
 export type ProjectProposer = ProjectNaturalProposer;
@@ -83,7 +83,7 @@ export type ProjectAttachmentItem = {
   uploadedBy: {
     id: number;
     fullName: string;
-    email: string;
+    email: string | null;
   } | null;
 };
 

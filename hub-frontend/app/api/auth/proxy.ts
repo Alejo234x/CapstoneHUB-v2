@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { backendUnavailableResponse } from "../proxy";
+import {
+  backendUnavailableResponse,
+  isCrossOriginMutation,
+} from "../proxy";
 import {
   clearSessionCookie,
   getSessionToken,
@@ -17,6 +20,13 @@ async function callBackend(
     return NextResponse.json(
       { error: "BACKEND_URL is not set" },
       { status: 500 },
+    );
+  }
+
+  if (method !== "GET" && isCrossOriginMutation(request)) {
+    return NextResponse.json(
+      { error: "Cross-origin request rejected" },
+      { status: 403 },
     );
   }
 
