@@ -1,6 +1,5 @@
 import { ProjectMilestoneItem, ProjectPhase } from "./schemas";
-import { getApiUrl } from "@/lib/api";
-import { ensureOk } from "@/lib/http";
+import { apiRequest, apiRequestVoid } from "@/lib/http";
 
 export type CreateProjectMilestonePayload = {
   title: string;
@@ -16,66 +15,46 @@ export type UpdateProjectMilestonePayload = Partial<
   CreateProjectMilestonePayload
 >;
 
-export async function getProjectMilestones(
+export function getProjectMilestones(
   id: string,
 ): Promise<ProjectMilestoneItem[]> {
-  const response = await fetch(getApiUrl(`/api/projects/${id}/milestones`), {
-    cache: "no-store",
+  return apiRequest<ProjectMilestoneItem[]>(`/api/projects/${id}/milestones`, {
+    action: "consultar los hitos del proyecto",
   });
-
-  await ensureOk(response, { action: "consultar los hitos del proyecto" });
-
-  return (await response.json()) as ProjectMilestoneItem[];
 }
 
-export async function createProjectMilestone(
+export function createProjectMilestone(
   id: string,
   payload: CreateProjectMilestonePayload,
 ): Promise<ProjectMilestoneItem> {
-  const response = await fetch(getApiUrl(`/api/projects/${id}/milestones`), {
+  return apiRequest<ProjectMilestoneItem>(`/api/projects/${id}/milestones`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+    body: payload,
+    action: "crear un hito",
   });
-
-  await ensureOk(response, { action: "crear un hito" });
-
-  return (await response.json()) as ProjectMilestoneItem;
 }
 
-export async function updateProjectMilestone(
+export function updateProjectMilestone(
   id: string,
   milestoneId: number,
   payload: UpdateProjectMilestonePayload,
 ): Promise<ProjectMilestoneItem> {
-  const response = await fetch(
-    getApiUrl(`/api/projects/${id}/milestones/${milestoneId}`),
+  return apiRequest<ProjectMilestoneItem>(
+    `/api/projects/${id}/milestones/${milestoneId}`,
     {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      action: "editar un hito",
     },
   );
-
-  await ensureOk(response, { action: "editar un hito" });
-
-  return (await response.json()) as ProjectMilestoneItem;
 }
 
-export async function deleteProjectMilestone(
+export function deleteProjectMilestone(
   id: string,
   milestoneId: number,
 ): Promise<void> {
-  const response = await fetch(
-    getApiUrl(`/api/projects/${id}/milestones/${milestoneId}`),
-    {
-      method: "DELETE",
-    },
-  );
-
-  await ensureOk(response, { action: "eliminar un hito" });
+  return apiRequestVoid(`/api/projects/${id}/milestones/${milestoneId}`, {
+    method: "DELETE",
+    action: "eliminar un hito",
+  });
 }

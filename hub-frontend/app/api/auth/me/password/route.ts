@@ -1,5 +1,5 @@
-import { proxyRequest } from "../../proxy";
+import { proxyJson } from "@/app/api/proxy";
 
-export async function PATCH(request: Request) {
-  return proxyRequest(request, "/auth/me/password", "PATCH");
+export function PATCH(request: Request) {
+  return proxyJson(request, "/auth/me/password", "PATCH");
 }

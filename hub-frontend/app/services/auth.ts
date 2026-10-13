@@ -1,4 +1,4 @@
-import { apiErrorMessage, ensureOk } from "@/lib/http";
+import { apiErrorMessage, apiRequest, apiRequestVoid } from "@/lib/http";
 
 export type AuthUser = {
   id: number;
@@ -34,14 +34,14 @@ async function requestSessionUser(
   return data.user;
 }
 
-export async function loginUser(payload: {
+export function loginUser(payload: {
   email: string;
   password: string;
 }): Promise<AuthUser> {
   return requestSessionUser("/api/auth/login", payload);
 }
 
-export async function registerUser(payload: {
+export function registerUser(payload: {
   fullName: string;
   email: string;
   password: string;
@@ -57,68 +57,55 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     return null;
   }
 
-  await ensureOk(response, { action: "consultar la sesión" });
+  if (!response.ok) {
+    throw new Error(await apiErrorMessage(response));
+  }
 
   return (await response.json()) as AuthUser;
 }
 
 /** Cierra la sesión: el BFF limpia la cookie httpOnly. */
-export async function logoutUser(): Promise<void> {
-  await fetch("/api/auth/logout", { method: "POST" });
+export function logoutUser(): Promise<Response> {
+  return fetch("/api/auth/logout", { method: "POST" });
 }
 
-export async function getUsers(): Promise<AuthUser[]> {
-  const response = await fetch("/api/auth/users", {
-    method: "GET",
-    cache: "no-store",
+export function getUsers(): Promise<AuthUser[]> {
+  return apiRequest<AuthUser[]>("/api/auth/users", {
+    action: "consultar los usuarios",
   });
-
-  await ensureOk(response, { action: "consultar los usuarios" });
-
-  return (await response.json()) as AuthUser[];
 }
 
-export async function createUser(payload: {
+export function createUser(payload: {
   fullName: string;
   email: string;
   password: string;
   roles: string[];
 }): Promise<AuthUser> {
-  const response = await fetch("/api/auth/users", {
+  return apiRequest<AuthUser>("/api/auth/users", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: payload,
+    action: "crear el usuario",
   });
-
-  await ensureOk(response, { action: "crear el usuario" });
-
-  return (await response.json()) as AuthUser;
 }
 
-export async function updateUserRoles(
+export function updateUserRoles(
   userId: number,
   roles: string[],
 ): Promise<AuthUser> {
-  const response = await fetch(`/api/auth/users/${userId}/roles`, {
+  return apiRequest<AuthUser>(`/api/auth/users/${userId}/roles`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ roles }),
+    body: { roles },
+    action: "actualizar los roles del usuario",
   });
-
-  await ensureOk(response, { action: "actualizar los roles del usuario" });
-
-  return (await response.json()) as AuthUser;
 }
 
-export async function changePassword(payload: {
+export function changePassword(payload: {
   currentPassword: string;
   newPassword: string;
 }): Promise<void> {
-  const response = await fetch("/api/auth/me/password", {
+  return apiRequestVoid("/api/auth/me/password", {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: payload,
+    action: "cambiar la contraseña",
   });
-
-  await ensureOk(response, { action: "cambiar la contraseña" });
 }

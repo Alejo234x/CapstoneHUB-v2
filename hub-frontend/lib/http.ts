@@ -2,12 +2,18 @@
  * Utilidades compartidas para traducir respuestas fallidas de la API a errores
  * con mensajes consistentes.
  */
+import { getApiUrl } from "./api";
 
 export type ApiErrorOptions = {
   // Frase verbal que describe la acción, p. ej. "editar el proyecto".
   action: string;
   // Mensaje específico para respuestas 409 cuando el estado no lo permite.
   conflictMessage?: string;
+};
+
+export type ApiRequestOptions = ApiErrorOptions & {
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  body?: unknown;
 };
 
 // Mensaje que se muestra cuando el servicio no responde.
@@ -108,4 +114,50 @@ export async function ensureOk(
   if (!response.ok) {
     throw await apiRequestError(response, options);
   }
+}
+
+/**
+ * Petición JSON genérica: resuelve la URL, envía el cuerpo como JSON y lanza un
+ * error con mensaje consistente si la respuesta no es satisfactoria. Devuelve
+ * la respuesta parseada. Los `GET` usan `cache: "no-store"`.
+ */
+export async function apiRequest<T>(
+  path: string,
+  options: ApiRequestOptions,
+): Promise<T> {
+  const response = await fetch(getApiUrl(path), {
+    method: options.method,
+    cache: options.method ? undefined : "no-store",
+    headers:
+      options.body !== undefined
+        ? { "Content-Type": "application/json" }
+        : undefined,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+  });
+
+  await ensureOk(response, options);
+
+  return (await response.json()) as T;
+}
+
+/**
+ * Petición sin cuerpo de respuesta (DELETE, 204): lanza si falla y no parsea.
+ */
+export async function apiRequestVoid(
+  path: string,
+  options: ApiErrorOptions & {
+    method?: "POST" | "PUT" | "PATCH" | "DELETE";
+    body?: unknown;
+  },
+): Promise<void> {
+  const response = await fetch(getApiUrl(path), {
+    method: options.method,
+    headers:
+      options.body !== undefined
+        ? { "Content-Type": "application/json" }
+        : undefined,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+  });
+
+  await ensureOk(response, options);
 }

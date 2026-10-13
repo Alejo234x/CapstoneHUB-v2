@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { proxyRequest } from "./../../../proxy";
+import { proxyJson } from "@/app/api/proxy";
 
 const NUMERIC_ID = /^\d+$/;
 
@@ -13,5 +13,5 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid user id" }, { status: 400 });
   }
 
-  return proxyRequest(request, `/auth/users/${id}/roles`, "PATCH");
+  return proxyJson(request, `/auth/users/${id}/roles`, "PATCH");
 }

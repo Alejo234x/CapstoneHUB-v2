@@ -1,6 +1,5 @@
 import { ProjectReportContentKind, ProjectReportItem } from "./schemas";
-import { getApiUrl } from "@/lib/api";
-import { ensureOk } from "@/lib/http";
+import { apiRequest, apiRequestVoid } from "@/lib/http";
 
 export const REPORT_CONFLICT_MESSAGE =
   "La entrega no está en un estado válido para esta acción.";
@@ -16,124 +15,79 @@ export type CreateProjectReportPayload = {
 
 export type UpdateProjectReportPayload = Partial<CreateProjectReportPayload>;
 
-export async function getProjectReports(
-  id: string,
-): Promise<ProjectReportItem[]> {
-  const response = await fetch(getApiUrl(`/api/projects/${id}/reports`), {
-    cache: "no-store",
-  });
-
-  await ensureOk(response, {
+export function getProjectReports(id: string): Promise<ProjectReportItem[]> {
+  return apiRequest<ProjectReportItem[]>(`/api/projects/${id}/reports`, {
     action: "consultar la entrega",
     conflictMessage: REPORT_CONFLICT_MESSAGE,
   });
-
-  return (await response.json()) as ProjectReportItem[];
 }
 
-export async function createProjectReport(
+export function createProjectReport(
   id: string,
   payload: CreateProjectReportPayload,
 ): Promise<ProjectReportItem> {
-  const response = await fetch(getApiUrl(`/api/projects/${id}/reports`), {
+  return apiRequest<ProjectReportItem>(`/api/projects/${id}/reports`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  await ensureOk(response, {
+    body: payload,
     action: "crear la entrega",
     conflictMessage: REPORT_CONFLICT_MESSAGE,
   });
-
-  return (await response.json()) as ProjectReportItem;
 }
 
-export async function updateProjectReport(
+export function updateProjectReport(
   id: string,
   reportId: number,
   payload: UpdateProjectReportPayload,
 ): Promise<ProjectReportItem> {
-  const response = await fetch(
-    getApiUrl(`/api/projects/${id}/reports/${reportId}`),
+  return apiRequest<ProjectReportItem>(
+    `/api/projects/${id}/reports/${reportId}`,
     {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      action: "editar la entrega",
+      conflictMessage: REPORT_CONFLICT_MESSAGE,
     },
   );
-
-  await ensureOk(response, {
-    action: "editar la entrega",
-    conflictMessage: REPORT_CONFLICT_MESSAGE,
-  });
-
-  return (await response.json()) as ProjectReportItem;
 }
 
-export async function deleteProjectReport(
+export function deleteProjectReport(
   id: string,
   reportId: number,
 ): Promise<void> {
-  const response = await fetch(
-    getApiUrl(`/api/projects/${id}/reports/${reportId}`),
-    {
-      method: "DELETE",
-    },
-  );
-
-  await ensureOk(response, {
+  return apiRequestVoid(`/api/projects/${id}/reports/${reportId}`, {
+    method: "DELETE",
     action: "eliminar la entrega",
     conflictMessage: REPORT_CONFLICT_MESSAGE,
   });
 }
 
-export async function submitProjectReport(
+export function submitProjectReport(
   id: string,
   reportId: number,
 ): Promise<ProjectReportItem> {
-  const response = await fetch(
-    getApiUrl(`/api/projects/${id}/reports/${reportId}/submit`),
+  return apiRequest<ProjectReportItem>(
+    `/api/projects/${id}/reports/${reportId}/submit`,
     {
       method: "POST",
-      headers: {
-      },
+      action: "enviar la entrega",
+      conflictMessage: REPORT_CONFLICT_MESSAGE,
     },
   );
-
-  await ensureOk(response, {
-    action: "enviar la entrega",
-    conflictMessage: REPORT_CONFLICT_MESSAGE,
-  });
-
-  return (await response.json()) as ProjectReportItem;
 }
 
-export async function reviewProjectReport(
+export function reviewProjectReport(
   id: string,
   reportId: number,
   decision: "accepted" | "rejected",
   comment?: string,
 ): Promise<ProjectReportItem> {
-  const response = await fetch(
-    getApiUrl(`/api/projects/${id}/reports/${reportId}/review`),
+  return apiRequest<ProjectReportItem>(
+    `/api/projects/${id}/reports/${reportId}/review`,
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ decision, comment }),
+      body: { decision, comment },
+      action: "revisar la entrega",
+      conflictMessage: REPORT_CONFLICT_MESSAGE,
     },
   );
-
-  await ensureOk(response, {
-    action: "revisar la entrega",
-    conflictMessage: REPORT_CONFLICT_MESSAGE,
-  });
-
-  return (await response.json()) as ProjectReportItem;
 }

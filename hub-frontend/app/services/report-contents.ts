@@ -1,7 +1,7 @@
 import { ProjectReportContentItem } from "./schemas";
 import { REPORT_CONFLICT_MESSAGE } from "./reports";
+import { apiRequest, apiRequestVoid } from "@/lib/http";
 import { getApiUrl } from "@/lib/api";
-import { ensureOk } from "@/lib/http";
 
 export type CreateReportContentPayload =
   | { kind: "text"; textContent: string }
@@ -19,28 +19,20 @@ export type ReportContentFileMetadata = {
   sizeBytes: number;
 };
 
-export async function createReportContent(
+export function createReportContent(
   id: string,
   reportId: number,
   payload: CreateReportContentPayload,
 ): Promise<ProjectReportContentItem> {
-  const response = await fetch(
-    getApiUrl(`/api/projects/${id}/reports/${reportId}/contents`),
+  return apiRequest<ProjectReportContentItem>(
+    `/api/projects/${id}/reports/${reportId}/contents`,
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      action: "agregar el contenido de la entrega",
+      conflictMessage: REPORT_CONFLICT_MESSAGE,
     },
   );
-
-  await ensureOk(response, {
-    action: "agregar el contenido de la entrega",
-    conflictMessage: REPORT_CONFLICT_MESSAGE,
-  });
-
-  return (await response.json()) as ProjectReportContentItem;
 }
 
 export type ReportFileUploadTarget = {
@@ -50,30 +42,20 @@ export type ReportFileUploadTarget = {
   expiresInSeconds: number;
 };
 
-export async function presignReportContentFile(
+export function presignReportContentFile(
   id: string,
   reportId: number,
   metadata: ReportContentFileMetadata,
 ): Promise<ReportFileUploadTarget> {
-  const response = await fetch(
-    getApiUrl(
-      `/api/projects/${id}/reports/${reportId}/contents/files/presign`,
-    ),
+  return apiRequest<ReportFileUploadTarget>(
+    `/api/projects/${id}/reports/${reportId}/contents/files/presign`,
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(metadata),
+      body: metadata,
+      action: "preparar la subida del contenido de la entrega",
+      conflictMessage: REPORT_CONFLICT_MESSAGE,
     },
   );
-
-  await ensureOk(response, {
-    action: "preparar la subida del contenido de la entrega",
-    conflictMessage: REPORT_CONFLICT_MESSAGE,
-  });
-
-  return (await response.json()) as ReportFileUploadTarget;
 }
 
 /**
@@ -120,77 +102,52 @@ export function uploadFileToStorage(
   });
 }
 
-export async function confirmReportContentFile(
+export function confirmReportContentFile(
   id: string,
   reportId: number,
   metadata: ReportContentFileMetadata & { storageKey: string },
 ): Promise<ProjectReportContentItem> {
-  const response = await fetch(
-    getApiUrl(
-      `/api/projects/${id}/reports/${reportId}/contents/files/confirm`,
-    ),
+  return apiRequest<ProjectReportContentItem>(
+    `/api/projects/${id}/reports/${reportId}/contents/files/confirm`,
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(metadata),
+      body: metadata,
+      action: "confirmar la subida del contenido de la entrega",
+      conflictMessage: REPORT_CONFLICT_MESSAGE,
     },
   );
-
-  await ensureOk(response, {
-    action: "confirmar la subida del contenido de la entrega",
-    conflictMessage: REPORT_CONFLICT_MESSAGE,
-  });
-
-  return (await response.json()) as ProjectReportContentItem;
 }
 
-export async function updateReportContent(
+export function updateReportContent(
   id: string,
   reportId: number,
   contentId: number,
   payload: UpdateReportContentPayload,
 ): Promise<ProjectReportContentItem> {
-  const response = await fetch(
-    getApiUrl(
-      `/api/projects/${id}/reports/${reportId}/contents/${contentId}`,
-    ),
+  return apiRequest<ProjectReportContentItem>(
+    `/api/projects/${id}/reports/${reportId}/contents/${contentId}`,
     {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      action: "editar el contenido de la entrega",
+      conflictMessage: REPORT_CONFLICT_MESSAGE,
     },
   );
-
-  await ensureOk(response, {
-    action: "editar el contenido de la entrega",
-    conflictMessage: REPORT_CONFLICT_MESSAGE,
-  });
-
-  return (await response.json()) as ProjectReportContentItem;
 }
 
-export async function deleteReportContent(
+export function deleteReportContent(
   id: string,
   reportId: number,
   contentId: number,
 ): Promise<void> {
-  const response = await fetch(
-    getApiUrl(
-      `/api/projects/${id}/reports/${reportId}/contents/${contentId}`,
-    ),
+  return apiRequestVoid(
+    `/api/projects/${id}/reports/${reportId}/contents/${contentId}`,
     {
       method: "DELETE",
+      action: "eliminar el contenido de la entrega",
+      conflictMessage: REPORT_CONFLICT_MESSAGE,
     },
   );
-
-  await ensureOk(response, {
-    action: "eliminar el contenido de la entrega",
-    conflictMessage: REPORT_CONFLICT_MESSAGE,
-  });
 }
 
 /**

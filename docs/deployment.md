@@ -154,6 +154,12 @@ directa.
 Usa **Volume Backups** de Dokploy sobre `db_data` y `minio_data` (volúmenes
 nombrados, aptos para respaldo). Si migras a S3 externo, solo respalda `db_data`.
 
+> **Limpieza de subidas huérfanas.** Los objetos subidos directamente y nunca
+> confirmados se limpian con `npm run storage:gc` (ver `docs/backend_arch.md`).
+> En producción, programa ese comando periódicamente (p. ej. un cron diario en el
+> contenedor del backend). No hace falta una regla de ciclo de vida de MinIO:
+> borraría también adjuntos confirmados.
+
 ## S3 real en producción
 
 El compose incluye MinIO para simplicidad. Para usar S3 (AWS u otro compatible),

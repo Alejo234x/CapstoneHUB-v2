@@ -434,7 +434,7 @@ describe('ReportsService', () => {
     storage.createUploadUrl.mockResolvedValue({
       url: 'http://localhost:9000/capstonehub/projects/10/foto.png?X-Amz',
       method: 'PUT',
-      expiresInSeconds: 3600,
+      expiresInSeconds: 900,
     });
 
     const result = await service.presignFileContent({
@@ -453,7 +453,7 @@ describe('ReportsService', () => {
     expect(result.uploadUrl).toContain('X-Amz');
     expect(storage.createUploadUrl).toHaveBeenCalledWith({
       key: result.storageKey,
-      expiresInSeconds: 3600,
+      expiresInSeconds: 900,
     });
   });
 

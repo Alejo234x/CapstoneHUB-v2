@@ -1,9 +1,4 @@
-/** Parsea un entero positivo desde una variable de entorno, con fallback. */
-function positiveInt(value: string | undefined, fallback: number): number {
-  const parsed = Number(value);
-
-  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
-}
+import { positiveInt } from '../common/env';
 
 export const MAX_ATTACHMENT_SIZE_BYTES = positiveInt(
   process.env.MAX_FILE_SIZE_BYTES,
@@ -60,8 +55,8 @@ export const REPORT_FILE_MIME_TYPES: ReadonlySet<string> = new Set([
   ...REPORT_VIDEO_MIME_TYPES,
 ]);
 
-/** Vigencia de la URL prefirmada de subida (1 hora por defecto). */
+/** Vigencia de la URL prefirmada de subida (15 minutos por defecto). */
 export const UPLOAD_URL_TTL_SECONDS = positiveInt(
   process.env.S3_UPLOAD_URL_TTL_SECONDS,
-  60 * 60,
+  15 * 60,
 );
