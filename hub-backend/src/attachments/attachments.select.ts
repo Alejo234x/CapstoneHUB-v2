@@ -34,12 +34,13 @@ export type ProjectAttachmentResponse = {
   uploadedBy: {
     id: number;
     fullName: string;
-    email: string;
+    email: string | null;
   } | null;
 };
 
 export function mapAttachment(
   attachment: SelectedAttachment,
+  canViewSensitiveData = true,
 ): ProjectAttachmentResponse {
   return {
     id: attachment.id,
@@ -49,6 +50,12 @@ export function mapAttachment(
     mimeType: attachment.mimeType,
     sizeBytes: attachment.sizeBytes,
     createdAt: attachment.createdAt,
-    uploadedBy: attachment.uploadedBy,
+    uploadedBy: attachment.uploadedBy
+      ? {
+          id: attachment.uploadedBy.id,
+          fullName: attachment.uploadedBy.fullName,
+          email: canViewSensitiveData ? attachment.uploadedBy.email : null,
+        }
+      : null,
   };
 }

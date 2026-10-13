@@ -9,7 +9,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-} from '@nestjs/class-validator';
+} from 'class-validator';
 import { ProjectPhase } from '../generated/prisma/client';
 
 export class CreateMilestoneDto {

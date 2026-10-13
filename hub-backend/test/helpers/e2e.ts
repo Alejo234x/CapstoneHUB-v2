@@ -11,6 +11,9 @@ import { PrismaService } from '../../src/prisma.service';
 process.env.S3_BUCKET ??= 'test-bucket';
 process.env.S3_ACCESS_KEY ??= 'test';
 process.env.S3_SECRET_KEY ??= 'test';
+// Los tests e2e ejercitan login/registro decenas de veces desde la misma IP;
+// se desactiva el rate limiting para no falsear los resultados.
+process.env.DISABLE_THROTTLE ??= 'true';
 
 /**
  * Levanta la aplicación Nest completa (módulos reales + base de datos) para los

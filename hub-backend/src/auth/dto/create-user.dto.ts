@@ -6,7 +6,7 @@ import {
   IsNotEmpty,
   IsString,
   MinLength,
-} from '@nestjs/class-validator';
+} from 'class-validator';
 import { UserRole } from '../../generated/prisma/client';
 
 export class CreateUserDto {

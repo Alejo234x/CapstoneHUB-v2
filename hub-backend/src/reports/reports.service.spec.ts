@@ -100,12 +100,20 @@ describe('ReportsService', () => {
       },
       projectAttachment: {
         findFirst: jest.fn(),
+        findMany: jest.fn(),
         create: jest.fn(),
         delete: jest.fn(),
+        deleteMany: jest.fn(),
       },
     };
+    // `deleteReport` envuelve el borrado en una transacción.
+    prisma.$transaction = jest.fn(
+      async (callback: (tx: typeof prisma) => Promise<unknown>) =>
+        callback(prisma),
+    );
     const authorization = {
       assertProjectMember: jest.fn(),
+      assertCanWriteProjectData: jest.fn(),
       assertCanManageMilestone: jest.fn(),
     };
     const storage = {
@@ -281,7 +289,10 @@ describe('ReportsService', () => {
     });
 
     expect(result.status).toBe('submitted');
-    expect(authorization.assertProjectMember).toHaveBeenCalledWith(user, 10);
+    expect(authorization.assertCanWriteProjectData).toHaveBeenCalledWith(
+      user,
+      10,
+    );
     expect(prisma.projectReport.update).toHaveBeenCalledWith({
       where: { id: 3 },
       data: {
@@ -348,7 +359,10 @@ describe('ReportsService', () => {
     });
 
     expect(result.textContent).toBe('Hola mundo');
-    expect(authorization.assertProjectMember).toHaveBeenCalledWith(user, 10);
+    expect(authorization.assertCanWriteProjectData).toHaveBeenCalledWith(
+      user,
+      10,
+    );
     expect(prisma.projectReportContent.create).toHaveBeenCalledWith({
       data: {
         reportId: 3,
@@ -787,6 +801,32 @@ describe('ReportsService', () => {
     await expect(
       service.deleteReport({ projectId: 10, reportId: 99, user }),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('deletes a report together with its attachments and their objects', async () => {
+    const { service, prisma, storage } = createService();
+    prisma.project.findUnique.mockResolvedValue({ id: 10 });
+    prisma.projectReport.findFirst.mockResolvedValue(pendingReport());
+    prisma.projectAttachment.findMany.mockResolvedValue([
+      { id: 55, storageKey: 'projects/10/foto.png' },
+    ]);
+    prisma.projectReport.delete.mockResolvedValue(selectedReport());
+
+    const result = await service.deleteReport({
+      projectId: 10,
+      reportId: 3,
+      user,
+    });
+
+    expect(result.id).toBe(3);
+    expect(prisma.projectAttachment.deleteMany).toHaveBeenCalledWith({
+      where: { id: { in: [55] } },
+    });
+    expect(prisma.projectReport.delete).toHaveBeenCalledWith({
+      where: { id: 3 },
+      select: expect.any(Object) as object,
+    });
+    expect(storage.delete).toHaveBeenCalledWith('projects/10/foto.png');
   });
 
   it('rejects content whose kind does not match the report type', async () => {

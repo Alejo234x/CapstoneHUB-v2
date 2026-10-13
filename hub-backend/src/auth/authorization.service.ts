@@ -23,6 +23,11 @@ export class AuthorizationService {
     }
   }
 
+  /**
+   * Acceso de LECTURA: un miembro del proyecto o, si el proyecto es público
+   * (cerrado y no privado), cualquier usuario autenticado. No autoriza
+   * mutaciones; para eso usa {@link assertCanWriteProjectData}.
+   */
   async assertProjectMember(
     user: AuthenticatedUser,
     projectId: number,
@@ -36,6 +41,49 @@ export class AuthorizationService {
     }
 
     throw new ForbiddenException('You do not have access to this project');
+  }
+
+  /**
+   * Acceso de ESCRITURA: solo administradores, el proponente o un actor
+   * asignado al proyecto. A diferencia de la lectura, un revisor global
+   * (evaluator/coordinator) sin asignación NO puede escribir en proyectos
+   * ajenos, y los proyectos públicos no otorgan escritura a extraños.
+   */
+  async assertCanWriteProjectData(
+    user: AuthenticatedUser,
+    projectId: number,
+  ): Promise<void> {
+    if (user.roles.includes(UserRole.admin)) {
+      return;
+    }
+
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        proposerUserId: true,
+        actorAssignments: { select: { userId: true } },
+      },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+
+    if (project.proposerUserId === user.id) {
+      return;
+    }
+
+    if (
+      project.actorAssignments.some(
+        (assignment) => assignment.userId === user.id,
+      )
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      'You do not have permission to modify this project',
+    );
   }
 
   /**

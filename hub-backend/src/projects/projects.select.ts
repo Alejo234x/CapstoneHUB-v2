@@ -103,7 +103,7 @@ export type ProjectProposerResponse = {
   type: 'natural_person';
   fullName: string;
   idNumber: string | null;
-  email: string;
+  email: string | null;
 };
 
 export type ProjectListResponse = {
@@ -273,13 +273,16 @@ export type AssignableUserResponse = {
 
 function mapProjectProposer(
   project: Pick<ProjectWithRelations, 'naturalProposer'>,
+  canViewSensitiveData: boolean,
 ): ProjectProposerResponse | null {
   if (project.naturalProposer) {
     return {
       type: 'natural_person',
       fullName: project.naturalProposer.fullName,
-      idNumber: project.naturalProposer.idNumber,
-      email: project.naturalProposer.email,
+      // La cédula y el correo del proponente son PII: solo se exponen a los
+      // miembros. La vista pública conserva únicamente el nombre.
+      idNumber: canViewSensitiveData ? project.naturalProposer.idNumber : null,
+      email: canViewSensitiveData ? project.naturalProposer.email : null,
     };
   }
 
@@ -346,7 +349,7 @@ export function mapProjectListResponse(
     isPrivate: project.isPrivate,
     source: project.source,
     sourceDetails: project.sourceDetails,
-    proposer: mapProjectProposer(project),
+    proposer: mapProjectProposer(project, canViewSensitiveData),
     // El equipo (nombres y correos) es sensible, así que solo se expone a los
     // miembros mientras el proyecto no sea todavía público.
     actors: canViewSensitiveData
@@ -488,7 +491,7 @@ export function mapProjectDetailResponse(
               'desc',
             ),
           )
-          .map(mapAttachment)
+          .map((attachment) => mapAttachment(attachment))
       : [],
     reports: canViewSensitiveData
       ? project.reports

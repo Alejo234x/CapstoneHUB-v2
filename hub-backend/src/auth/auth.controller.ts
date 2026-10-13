@@ -13,6 +13,7 @@ import { AdminGuard } from './admin.guard';
 import { Public } from './public.decorator';
 import { CurrentUser } from './current-user.decorator';
 import type { AuthenticatedUser } from './auth.types';
+import { Throttle } from '@nestjs/throttler';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
@@ -24,12 +25,14 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('register')
   register(@Body() payload: RegisterUserDto) {
     return this.authService.register(payload);
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('login')
   login(@Body() payload: LoginUserDto) {
     return this.authService.login(payload);

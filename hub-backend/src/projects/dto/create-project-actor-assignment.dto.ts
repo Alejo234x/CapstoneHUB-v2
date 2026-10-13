@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from '@nestjs/class-transformer';
-import { IsEnum, IsInt, IsNotEmpty, Min } from '@nestjs/class-validator';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsNotEmpty, Min } from 'class-validator';
 import { ActorRole } from '../../generated/prisma/client';
 
 export class CreateProjectActorAssignmentDTO {

@@ -1,13 +1,22 @@
-export const MAX_ATTACHMENT_SIZE_BYTES =
-  Number(process.env.MAX_FILE_SIZE_BYTES) || 10 * 1024 * 1024;
+/** Parsea un entero positivo desde una variable de entorno, con fallback. */
+function positiveInt(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
+
+export const MAX_ATTACHMENT_SIZE_BYTES = positiveInt(
+  process.env.MAX_FILE_SIZE_BYTES,
+  10 * 1024 * 1024,
+);
 
 /**
  * Tope único para los archivos de una entrega (documentos, imágenes y videos).
  * Se mantiene `MAX_VIDEO_SIZE_BYTES` como fallback por compatibilidad.
  */
 export const MAX_REPORT_FILE_SIZE_BYTES =
-  Number(process.env.MAX_REPORT_FILE_SIZE_BYTES) ||
-  Number(process.env.MAX_VIDEO_SIZE_BYTES) ||
+  positiveInt(process.env.MAX_REPORT_FILE_SIZE_BYTES, 0) ||
+  positiveInt(process.env.MAX_VIDEO_SIZE_BYTES, 0) ||
   100 * 1024 * 1024;
 
 export const ALLOWED_ATTACHMENT_MIME_TYPES: ReadonlySet<string> = new Set([
@@ -52,5 +61,7 @@ export const REPORT_FILE_MIME_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /** Vigencia de la URL prefirmada de subida (1 hora por defecto). */
-export const UPLOAD_URL_TTL_SECONDS =
-  Number(process.env.S3_UPLOAD_URL_TTL_SECONDS) || 60 * 60;
+export const UPLOAD_URL_TTL_SECONDS = positiveInt(
+  process.env.S3_UPLOAD_URL_TTL_SECONDS,
+  60 * 60,
+);

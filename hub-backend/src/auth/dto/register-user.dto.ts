@@ -1,11 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsString,
-  MinLength,
-} from '@nestjs/class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 /** Recorta los espacios de los campos de texto antes de validarlos. */
 function trimWhitespace({ value }: { value: unknown }): unknown {

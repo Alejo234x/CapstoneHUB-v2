@@ -666,10 +666,20 @@ export class ProjectsService {
       }
     }
     await this.prisma.$transaction(async (transaction) => {
-      await transaction.project.update({
-        where: { id: projectId },
+      // Actualización con concurrencia optimista: si el estado cambió desde la
+      // lectura, `count` es 0 y se rechaza en lugar de sobrescribir una
+      // transición concurrente.
+      const result = await transaction.project.updateMany({
+        where: { id: projectId, status: currentProject.status },
         data: { status: nextStatus },
       });
+
+      if (result.count !== 1) {
+        throw new ConflictException(
+          'The project status changed concurrently; please retry',
+        );
+      }
+
       await transaction.projectStatusHistory.create({
         data: {
           projectId,

@@ -193,10 +193,30 @@ export class ReportsService {
     const { projectId, reportId, user } = params;
     await this.assertManageableReport(projectId, reportId, user);
 
-    const report = await this.prisma.projectReport.delete({
-      where: { id: reportId },
-      select: reportSelect,
+    // Los adjuntos de la entrega (sueltos o asociados a contenido) sobrevivirían
+    // al borrado: `ProjectAttachment.report` es `SetNull` y el cascade no elimina
+    // los objetos de S3. Se capturan y se borran junto con sus objetos.
+    const attachments = await this.prisma.projectAttachment.findMany({
+      where: { projectId, reportId },
+      select: { id: true, storageKey: true },
     });
+
+    const report = await this.prisma.$transaction(async (transaction) => {
+      if (attachments.length > 0) {
+        await transaction.projectAttachment.deleteMany({
+          where: { id: { in: attachments.map((attachment) => attachment.id) } },
+        });
+      }
+
+      return transaction.projectReport.delete({
+        where: { id: reportId },
+        select: reportSelect,
+      });
+    });
+
+    await Promise.all(
+      attachments.map((attachment) => this.safeDelete(attachment.storageKey)),
+    );
 
     return mapReport(report);
   }
@@ -207,7 +227,7 @@ export class ReportsService {
     user: AuthenticatedUser;
   }): Promise<ProjectReportResponse> {
     const { projectId, reportId, user } = params;
-    await this.assertProjectAccess(projectId, user);
+    await this.assertCanWriteProject(projectId, user);
     const existing = await assertReportBelongsToProject(
       this.prisma,
       projectId,
@@ -379,18 +399,35 @@ export class ReportsService {
       );
     }
 
-    const attachment = await this.prisma.projectAttachment.create({
-      data: {
-        projectId,
-        reportId,
-        uploadedByUserId: user.id,
-        originalName: data.fileName,
-        storageKey: data.storageKey,
-        mimeType: data.mimeType,
-        sizeBytes: stored.sizeBytes,
-      },
-      select: { id: true },
-    });
+    let attachment: { id: number };
+
+    try {
+      attachment = await this.prisma.projectAttachment.create({
+        data: {
+          projectId,
+          reportId,
+          uploadedByUserId: user.id,
+          originalName: data.fileName,
+          storageKey: data.storageKey,
+          mimeType: data.mimeType,
+          sizeBytes: stored.sizeBytes,
+        },
+        select: { id: true },
+      });
+    } catch (error) {
+      // La clave de almacenamiento es única: un doble envío (o una carrera)
+      // choca aquí en lugar de duplicar el adjunto.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'This file has already been added to the report',
+        );
+      }
+
+      throw error;
+    }
 
     try {
       const content = await this.prisma.projectReportContent.create({
@@ -731,7 +768,7 @@ export class ReportsService {
     allowedMimeTypes: string[];
     maxFiles: number | null;
   }> {
-    await this.assertProjectAccess(projectId, user);
+    await this.assertCanWriteProject(projectId, user);
     const report = await assertReportBelongsToProject(
       this.prisma,
       projectId,
@@ -934,6 +971,14 @@ export class ReportsService {
   ): Promise<void> {
     await assertProjectExists(this.prisma, projectId);
     await this.authorization.assertProjectMember(user, projectId);
+  }
+
+  private async assertCanWriteProject(
+    projectId: number,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    await assertProjectExists(this.prisma, projectId);
+    await this.authorization.assertCanWriteProjectData(user, projectId);
   }
 
   private async assertCanManageReports(
