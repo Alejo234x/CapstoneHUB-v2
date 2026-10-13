@@ -108,12 +108,19 @@ las referencia con `${VAR}`.
 | `S3_PUBLIC_ENDPOINT` | URL **pública** de MinIO que alcanza el navegador. |
 | `S3_CORS_ORIGINS` | Origen del frontend permitido por CORS. |
 | `MAX_FILE_SIZE_BYTES`, `MAX_REPORT_FILE_SIZE_BYTES` | Límites de archivos. |
-| `SWAGGER_ENABLED` | `false` en producción (deshabilita Swagger en `/api`). |
+| `SWAGGER_ENABLED` | `true` habilita Swagger en `/api`; está **deshabilitado por defecto**. |
 | `BACKEND_IMAGE`, `FRONTEND_IMAGE` | (Opcional) tags concretos de las imágenes. |
 
 > **No ejecutes el seed en producción.** El seeder se niega a correr cuando
 > `NODE_ENV=production`; si de verdad lo necesitas, usa `--force`
 > (`npm run seed -- --force`).
+
+**Seguridad por defecto.** El backend aplica `helmet` (cabeceras de seguridad) y
+un límite de peticiones global (300/min por IP, con 10/min para `login` y
+`register`). Detrás de Traefik la IP del cliente se obtiene con `trust proxy 1`.
+El BFF del frontend añade `X-Content-Type-Options: nosniff`, `X-Frame-Options:
+DENY` y una verificación de `Origin` para las mutaciones (CSRF). No requieren
+variables adicionales.
 
 ### 4. Dominios
 
@@ -146,6 +153,12 @@ directa.
 
 Usa **Volume Backups** de Dokploy sobre `db_data` y `minio_data` (volúmenes
 nombrados, aptos para respaldo). Si migras a S3 externo, solo respalda `db_data`.
+
+> **Limpieza de subidas huérfanas.** Los objetos subidos directamente y nunca
+> confirmados se limpian con `npm run storage:gc` (ver `docs/backend_arch.md`).
+> En producción, programa ese comando periódicamente (p. ej. un cron diario en el
+> contenedor del backend). No hace falta una regla de ciclo de vida de MinIO:
+> borraría también adjuntos confirmados.
 
 ## S3 real en producción
 

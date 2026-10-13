@@ -7,6 +7,7 @@ import {
   Patch,
   Delete,
   Put,
+  Query,
   BadRequestException,
   NotFoundException,
   ParseIntPipe,
@@ -18,7 +19,6 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 import {
   Project as ProjectModel,
   ProjectSource,
-  ProjectStatus,
 } from '../generated/prisma/client';
 import {
   AssignableUserResponse,
@@ -32,6 +32,11 @@ import {
 import { CreateProjectActorAssignmentDTO } from './dto/create-project-actor-assignment.dto';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDTO } from './dto/update-project.dto';
+import { TransitionProjectStatusDTO } from './dto/transition-project-status.dto';
+import {
+  PaginationQueryDto,
+  paginationToSkipTake,
+} from '../common/pagination.dto';
 
 function parseProjectDate(value: string | null): Date | null {
   if (value === null || value.trim().length === 0) {
@@ -86,8 +91,9 @@ export class ProjectsController {
   @Get()
   async getProjects(
     @OptionalCurrentUser() user?: AuthenticatedUser,
+    @Query() pagination: PaginationQueryDto = {},
   ): Promise<ProjectListResponse[]> {
-    return this.projectService.projects({}, user);
+    return this.projectService.projects(paginationToSkipTake(pagination), user);
   }
 
   @Post()
@@ -278,13 +284,9 @@ export class ProjectsController {
   @Patch(':id/status')
   async transitionProjectStatus(
     @Param('id', ParseIntPipe) id: number,
-    @Body() data: { status: ProjectStatus; description?: string },
+    @Body() data: TransitionProjectStatusDTO,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<ProjectDetailResponse> {
-    if (!data.status) {
-      throw new BadRequestException('A target status is required');
-    }
-
     return this.projectService.transitionProjectStatus({
       user,
       projectId: id,

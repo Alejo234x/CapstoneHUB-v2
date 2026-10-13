@@ -16,11 +16,21 @@ import { isValidEmail } from "@/lib/validation";
 function getPostLoginPath(): string {
   const next = new URLSearchParams(window.location.search).get("next");
 
-  if (!next || !next.startsWith("/") || next.startsWith("//")) {
+  if (!next) {
     return "/projects";
   }
 
-  return next;
+  try {
+    const resolved = new URL(next, window.location.origin);
+
+    if (resolved.origin !== window.location.origin) {
+      return "/projects";
+    }
+
+    return resolved.pathname + resolved.search + resolved.hash;
+  } catch {
+    return "/projects";
+  }
 }
 
 export default function LoginForm() {

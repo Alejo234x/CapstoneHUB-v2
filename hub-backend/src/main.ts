@@ -2,9 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { Logger, ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import helmet from 'helmet';
 
 function isSwaggerEnabled(): boolean {
-  return (process.env.SWAGGER_ENABLED ?? 'true').toLowerCase() !== 'false';
+  // Deshabilitado por defecto: solo se activa explícitamente (SWAGGER_ENABLED="true").
+  return (process.env.SWAGGER_ENABLED ?? 'false').toLowerCase() === 'true';
 }
 
 /**
@@ -28,7 +31,11 @@ function logEnvironmentWarnings(): void {
 async function bootstrap() {
   logEnvironmentWarnings();
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Detrás de Traefik (Dokploy) confiamos en el primer hop para obtener la IP
+  // real del cliente, usada por el rate limiting.
+  app.set('trust proxy', 1);
+  app.use(helmet());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

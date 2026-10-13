@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ActorRole, ProjectStatus, UserRole } from '../generated/prisma/client';
 import { AuthorizationService } from './authorization.service';
 
@@ -396,6 +396,73 @@ describe('AuthorizationService', () => {
           { actorAssignments: { some: { userId: 7 } } },
         ],
       });
+    });
+  });
+
+  describe('assertCanWriteProjectData', () => {
+    function writePrisma(project: unknown) {
+      return {
+        project: { findUnique: jest.fn().mockResolvedValue(project) },
+      };
+    }
+
+    it('allows admins without a project assignment', async () => {
+      const service = new AuthorizationService(writePrisma(null) as never);
+
+      await expect(
+        service.assertCanWriteProjectData(user([UserRole.admin]), 10),
+      ).resolves.toBeUndefined();
+    });
+
+    it('allows the project proposer', async () => {
+      const service = new AuthorizationService(
+        writePrisma({ proposerUserId: 7, actorAssignments: [] }) as never,
+      );
+
+      await expect(
+        service.assertCanWriteProjectData(user([UserRole.student]), 10),
+      ).resolves.toBeUndefined();
+    });
+
+    it('allows an assigned actor', async () => {
+      const service = new AuthorizationService(
+        writePrisma({
+          proposerUserId: 999,
+          actorAssignments: [{ userId: 7 }],
+        }) as never,
+      );
+
+      await expect(
+        service.assertCanWriteProjectData(user([UserRole.student]), 10),
+      ).resolves.toBeUndefined();
+    });
+
+    it('rejects an unassigned global evaluator', async () => {
+      const service = new AuthorizationService(
+        writePrisma({ proposerUserId: 999, actorAssignments: [] }) as never,
+      );
+
+      await expect(
+        service.assertCanWriteProjectData(user([UserRole.evaluator]), 10),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rejects an unassigned user even when the project is public', async () => {
+      const service = new AuthorizationService(
+        writePrisma({ proposerUserId: 999, actorAssignments: [] }) as never,
+      );
+
+      await expect(
+        service.assertCanWriteProjectData(user([UserRole.student]), 10),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rejects writes to a missing project', async () => {
+      const service = new AuthorizationService(writePrisma(null) as never);
+
+      await expect(
+        service.assertCanWriteProjectData(user([UserRole.student]), 10),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 

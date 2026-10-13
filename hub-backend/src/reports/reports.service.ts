@@ -20,9 +20,21 @@ import {
 } from '../common/lookups';
 import {
   MAX_REPORT_FILE_SIZE_BYTES,
-  REPORT_FILE_MIME_TYPES,
   UPLOAD_URL_TTL_SECONDS,
 } from '../attachments/attachments.constants';
+import {
+  assertFileMatchesKind,
+  assertKindMatchesReportType,
+  assertMimeAllowed,
+  assertReportAcceptsFiles,
+  megabytes,
+  normalizeTextContent,
+  normalizeTitle,
+  normalizeUrl,
+  resolveReportConfigUpdate,
+  sameStringSet,
+  validateReportConfig,
+} from './reports.rules';
 import {
   StorageService,
   StoredObject,
@@ -102,7 +114,7 @@ export class ReportsService {
     const { projectId, data, user } = params;
     await this.assertCanManageReports(projectId, user);
 
-    const config = this.validateReportConfig(
+    const config = validateReportConfig(
       data.type,
       data.allowedMimeTypes,
       data.maxFiles,
@@ -112,7 +124,7 @@ export class ReportsService {
       data: {
         projectId,
         createdByUserId: user.id,
-        title: this.normalizeTitle(data.title),
+        title: normalizeTitle(data.title),
         description: data.description?.trim() || null,
         dueDate: data.dueDate,
         type: data.type,
@@ -141,7 +153,7 @@ export class ReportsService {
     const updateData: Prisma.ProjectReportUpdateInput = {};
 
     if (data.title !== undefined) {
-      updateData.title = this.normalizeTitle(data.title);
+      updateData.title = normalizeTitle(data.title);
     }
 
     if (data.description !== undefined) {
@@ -158,11 +170,11 @@ export class ReportsService {
       data.maxFiles !== undefined;
 
     if (hasConfigInput) {
-      const config = this.resolveReportConfigUpdate(existing, data);
+      const config = resolveReportConfigUpdate(existing, data);
       const configChanged =
         config.type !== existing.type ||
         config.maxFiles !== existing.maxFiles ||
-        !this.sameStringSet(config.allowedMimeTypes, existing.allowedMimeTypes);
+        !sameStringSet(config.allowedMimeTypes, existing.allowedMimeTypes);
 
       if (configChanged) {
         await this.assertReportConfigIsChangeable(reportId, existing.status);
@@ -193,10 +205,30 @@ export class ReportsService {
     const { projectId, reportId, user } = params;
     await this.assertManageableReport(projectId, reportId, user);
 
-    const report = await this.prisma.projectReport.delete({
-      where: { id: reportId },
-      select: reportSelect,
+    // Los adjuntos de la entrega (sueltos o asociados a contenido) sobrevivirían
+    // al borrado: `ProjectAttachment.report` es `SetNull` y el cascade no elimina
+    // los objetos de S3. Se capturan y se borran junto con sus objetos.
+    const attachments = await this.prisma.projectAttachment.findMany({
+      where: { projectId, reportId },
+      select: { id: true, storageKey: true },
     });
+
+    const report = await this.prisma.$transaction(async (transaction) => {
+      if (attachments.length > 0) {
+        await transaction.projectAttachment.deleteMany({
+          where: { id: { in: attachments.map((attachment) => attachment.id) } },
+        });
+      }
+
+      return transaction.projectReport.delete({
+        where: { id: reportId },
+        select: reportSelect,
+      });
+    });
+
+    await Promise.all(
+      attachments.map((attachment) => this.safeDelete(attachment.storageKey)),
+    );
 
     return mapReport(report);
   }
@@ -207,7 +239,7 @@ export class ReportsService {
     user: AuthenticatedUser;
   }): Promise<ProjectReportResponse> {
     const { projectId, reportId, user } = params;
-    await this.assertProjectAccess(projectId, user);
+    await this.assertCanWriteProject(projectId, user);
     const existing = await assertReportBelongsToProject(
       this.prisma,
       projectId,
@@ -287,7 +319,7 @@ export class ReportsService {
       reportId,
       user,
     );
-    this.assertKindMatchesReportType(data.kind, report.type);
+    assertKindMatchesReportType(data.kind, report.type);
 
     if (data.kind === ReportContentKind.text) {
       return this.createTextContent({
@@ -317,10 +349,10 @@ export class ReportsService {
       reportId,
       user,
     );
-    this.assertReportAcceptsFiles(report.type);
-    this.assertMimeAllowed(data.mimeType, report.allowedMimeTypes);
+    assertReportAcceptsFiles(report.type);
+    assertMimeAllowed(data.mimeType, report.allowedMimeTypes);
     await this.assertWithinMaxFiles(reportId, report.type, report.maxFiles);
-    this.assertFileMatchesKind({
+    assertFileMatchesKind({
       mimeType: data.mimeType,
       sizeBytes: data.sizeBytes,
     });
@@ -351,8 +383,8 @@ export class ReportsService {
       reportId,
       user,
     );
-    this.assertReportAcceptsFiles(report.type);
-    this.assertMimeAllowed(data.mimeType, report.allowedMimeTypes);
+    assertReportAcceptsFiles(report.type);
+    assertMimeAllowed(data.mimeType, report.allowedMimeTypes);
     await this.assertWithinMaxFiles(reportId, report.type, report.maxFiles);
 
     if (!data.storageKey.startsWith(projectStoragePrefix(projectId))) {
@@ -361,7 +393,7 @@ export class ReportsService {
       );
     }
 
-    this.assertFileMatchesKind({
+    assertFileMatchesKind({
       mimeType: data.mimeType,
       sizeBytes: data.sizeBytes,
     });
@@ -375,37 +407,83 @@ export class ReportsService {
     if (stored.sizeBytes > MAX_REPORT_FILE_SIZE_BYTES) {
       await this.safeDelete(data.storageKey);
       throw new BadRequestException(
-        `File exceeds the ${this.megabytes(MAX_REPORT_FILE_SIZE_BYTES)} MB limit`,
+        `File exceeds the ${megabytes(MAX_REPORT_FILE_SIZE_BYTES)} MB limit`,
       );
     }
 
-    const attachment = await this.prisma.projectAttachment.create({
-      data: {
-        projectId,
-        reportId,
-        uploadedByUserId: user.id,
-        originalName: data.fileName,
-        storageKey: data.storageKey,
-        mimeType: data.mimeType,
-        sizeBytes: stored.sizeBytes,
-      },
-      select: { id: true },
-    });
-
     try {
-      const content = await this.prisma.projectReportContent.create({
-        data: {
-          reportId,
-          createdByUserId: user.id,
-          kind: report.type,
-          attachmentId: attachment.id,
+      const content = await this.prisma.$transaction(
+        async (transaction) => {
+          // Re-verifica el tope de archivos dentro de la transacción para que
+          // dos confirmaciones concurrentes no lo excedan.
+          await this.assertWithinMaxFiles(
+            reportId,
+            report.type,
+            report.maxFiles,
+            transaction,
+          );
+
+          let attachment: { id: number };
+
+          try {
+            attachment = await transaction.projectAttachment.create({
+              data: {
+                projectId,
+                reportId,
+                uploadedByUserId: user.id,
+                originalName: data.fileName,
+                storageKey: data.storageKey,
+                mimeType: data.mimeType,
+                sizeBytes: stored.sizeBytes,
+              },
+              select: { id: true },
+            });
+          } catch (error) {
+            // La clave de almacenamiento es única: un doble envío (o una carrera)
+            // choca aquí en lugar de duplicar el adjunto.
+            if (
+              error instanceof Prisma.PrismaClientKnownRequestError &&
+              error.code === 'P2002'
+            ) {
+              throw new ConflictException(
+                'This file has already been added to the report',
+              );
+            }
+
+            throw error;
+          }
+
+          return transaction.projectReportContent.create({
+            data: {
+              reportId,
+              createdByUserId: user.id,
+              kind: report.type,
+              attachmentId: attachment.id,
+            },
+            select: reportContentSelect,
+          });
         },
-        select: reportContentSelect,
-      });
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
 
       return mapReportContent(content);
     } catch (error) {
-      await this.removeAttachment(projectId, attachment.id);
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2034'
+      ) {
+        throw new ConflictException(
+          'The report changed concurrently; please retry',
+        );
+      }
+
+      // En el caso "archivo ya añadido" (P2002) el objeto sigue en uso; el GC
+      // limpiará el resto. Cualquier otro fallo deja el adjunto revertido y el
+      // objeto huérfano: se elimina.
+      if (!(error instanceof ConflictException)) {
+        await this.safeDelete(data.storageKey);
+      }
+
       throw error;
     }
   }
@@ -435,14 +513,14 @@ export class ReportsService {
         throw new BadRequestException('No update fields provided');
       }
 
-      updateData.textContent = this.normalizeTextContent(data.textContent);
+      updateData.textContent = normalizeTextContent(data.textContent);
     } else {
       if (data.url === undefined && data.label === undefined) {
         throw new BadRequestException('No update fields provided');
       }
 
       if (data.url !== undefined) {
-        updateData.url = this.normalizeUrl(data.url);
+        updateData.url = normalizeUrl(data.url);
       }
 
       if (data.label !== undefined) {
@@ -537,7 +615,7 @@ export class ReportsService {
     user: AuthenticatedUser;
   }): Promise<ProjectReportContentResponse> {
     const { reportId, textContent, user } = params;
-    const normalized = this.normalizeTextContent(textContent);
+    const normalized = normalizeTextContent(textContent);
 
     const content = await this.prisma.projectReportContent.create({
       data: {
@@ -565,7 +643,7 @@ export class ReportsService {
         reportId,
         createdByUserId: user.id,
         kind: ReportContentKind.link,
-        url: this.normalizeUrl(url),
+        url: normalizeUrl(url),
         label: label?.trim() || null,
       },
       select: reportContentSelect,
@@ -640,86 +718,6 @@ export class ReportsService {
     }
   }
 
-  private normalizeTitle(title: string): string {
-    const trimmed = title.trim();
-    if (!trimmed) {
-      throw new BadRequestException('Report title is required');
-    }
-
-    return trimmed;
-  }
-
-  private normalizeTextContent(value: string | undefined): string {
-    const trimmed = value?.trim() ?? '';
-
-    if (!trimmed) {
-      throw new BadRequestException('Text content is required');
-    }
-
-    return trimmed;
-  }
-
-  private normalizeUrl(value: string | undefined): string {
-    const trimmed = value?.trim() ?? '';
-
-    if (!trimmed) {
-      throw new BadRequestException('Link URL is required');
-    }
-
-    let parsed: URL;
-
-    try {
-      parsed = new URL(trimmed);
-    } catch {
-      throw new BadRequestException('Link URL is not valid');
-    }
-
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      throw new BadRequestException('Link URL must use http or https');
-    }
-
-    return parsed.toString();
-  }
-
-  private assertReportAcceptsFiles(type: ReportContentKind): void {
-    if (type !== ReportContentKind.file) {
-      throw new BadRequestException('This report does not accept files');
-    }
-  }
-
-  private assertFileMatchesKind(metadata: {
-    mimeType: string;
-    sizeBytes: number;
-  }): void {
-    if (!REPORT_FILE_MIME_TYPES.has(metadata.mimeType)) {
-      throw new BadRequestException(
-        `Unsupported file type: ${metadata.mimeType}`,
-      );
-    }
-
-    this.assertStoredSizeWithinLimit(metadata.sizeBytes);
-  }
-
-  private assertStoredSizeWithinLimit(sizeBytes: number): void {
-    if (sizeBytes > MAX_REPORT_FILE_SIZE_BYTES) {
-      throw new BadRequestException(
-        `File exceeds the ${this.megabytes(MAX_REPORT_FILE_SIZE_BYTES)} MB limit`,
-      );
-    }
-  }
-
-  private allowedMimeTypesForReportType(
-    type: ReportContentKind,
-  ): ReadonlySet<string> {
-    return type === ReportContentKind.file
-      ? REPORT_FILE_MIME_TYPES
-      : new Set<string>();
-  }
-
-  private megabytes(bytes: number): number {
-    return Math.round(bytes / (1024 * 1024));
-  }
-
   private async assertContentMutationAllowed(
     projectId: number,
     reportId: number,
@@ -731,7 +729,7 @@ export class ReportsService {
     allowedMimeTypes: string[];
     maxFiles: number | null;
   }> {
-    await this.assertProjectAccess(projectId, user);
+    await this.assertCanWriteProject(projectId, user);
     const report = await assertReportBelongsToProject(
       this.prisma,
       projectId,
@@ -748,38 +746,17 @@ export class ReportsService {
     return report;
   }
 
-  private assertKindMatchesReportType(
-    kind: ReportContentKind,
-    reportType: ReportContentKind,
-  ): void {
-    if (kind !== reportType) {
-      throw new BadRequestException(
-        `This report only accepts ${reportType} content`,
-      );
-    }
-  }
-
-  private assertMimeAllowed(
-    mimeType: string,
-    allowedMimeTypes: string[],
-  ): void {
-    if (!allowedMimeTypes.includes(mimeType)) {
-      throw new BadRequestException(
-        `MIME type not allowed for this report: ${mimeType}`,
-      );
-    }
-  }
-
   private async assertWithinMaxFiles(
     reportId: number,
     type: ReportContentKind,
     maxFiles: number | null,
+    client: Pick<PrismaService, 'projectReportContent'> = this.prisma,
   ): Promise<void> {
     if (maxFiles === null) {
       return;
     }
 
-    const fileCount = await this.prisma.projectReportContent.count({
+    const fileCount = await client.projectReportContent.count({
       where: { reportId, kind: type },
     });
 
@@ -811,129 +788,20 @@ export class ReportsService {
     }
   }
 
-  private validateReportConfig(
-    type: ReportContentKind,
-    allowedMimeTypes: string[] | undefined,
-    maxFiles: number | null | undefined,
-  ): { allowedMimeTypes: string[]; maxFiles: number | null } {
-    this.assertValidReportType(type);
-
-    if (!this.isFileReportType(type)) {
-      if ((allowedMimeTypes?.length ?? 0) > 0) {
-        throw new BadRequestException(
-          'Text and link reports do not accept allowed MIME types',
-        );
-      }
-
-      if (maxFiles !== undefined && maxFiles !== null) {
-        throw new BadRequestException(
-          'Text and link reports do not accept a maximum number of files',
-        );
-      }
-
-      return { allowedMimeTypes: [], maxFiles: null };
-    }
-
-    const allowed = this.allowedMimeTypesForReportType(type);
-    const unique = [...new Set(allowedMimeTypes ?? [])];
-
-    if (unique.length === 0) {
-      throw new BadRequestException(
-        'Select at least one allowed MIME type for this report',
-      );
-    }
-
-    const invalid = unique.filter((mime) => !allowed.has(mime));
-
-    if (invalid.length > 0) {
-      throw new BadRequestException(
-        `Unsupported MIME types for ${type}: ${invalid.join(', ')}`,
-      );
-    }
-
-    if (maxFiles === undefined || maxFiles === null) {
-      throw new BadRequestException(
-        'A maximum number of files is required for this report',
-      );
-    }
-
-    if (!Number.isInteger(maxFiles) || maxFiles < 1) {
-      throw new BadRequestException(
-        'The maximum number of files must be a positive integer',
-      );
-    }
-
-    return { allowedMimeTypes: unique, maxFiles };
-  }
-
-  private resolveReportConfigUpdate(
-    existing: {
-      type: ReportContentKind;
-      allowedMimeTypes: string[];
-      maxFiles: number | null;
-    },
-    data: UpdateReportDto,
-  ): {
-    type: ReportContentKind;
-    allowedMimeTypes: string[];
-    maxFiles: number | null;
-  } {
-    const nextType = data.type ?? existing.type;
-
-    let nextAllowed = data.allowedMimeTypes ?? existing.allowedMimeTypes;
-    let nextMax = data.maxFiles ?? existing.maxFiles;
-
-    if (data.type !== undefined && data.type !== existing.type) {
-      if (!this.isFileReportType(nextType)) {
-        if (data.allowedMimeTypes === undefined) {
-          nextAllowed = [];
-        }
-
-        if (data.maxFiles === undefined) {
-          nextMax = null;
-        }
-      } else if (!this.isFileReportType(existing.type)) {
-        nextAllowed = data.allowedMimeTypes ?? [];
-        nextMax = data.maxFiles ?? null;
-      }
-    }
-
-    const config = this.validateReportConfig(nextType, nextAllowed, nextMax);
-
-    return { type: nextType, ...config };
-  }
-
-  private isFileReportType(type: ReportContentKind): boolean {
-    return type === ReportContentKind.file;
-  }
-
-  private assertValidReportType(type: ReportContentKind): void {
-    if (
-      type !== ReportContentKind.text &&
-      type !== ReportContentKind.link &&
-      type !== ReportContentKind.file
-    ) {
-      throw new BadRequestException(`Unsupported report type: ${type}`);
-    }
-  }
-
-  private sameStringSet(left: string[], right: string[]): boolean {
-    if (left.length !== right.length) {
-      return false;
-    }
-
-    const sortedLeft = [...left].sort((a, b) => a.localeCompare(b));
-    const sortedRight = [...right].sort((a, b) => a.localeCompare(b));
-
-    return sortedLeft.every((value, index) => value === sortedRight[index]);
-  }
-
   private async assertProjectAccess(
     projectId: number,
     user: AuthenticatedUser,
   ): Promise<void> {
     await assertProjectExists(this.prisma, projectId);
     await this.authorization.assertProjectMember(user, projectId);
+  }
+
+  private async assertCanWriteProject(
+    projectId: number,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    await assertProjectExists(this.prisma, projectId);
+    await this.authorization.assertCanWriteProjectData(user, projectId);
   }
 
   private async assertCanManageReports(

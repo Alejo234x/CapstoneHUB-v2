@@ -1,9 +1,9 @@
-import { proxyRequest } from "../../auth/proxy";
+import { proxyJson, proxyToBackend } from "@/app/api/proxy";
 
-export async function GET(request: Request) {
-  return proxyRequest(request, "/auth/users", "GET");
+export function GET(request: Request) {
+  return proxyToBackend(request, "/auth/users", { cache: "no-store" });
 }
 
-export async function POST(request: Request) {
-  return proxyRequest(request, "/auth/users", "POST");
+export function POST(request: Request) {
+  return proxyJson(request, "/auth/users", "POST");
 }

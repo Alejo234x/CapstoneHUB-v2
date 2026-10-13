@@ -12,7 +12,7 @@ import {
   MaxLength,
   Min,
   ValidateIf,
-} from '@nestjs/class-validator';
+} from 'class-validator';
 import { ReportContentKind, ReportStatus } from '../generated/prisma/client';
 
 export const MAX_REPORT_TEXT_LENGTH = 20_000;

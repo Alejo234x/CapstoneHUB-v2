@@ -12,6 +12,7 @@ import {
   ObservationsService,
   ProjectObservationResponse,
 } from './observations.service';
+import { CreateObservationDto } from './observations.dto';
 
 @Controller('projects/:projectId/observations')
 export class ObservationsController {
@@ -28,7 +29,7 @@ export class ObservationsController {
   @Post()
   async createProjectObservation(
     @Param('projectId', ParseIntPipe) projectId: number,
-    @Body() data: { content?: string },
+    @Body() data: CreateObservationDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<ProjectObservationResponse> {
     return this.observationsService.createObservation({

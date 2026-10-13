@@ -34,6 +34,12 @@ export class AttachmentsService {
     await assertProjectExists(this.prisma, projectId);
     await this.authorization.assertProjectMember(user, projectId);
 
+    // El correo del subidor es PII: solo se expone a los miembros.
+    const canViewSensitiveData = await this.authorization.canViewProject(
+      user,
+      projectId,
+    );
+
     const attachments = await this.prisma.projectAttachment.findMany({
       // Los archivos de una entrega viven en la pestaña Entregas; Anexos solo
       // lista los archivos sueltos del proyecto.
@@ -42,7 +48,9 @@ export class AttachmentsService {
       select: attachmentSelect,
     });
 
-    return attachments.map(mapAttachment);
+    return attachments.map((attachment) =>
+      mapAttachment(attachment, canViewSensitiveData),
+    );
   }
 
   async createAttachment(params: {
@@ -53,7 +61,7 @@ export class AttachmentsService {
   }): Promise<ProjectAttachmentResponse> {
     const { projectId, file, user, reportId } = params;
     await assertProjectExists(this.prisma, projectId);
-    await this.authorization.assertProjectMember(user, projectId);
+    await this.authorization.assertCanWriteProjectData(user, projectId);
 
     if (reportId !== undefined) {
       await assertReportBelongsToProject(this.prisma, projectId, reportId);

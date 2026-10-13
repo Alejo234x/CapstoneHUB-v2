@@ -4,16 +4,12 @@
  * entorno del proyecto.
  */
 
+import { positiveInt } from '../common/env';
+
 const DEFAULT_TTL_SECONDS = 60 * 60 * 24;
 
-function parseSeconds(value: string | undefined, fallback: number): number {
-  const parsed = Number(value);
-
-  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
-}
-
 /** Vida del token de acceso (24 h por defecto). */
-export const AUTH_TOKEN_TTL_SECONDS = parseSeconds(
+export const AUTH_TOKEN_TTL_SECONDS = positiveInt(
   process.env.AUTH_TOKEN_TTL_SECONDS,
   DEFAULT_TTL_SECONDS,
 );
@@ -22,7 +18,7 @@ export const AUTH_TOKEN_TTL_SECONDS = parseSeconds(
  * Antigüedad a partir de la cual se reemite el token en cada petición válida
  * (la mitad de la vida por defecto).
  */
-export const AUTH_TOKEN_RENEW_AFTER_SECONDS = parseSeconds(
+export const AUTH_TOKEN_RENEW_AFTER_SECONDS = positiveInt(
   process.env.AUTH_TOKEN_RENEW_AFTER_SECONDS,
   Math.floor(AUTH_TOKEN_TTL_SECONDS / 2),
 );

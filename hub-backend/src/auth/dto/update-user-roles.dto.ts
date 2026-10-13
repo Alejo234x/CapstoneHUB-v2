@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsEnum } from '@nestjs/class-validator';
+import { IsArray, IsEnum } from 'class-validator';
 import { UserRole } from '../../generated/prisma/client';
 
 export class UpdateUserRolesDto {

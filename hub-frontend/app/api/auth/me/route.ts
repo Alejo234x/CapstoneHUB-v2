@@ -1,5 +1,5 @@
-import { proxyRequest } from "../proxy";
+import { proxyToBackend } from "@/app/api/proxy";
 
-export async function GET(request: Request) {
-  return proxyRequest(request, "/auth/me", "GET");
+export function GET(request: Request) {
+  return proxyToBackend(request, "/auth/me", { cache: "no-store" });
 }

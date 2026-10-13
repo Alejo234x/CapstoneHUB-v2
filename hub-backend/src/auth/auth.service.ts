@@ -30,6 +30,7 @@ const authUserSelect = {
   isActive: true,
   emailVerifiedAt: true,
   lastLoginAt: true,
+  tokenVersion: true,
   createdAt: true,
   updatedAt: true,
   roleAssignments: {
@@ -137,7 +138,10 @@ export class AuthService implements OnModuleInit {
 
     return {
       user,
-      accessToken: this.createAccessToken(user),
+      accessToken: this.createAccessToken(
+        user,
+        userRecordWithRoles.tokenVersion,
+      ),
     };
   }
 
@@ -185,13 +189,17 @@ export class AuthService implements OnModuleInit {
 
     return {
       user,
-      accessToken: this.createAccessToken(user),
+      accessToken: this.createAccessToken(user, userRecord.tokenVersion),
     };
   }
 
-  async users(): Promise<UserSummary[]> {
+  async users(
+    pagination: { skip?: number; take?: number } = {},
+  ): Promise<UserSummary[]> {
     const users = await this.prisma.user.findMany({
       orderBy: { fullName: 'asc' },
+      skip: pagination.skip,
+      take: pagination.take,
       select: {
         id: true,
         fullName: true,
@@ -255,27 +263,48 @@ export class AuthService implements OnModuleInit {
       throw new BadRequestException(`User ${userId} not found`);
     }
 
-    if (!uniqueRoles.includes(UserRole.admin)) {
-      const adminCount = await this.prisma.userRoleAssignment.count({
-        where: { role: UserRole.admin },
-      });
-      const userIsAdmin = await this.prisma.userRoleAssignment.count({
-        where: { userId, role: UserRole.admin },
-      });
+    try {
+      // Transacción serializable: la comprobación de "queda al menos un admin"
+      // y la sustitución de roles son atómicas, de modo que dos demisiones
+      // concurrentes no puedan dejar el sistema sin administradores.
+      await this.prisma.$transaction(
+        async (transaction) => {
+          if (!uniqueRoles.includes(UserRole.admin)) {
+            const adminCount = await transaction.userRoleAssignment.count({
+              where: { role: UserRole.admin },
+            });
+            const userIsAdmin = await transaction.userRoleAssignment.count({
+              where: { userId, role: UserRole.admin },
+            });
 
-      if (userIsAdmin > 0 && adminCount <= 1) {
+            if (userIsAdmin > 0 && adminCount <= 1) {
+              throw new BadRequestException(
+                'The system must retain at least one admin',
+              );
+            }
+          }
+
+          await transaction.userRoleAssignment.deleteMany({
+            where: { userId },
+          });
+          await transaction.userRoleAssignment.createMany({
+            data: uniqueRoles.map((role) => ({ userId, role })),
+          });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2034'
+      ) {
         throw new BadRequestException(
-          'The system must retain at least one admin',
+          'The roles changed concurrently; please retry',
         );
       }
-    }
 
-    await this.prisma.$transaction([
-      this.prisma.userRoleAssignment.deleteMany({ where: { userId } }),
-      this.prisma.userRoleAssignment.createMany({
-        data: uniqueRoles.map((role) => ({ userId, role })),
-      }),
-    ]);
+      throw error;
+    }
 
     return (await this.users()).find((summary) => summary.id === userId)!;
   }
@@ -325,19 +354,24 @@ export class AuthService implements OnModuleInit {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash: await this.hashPassword(payload.newPassword) },
+      data: {
+        passwordHash: await this.hashPassword(payload.newPassword),
+        // Invalida todos los tokens existentes del usuario.
+        tokenVersion: { increment: 1 },
+      },
     });
 
     return { message: 'Password updated' };
   }
 
   async verifyAccessToken(token: string): Promise<AuthenticatedUser> {
-    let payload: { sub?: number };
+    let payload: { sub?: number; tokenVersion?: number };
 
     try {
-      payload = await this.jwt.verifyAsync<{ sub?: number }>(token, {
-        algorithms: ['HS256'],
-      });
+      payload = await this.jwt.verifyAsync<{
+        sub?: number;
+        tokenVersion?: number;
+      }>(token, { algorithms: ['HS256'] });
     } catch (error) {
       const expired =
         error instanceof Error && error.name === 'TokenExpiredError';
@@ -360,6 +394,11 @@ export class AuthService implements OnModuleInit {
       throw new UnauthorizedException('User is inactive or does not exist');
     }
 
+    // Rechaza tokens emitidos antes del último cambio de contraseña.
+    if ((payload.tokenVersion ?? 0) !== user.tokenVersion) {
+      throw new UnauthorizedException('Access token is no longer valid');
+    }
+
     return this.toAuthenticatedUser(user);
   }
 
@@ -372,7 +411,10 @@ export class AuthService implements OnModuleInit {
     token: string,
     user: Pick<AuthenticatedUser, 'id' | 'email' | 'fullName'>,
   ): string | null {
-    const payload = this.jwt.decode<{ iat?: number } | null>(token);
+    const payload = this.jwt.decode<{
+      iat?: number;
+      tokenVersion?: number;
+    } | null>(token);
 
     if (!payload?.iat) {
       return null;
@@ -384,7 +426,8 @@ export class AuthService implements OnModuleInit {
       return null;
     }
 
-    return this.createAccessToken(user);
+    // El token ya fue verificado, así que su `tokenVersion` sigue vigente.
+    return this.createAccessToken(user, payload.tokenVersion ?? 0);
   }
 
   private toAuthenticatedUser(user: AuthUser): AuthenticatedUser {
@@ -429,11 +472,13 @@ export class AuthService implements OnModuleInit {
 
   private createAccessToken(
     user: Pick<AuthenticatedUser, 'id' | 'email' | 'fullName'>,
+    tokenVersion: number,
   ): string {
     return this.jwt.sign({
       sub: user.id,
       email: user.email,
       fullName: user.fullName,
+      tokenVersion,
     });
   }
 }

@@ -1,13 +1,17 @@
-export const MAX_ATTACHMENT_SIZE_BYTES =
-  Number(process.env.MAX_FILE_SIZE_BYTES) || 10 * 1024 * 1024;
+import { positiveInt } from '../common/env';
+
+export const MAX_ATTACHMENT_SIZE_BYTES = positiveInt(
+  process.env.MAX_FILE_SIZE_BYTES,
+  10 * 1024 * 1024,
+);
 
 /**
  * Tope único para los archivos de una entrega (documentos, imágenes y videos).
  * Se mantiene `MAX_VIDEO_SIZE_BYTES` como fallback por compatibilidad.
  */
 export const MAX_REPORT_FILE_SIZE_BYTES =
-  Number(process.env.MAX_REPORT_FILE_SIZE_BYTES) ||
-  Number(process.env.MAX_VIDEO_SIZE_BYTES) ||
+  positiveInt(process.env.MAX_REPORT_FILE_SIZE_BYTES, 0) ||
+  positiveInt(process.env.MAX_VIDEO_SIZE_BYTES, 0) ||
   100 * 1024 * 1024;
 
 export const ALLOWED_ATTACHMENT_MIME_TYPES: ReadonlySet<string> = new Set([
@@ -51,6 +55,8 @@ export const REPORT_FILE_MIME_TYPES: ReadonlySet<string> = new Set([
   ...REPORT_VIDEO_MIME_TYPES,
 ]);
 
-/** Vigencia de la URL prefirmada de subida (1 hora por defecto). */
-export const UPLOAD_URL_TTL_SECONDS =
-  Number(process.env.S3_UPLOAD_URL_TTL_SECONDS) || 60 * 60;
+/** Vigencia de la URL prefirmada de subida (15 minutos por defecto). */
+export const UPLOAD_URL_TTL_SECONDS = positiveInt(
+  process.env.S3_UPLOAD_URL_TTL_SECONDS,
+  15 * 60,
+);

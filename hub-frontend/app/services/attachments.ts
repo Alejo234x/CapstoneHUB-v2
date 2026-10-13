@@ -1,17 +1,13 @@
 import { ProjectAttachmentItem } from "./schemas";
+import { apiRequest, apiRequestVoid, ensureOk } from "@/lib/http";
 import { getApiUrl } from "@/lib/api";
-import { ensureOk } from "@/lib/http";
 
-export async function getProjectAttachments(
+export function getProjectAttachments(
   id: string,
 ): Promise<ProjectAttachmentItem[]> {
-  const response = await fetch(getApiUrl(`/api/projects/${id}/attachments`), {
-    cache: "no-store",
+  return apiRequest<ProjectAttachmentItem[]>(`/api/projects/${id}/attachments`, {
+    action: "consultar el anexo",
   });
-
-  await ensureOk(response, { action: "consultar el anexo" });
-
-  return (await response.json()) as ProjectAttachmentItem[];
 }
 
 export async function uploadProjectAttachment(
@@ -36,18 +32,14 @@ export async function uploadProjectAttachment(
   return (await response.json()) as ProjectAttachmentItem;
 }
 
-export async function deleteProjectAttachment(
+export function deleteProjectAttachment(
   id: string,
   attachmentId: number,
 ): Promise<void> {
-  const response = await fetch(
-    getApiUrl(`/api/projects/${id}/attachments/${attachmentId}`),
-    {
-      method: "DELETE",
-    },
-  );
-
-  await ensureOk(response, { action: "eliminar el anexo" });
+  return apiRequestVoid(`/api/projects/${id}/attachments/${attachmentId}`, {
+    method: "DELETE",
+    action: "eliminar el anexo",
+  });
 }
 
 export async function downloadProjectAttachment(

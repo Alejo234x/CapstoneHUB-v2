@@ -7,7 +7,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-} from '@nestjs/class-validator';
+} from 'class-validator';
 import { ProjectSource } from '../../generated/prisma/client';
 
 export class CreateProjectDto {

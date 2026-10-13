@@ -70,7 +70,7 @@ function ProposerCard({ project }: { readonly project: ProjectDetails }) {
               <TableRow>
                 <TableCell className="text-muted-foreground">Correo</TableCell>
                 <TableCell className="text-right">
-                  {project.proposer.email}
+                  {project.proposer.email ?? "Sin información"}
                 </TableCell>
               </TableRow>
             </TableBody>

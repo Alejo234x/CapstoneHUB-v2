@@ -17,7 +17,8 @@ import { HealthModule } from './health/health.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { DatabaseExceptionFilter } from './common/filters/database-exception.filter';
 import { ConfigModule } from '@nestjs/config';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -30,12 +31,18 @@ import { APP_FILTER } from '@nestjs/core';
     ReportsModule,
     AuthModule,
     HealthModule,
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: 'default', ttl: 60_000, limit: 300 }],
+      // Permite desactivar el límite global (p. ej. en tests e2e).
+      skipIf: () => process.env.DISABLE_THROTTLE === 'true',
+    }),
   ],
   controllers: [AppController],
   providers: [
     AppService,
     // Convierte los errores de conexión a la base de datos en un 503 estable.
     { provide: APP_FILTER, useClass: DatabaseExceptionFilter },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule implements NestModule {

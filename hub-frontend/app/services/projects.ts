@@ -9,7 +9,7 @@ import {
 import { getApiUrl } from "@/lib/api";
 import {
   apiErrorMessage,
-  ensureOk,
+  apiRequest,
   notifyUnauthorized,
 } from "@/lib/http";
 
@@ -44,7 +44,6 @@ export async function getProjects(): Promise<{
       cache: "no-store",
     });
 
-
     if (!response.ok) {
       if (response.status === 401) {
         notifyUnauthorized();
@@ -78,7 +77,6 @@ export async function getMyProjects(): Promise<{
       cache: "no-store",
     });
 
-
     if (!response.ok) {
       if (response.status === 401) {
         notifyUnauthorized();
@@ -97,8 +95,7 @@ export async function getMyProjects(): Promise<{
   } catch (err) {
     return {
       projects: [],
-      error:
-        "Unable to reach the backend projects endpoint: " + err,
+      error: "Unable to reach the backend projects endpoint: " + err,
     };
   }
 }
@@ -112,7 +109,6 @@ export async function getProjectById(id: string): Promise<{
     const response = await fetch(getApiUrl(`/api/projects/${id}`), {
       cache: "no-store",
     });
-
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -136,100 +132,57 @@ export async function getProjectById(id: string): Promise<{
   }
 }
 
-export async function updateProjectStatus(
+export function updateProjectStatus(
   id: string,
   status: string,
   description?: string,
 ): Promise<ProjectDetails> {
-  const response = await fetch(getApiUrl(`/api/projects/${id}/status`), {
+  return apiRequest<ProjectDetails>(`/api/projects/${id}/status`, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ status, description }),
+    body: { status, description },
+    action: "cambiar el estado del proyecto",
   });
-
-  await ensureOk(response, { action: "cambiar el estado del proyecto" });
-
-  return (await response.json()) as ProjectDetails;
 }
 
-export async function advanceProjectPhase(
-  id: string,
-): Promise<ProjectDetails> {
-  const response = await fetch(getApiUrl(`/api/projects/${id}/phase/advance`), {
+export function advanceProjectPhase(id: string): Promise<ProjectDetails> {
+  return apiRequest<ProjectDetails>(`/api/projects/${id}/phase/advance`, {
     method: "POST",
+    action: "avanzar la fase del proyecto",
   });
-
-  await ensureOk(response, { action: "avanzar la fase del proyecto" });
-
-  return (await response.json()) as ProjectDetails;
 }
 
-export async function approveProjectPhase(
-  id: string,
-): Promise<ProjectDetails> {
-  const response = await fetch(
-    getApiUrl(`/api/projects/${id}/phase/approvals`),
-    {
-      method: "POST",
-    },
-  );
-
-  await ensureOk(response, { action: "dar el visto bueno de fase" });
-
-  return (await response.json()) as ProjectDetails;
+export function approveProjectPhase(id: string): Promise<ProjectDetails> {
+  return apiRequest<ProjectDetails>(`/api/projects/${id}/phase/approvals`, {
+    method: "POST",
+    action: "dar el visto bueno de fase",
+  });
 }
 
-export async function revokeProjectPhaseApproval(
-  id: string,
-): Promise<ProjectDetails> {
-  const response = await fetch(
-    getApiUrl(`/api/projects/${id}/phase/approvals`),
-    {
-      method: "DELETE",
-    },
-  );
-
-  await ensureOk(response, { action: "retirar el visto bueno de fase" });
-
-  return (await response.json()) as ProjectDetails;
+export function revokeProjectPhaseApproval(id: string): Promise<ProjectDetails> {
+  return apiRequest<ProjectDetails>(`/api/projects/${id}/phase/approvals`, {
+    method: "DELETE",
+    action: "retirar el visto bueno de fase",
+  });
 }
 
-export async function updateProject(
+export function updateProject(
   id: string,
   payload: UpdateProjectPayload,
 ): Promise<ProjectDetails> {
-  const response = await fetch(getApiUrl(`/api/projects/${id}`), {
+  return apiRequest<ProjectDetails>(`/api/projects/${id}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  await ensureOk(response, {
+    body: payload,
     action: "editar el proyecto",
     conflictMessage: PROJECT_EDIT_CONFLICT_MESSAGE,
   });
-
-  return (await response.json()) as ProjectDetails;
 }
 
-export async function createProject(
-  payload: CreateProjectPayload,
-): Promise<ProjectDetails> {
-  const res = await fetch(getApiUrl("/api/projects"), {
+export function createProject(payload: CreateProjectPayload): Promise<ProjectDetails> {
+  return apiRequest<ProjectDetails>("/api/projects", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+    body: payload,
+    action: "proponer un proyecto",
   });
-
-  await ensureOk(res, { action: "proponer un proyecto" });
-
-  return (await res.json()) as ProjectDetails;
 }
 
 export async function getAssignableUsers(
@@ -262,10 +215,7 @@ export async function getAssignableUsers(
   }
 }
 
-export async function addProjectActorAssignment(
-  projectId: number,
-  payload: { userId: number; role: string },
-): Promise<{
+type ProjectActorAssignmentResult = {
   id: number;
   projectId: number;
   userId: number;
@@ -273,24 +223,18 @@ export async function addProjectActorAssignment(
   assignedAt: string;
   project: { id: number; name: string };
   user: { id: number; fullName: string; email: string };
-}> {
-  const response = await fetch(getApiUrl(`/api/projects/${projectId}/actors`), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+};
+
+export function addProjectActorAssignment(
+  projectId: number,
+  payload: { userId: number; role: string },
+): Promise<ProjectActorAssignmentResult> {
+  return apiRequest<ProjectActorAssignmentResult>(
+    `/api/projects/${projectId}/actors`,
+    {
+      method: "POST",
+      body: payload,
+      action: "asignar actores al proyecto",
     },
-    body: JSON.stringify(payload),
-  });
-
-  await ensureOk(response, { action: "asignar actores al proyecto" });
-
-  return (await response.json()) as {
-    id: number;
-    projectId: number;
-    userId: number;
-    role: string;
-    assignedAt: string;
-    project: { id: number; name: string };
-    user: { id: number; fullName: string; email: string };
-  };
+  );
 }

@@ -69,14 +69,14 @@ function createProjectDetail() {
 }
 
 function createPrismaMock() {
-  const projectUpdate = jest.fn().mockResolvedValue(undefined);
+  const projectUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
   const historyCreate = jest.fn().mockResolvedValue(undefined);
   type Transaction = {
-    project: { update: typeof projectUpdate };
+    project: { updateMany: typeof projectUpdateMany };
     projectStatusHistory: { create: typeof historyCreate };
   };
   const transaction: Transaction = {
-    project: { update: projectUpdate },
+    project: { updateMany: projectUpdateMany },
     projectStatusHistory: { create: historyCreate },
   };
 
@@ -93,7 +93,7 @@ function createPrismaMock() {
     ),
   };
 
-  return { prisma, projectUpdate, historyCreate, milestoneFindMany };
+  return { prisma, projectUpdateMany, historyCreate, milestoneFindMany };
 }
 
 function createAuthorizationMock() {
@@ -226,7 +226,7 @@ describe('ProjectsService', () => {
   });
 
   it('updates status and history in the same transaction', async () => {
-    const { prisma, projectUpdate, historyCreate } = createPrismaMock();
+    const { prisma, projectUpdateMany, historyCreate } = createPrismaMock();
     const authorization = createAuthorizationMock();
     const service = createService(prisma, authorization);
     jest.spyOn(service, 'project').mockResolvedValue(createProjectDetail());
@@ -239,8 +239,8 @@ describe('ProjectsService', () => {
     });
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(projectUpdate).toHaveBeenCalledWith({
-      where: { id: 10 },
+    expect(projectUpdateMany).toHaveBeenCalledWith({
+      where: { id: 10, status: ProjectStatus.proposed },
       data: { status: ProjectStatus.under_review },
     });
     expect(historyCreate).toHaveBeenCalledWith({
@@ -307,7 +307,7 @@ describe('ProjectsService', () => {
   });
 
   it('blocks closing a project while minimum milestones are incomplete', async () => {
-    const { prisma, projectUpdate, milestoneFindMany } = createPrismaMock();
+    const { prisma, projectUpdateMany, milestoneFindMany } = createPrismaMock();
     prisma.project.findUnique.mockResolvedValue({
       id: 10,
       status: ProjectStatus.in_progress,
@@ -323,11 +323,11 @@ describe('ProjectsService', () => {
         description: 'Cerrar el proyecto',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
-    expect(projectUpdate).not.toHaveBeenCalled();
+    expect(projectUpdateMany).not.toHaveBeenCalled();
   });
 
   it('closes a project when its minimum milestones are complete', async () => {
-    const { prisma, projectUpdate } = createPrismaMock();
+    const { prisma, projectUpdateMany } = createPrismaMock();
     prisma.project.findUnique.mockResolvedValue({
       id: 10,
       status: ProjectStatus.in_progress,
@@ -342,8 +342,8 @@ describe('ProjectsService', () => {
       description: 'Cerrar el proyecto',
     });
 
-    expect(projectUpdate).toHaveBeenCalledWith({
-      where: { id: 10 },
+    expect(projectUpdateMany).toHaveBeenCalledWith({
+      where: { id: 10, status: ProjectStatus.in_progress },
       data: { status: ProjectStatus.closed },
     });
   });
