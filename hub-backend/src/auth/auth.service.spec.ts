@@ -99,7 +99,13 @@ describe('AuthService role management', () => {
   });
 
   it('replaces roles transactionally', async () => {
-    const transaction = jest.fn().mockResolvedValue(undefined);
+    const count = jest.fn().mockResolvedValue(2);
+    const deleteMany = jest.fn().mockResolvedValue(undefined);
+    const createMany = jest.fn().mockResolvedValue(undefined);
+    const transaction = jest.fn(
+      async (callback: (tx: unknown) => Promise<void>) =>
+        callback({ userRoleAssignment: { count, deleteMany, createMany } }),
+    );
     const prisma = {
       user: {
         findUnique: jest.fn().mockResolvedValue(adminUser),
@@ -113,9 +119,9 @@ describe('AuthService role management', () => {
         ]),
       },
       userRoleAssignment: {
-        count: jest.fn().mockResolvedValue(2),
-        deleteMany: jest.fn().mockResolvedValue(undefined),
-        createMany: jest.fn().mockResolvedValue(undefined),
+        count,
+        deleteMany,
+        createMany,
       },
       $transaction: transaction,
     };
@@ -124,13 +130,23 @@ describe('AuthService role management', () => {
     const result = await service.replaceUserRoles(1, [UserRole.evaluator]);
 
     expect(transaction).toHaveBeenCalledTimes(1);
+    expect(deleteMany).toHaveBeenCalledWith({ where: { userId: 1 } });
+    expect(createMany).toHaveBeenCalledWith({
+      data: [{ userId: 1, role: UserRole.evaluator }],
+    });
     expect(result.roles).toEqual([UserRole.evaluator]);
   });
 
   it('does not revoke the last admin role', async () => {
+    const count = jest.fn().mockResolvedValue(1);
+    const transaction = jest.fn(
+      async (callback: (tx: unknown) => Promise<void>) =>
+        callback({ userRoleAssignment: { count } }),
+    );
     const prisma = {
       user: { findUnique: jest.fn().mockResolvedValue(adminUser) },
-      userRoleAssignment: { count: jest.fn().mockResolvedValue(1) },
+      userRoleAssignment: { count },
+      $transaction: transaction,
     };
     const service = createService(prisma);
 
@@ -150,6 +166,7 @@ describe('AuthService registration', () => {
     isActive: true,
     emailVerifiedAt: null,
     lastLoginAt: registeredAt,
+    tokenVersion: 0,
     createdAt: registeredAt,
     updatedAt: registeredAt,
     roleAssignments: [{ role: UserRole.proposer }],
@@ -321,6 +338,21 @@ describe('AuthService password change', () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it('invalidates existing sessions by bumping tokenVersion', async () => {
+    const { prisma, update } = await createPrismaMock(CURRENT_PASSWORD);
+    const service = createService(prisma);
+
+    await service.changePassword(7, {
+      currentPassword: CURRENT_PASSWORD,
+      newPassword: NEW_PASSWORD,
+    });
+
+    const [callArguments] = update.mock.calls as unknown as [
+      [{ data: { passwordHash: string; tokenVersion: { increment: number } } }],
+    ];
+    expect(callArguments[0].data.tokenVersion).toEqual({ increment: 1 });
+  });
+
   it('rejects inactive or missing users', async () => {
     const service = createService({
       user: { findUnique: jest.fn().mockResolvedValue(null) },
@@ -363,6 +395,7 @@ describe('AuthService tokens', () => {
     isActive: true,
     emailVerifiedAt: null,
     lastLoginAt: null,
+    tokenVersion: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
     roleAssignments: [{ role: UserRole.student }],
@@ -403,6 +436,26 @@ describe('AuthService tokens', () => {
 
     await expect(service.verifyAccessToken(token)).rejects.toThrow(
       'Access token expired',
+    );
+  });
+
+  it('rejects a token whose tokenVersion no longer matches', async () => {
+    const service = createService({
+      user: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ ...userRecord, tokenVersion: 1 }),
+      },
+    });
+    const token = createJwt().sign({
+      sub: 7,
+      email: 'token@example.com',
+      fullName: 'Token User',
+      tokenVersion: 0,
+    });
+
+    await expect(service.verifyAccessToken(token)).rejects.toThrow(
+      'Access token is no longer valid',
     );
   });
 

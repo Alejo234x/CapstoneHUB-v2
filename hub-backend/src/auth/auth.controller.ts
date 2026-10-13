@@ -6,6 +6,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -14,6 +15,10 @@ import { Public } from './public.decorator';
 import { CurrentUser } from './current-user.decorator';
 import type { AuthenticatedUser } from './auth.types';
 import { Throttle } from '@nestjs/throttler';
+import {
+  PaginationQueryDto,
+  paginationToSkipTake,
+} from '../common/pagination.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
@@ -45,8 +50,8 @@ export class AuthController {
 
   @Get('users')
   @UseGuards(AdminGuard)
-  users() {
-    return this.authService.users();
+  users(@Query() pagination: PaginationQueryDto = {}) {
+    return this.authService.users(paginationToSkipTake(pagination));
   }
 
   @Post('users')

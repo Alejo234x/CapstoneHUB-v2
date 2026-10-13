@@ -399,50 +399,79 @@ export class ReportsService {
       );
     }
 
-    let attachment: { id: number };
-
     try {
-      attachment = await this.prisma.projectAttachment.create({
-        data: {
-          projectId,
-          reportId,
-          uploadedByUserId: user.id,
-          originalName: data.fileName,
-          storageKey: data.storageKey,
-          mimeType: data.mimeType,
-          sizeBytes: stored.sizeBytes,
-        },
-        select: { id: true },
-      });
-    } catch (error) {
-      // La clave de almacenamiento es única: un doble envío (o una carrera)
-      // choca aquí en lugar de duplicar el adjunto.
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException(
-          'This file has already been added to the report',
-        );
-      }
+      const content = await this.prisma.$transaction(
+        async (transaction) => {
+          // Re-verifica el tope de archivos dentro de la transacción para que
+          // dos confirmaciones concurrentes no lo excedan.
+          await this.assertWithinMaxFiles(
+            reportId,
+            report.type,
+            report.maxFiles,
+            transaction,
+          );
 
-      throw error;
-    }
+          let attachment: { id: number };
 
-    try {
-      const content = await this.prisma.projectReportContent.create({
-        data: {
-          reportId,
-          createdByUserId: user.id,
-          kind: report.type,
-          attachmentId: attachment.id,
+          try {
+            attachment = await transaction.projectAttachment.create({
+              data: {
+                projectId,
+                reportId,
+                uploadedByUserId: user.id,
+                originalName: data.fileName,
+                storageKey: data.storageKey,
+                mimeType: data.mimeType,
+                sizeBytes: stored.sizeBytes,
+              },
+              select: { id: true },
+            });
+          } catch (error) {
+            // La clave de almacenamiento es única: un doble envío (o una carrera)
+            // choca aquí en lugar de duplicar el adjunto.
+            if (
+              error instanceof Prisma.PrismaClientKnownRequestError &&
+              error.code === 'P2002'
+            ) {
+              throw new ConflictException(
+                'This file has already been added to the report',
+              );
+            }
+
+            throw error;
+          }
+
+          return transaction.projectReportContent.create({
+            data: {
+              reportId,
+              createdByUserId: user.id,
+              kind: report.type,
+              attachmentId: attachment.id,
+            },
+            select: reportContentSelect,
+          });
         },
-        select: reportContentSelect,
-      });
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
 
       return mapReportContent(content);
     } catch (error) {
-      await this.removeAttachment(projectId, attachment.id);
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2034'
+      ) {
+        throw new ConflictException(
+          'The report changed concurrently; please retry',
+        );
+      }
+
+      // En el caso "archivo ya añadido" (P2002) el objeto sigue en uso; el GC
+      // limpiará el resto. Cualquier otro fallo deja el adjunto revertido y el
+      // objeto huérfano: se elimina.
+      if (!(error instanceof ConflictException)) {
+        await this.safeDelete(data.storageKey);
+      }
+
       throw error;
     }
   }
@@ -811,12 +840,13 @@ export class ReportsService {
     reportId: number,
     type: ReportContentKind,
     maxFiles: number | null,
+    client: Pick<PrismaService, 'projectReportContent'> = this.prisma,
   ): Promise<void> {
     if (maxFiles === null) {
       return;
     }
 
-    const fileCount = await this.prisma.projectReportContent.count({
+    const fileCount = await client.projectReportContent.count({
       where: { reportId, kind: type },
     });
 

@@ -68,6 +68,12 @@ describe('Auth (e2e)', () => {
       })
       .expect(200);
 
+    // El token anterior queda invalidado por el cambio de contraseña.
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set(bearer(accessToken))
+      .expect(401);
+
     await loginUser(app, email, TEST_NEW_PASSWORD);
   });
 });
