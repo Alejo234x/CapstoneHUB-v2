@@ -2,12 +2,10 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import {
-  confirmReportContentFile,
   createReportContent,
   deleteReportContent,
-  presignReportContentFile,
   updateReportContent,
-  uploadFileToStorage,
+  uploadReportContentFile,
 } from "../../services/report-contents";
 import {
   createProjectReport,
@@ -503,25 +501,7 @@ export default function ProjectReportsPanel({
     file: File,
     onProgress: (fraction: number) => void,
   ): Promise<void> {
-    const metadata = {
-      fileName: file.name,
-      mimeType: file.type || "application/octet-stream",
-      sizeBytes: file.size,
-    };
-
-    const target = await presignReportContentFile(
-      String(projectId),
-      reportId,
-      metadata,
-    );
-
-    await uploadFileToStorage(target.uploadUrl, file, onProgress);
-
-    await confirmReportContentFile(String(projectId), reportId, {
-      ...metadata,
-      storageKey: target.storageKey,
-    });
-
+    await uploadReportContentFile(String(projectId), reportId, file, onProgress);
     await reloadReports();
   }
 

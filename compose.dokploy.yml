@@ -14,43 +14,30 @@
 # Los puertos se exponen con `expose` y Dokploy los enruta vía Traefik.
 
 services:
-  minio:
-    image: quay.io/minio/minio:latest
+  # Almacenamiento de objetos S3 (RustFS, sucesor de MinIO).
+  # Solo se accede desde el backend por la red interna; las subidas y descargas
+  # pasan por la API, así que no necesita dominio público ni CORS.
+  rustfs:
+    image: rustfs/rustfs:latest
     restart: unless-stopped
-    command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
-      # Origen permitido por CORS para las subidas directas desde el navegador.
-      MINIO_API_CORS_ALLOW_ORIGIN: ${S3_CORS_ORIGINS}
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_OBS_LOGGER_LEVEL: error
     volumes:
-      - minio_data:/data
+      - rustfs_data:/data
     expose:
-      - "9000"
-    networks:
-      - capstone
-
-  # Crea el bucket una sola vez antes de que arranque el backend.
-  minio-init:
-    image: quay.io/minio/mc:latest
-    restart: "no"
-    depends_on:
-      minio:
-        condition: service_started
-    environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
-      S3_BUCKET: ${S3_BUCKET}
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        until mc alias set local "http://minio:9000" "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do
-          echo "waiting for minio...";
-          sleep 2;
-        done
-        mc mb --ignore-existing "local/$$S3_BUCKET"
-        echo "bucket $$S3_BUCKET ready"
+      - "9000" # S3 API
+      - "9001" # Consola (opcional; exponer con un dominio de Dokploy)
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - capstone
 
@@ -74,17 +61,14 @@ services:
       INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME}
       MAX_FILE_SIZE_BYTES: ${MAX_FILE_SIZE_BYTES:-10485760}
       MAX_REPORT_FILE_SIZE_BYTES: ${MAX_REPORT_FILE_SIZE_BYTES:-104857600}
-      S3_ENDPOINT: http://minio:9000
-      # URL pública de MinIO (o de S3) que alcanza el navegador para las subidas.
-      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT}
+      S3_ENDPOINT: http://rustfs:9000
       S3_BUCKET: ${S3_BUCKET}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_FORCE_PATH_STYLE: "true"
-      S3_UPLOAD_URL_TTL_SECONDS: ${S3_UPLOAD_URL_TTL_SECONDS:-900}
     depends_on:
-      minio:
+      rustfs:
         condition: service_started
     expose:
       - "3001"
@@ -111,7 +95,7 @@ services:
       - capstone
 
 volumes:
-  minio_data:
+  rustfs_data:
 
 networks:
   capstone:

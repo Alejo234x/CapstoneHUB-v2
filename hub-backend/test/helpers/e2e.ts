@@ -8,9 +8,14 @@ import { PrismaService } from '../../src/prisma.service';
 
 // `S3StorageService` exige estas variables al arrancar, aunque los e2e del
 // primer corte no suben archivos. Se fijan valores inofensivos si faltan.
+// `S3_ENDPOINT` apunta a un host sin servicio para que el `ensureBucket` del
+// arranque falle rápido (connection refused) en lugar de intentar alcanzar AWS.
 process.env.S3_BUCKET ??= 'test-bucket';
 process.env.S3_ACCESS_KEY ??= 'test';
 process.env.S3_SECRET_KEY ??= 'test';
+process.env.S3_ENDPOINT ??= 'http://localhost:9000';
+process.env.S3_REGION ??= 'us-east-1';
+process.env.S3_FORCE_PATH_STYLE ??= 'true';
 // Los tests e2e ejercitan login/registro decenas de veces desde la misma IP;
 // se desactiva el rate limiting para no falsear los resultados.
 process.env.DISABLE_THROTTLE ??= 'true';

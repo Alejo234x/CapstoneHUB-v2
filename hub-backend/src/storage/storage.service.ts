@@ -7,23 +7,19 @@ export type SaveFileInput = {
   contentType: string;
 };
 
+export type SaveFilePathInput = {
+  key: string;
+  filePath: string;
+  contentType: string;
+  sizeBytes: number;
+};
+
 export type StoredObject = {
   stream: Readable;
   /** Tamaño del objeto o de la porción devuelta, si el proveedor lo informa. */
   contentLength?: number;
   /** Valor para la cabecera `Content-Range` cuando se sirve un rango. */
   contentRange?: string;
-};
-
-export type UploadUrlInput = {
-  key: string;
-  expiresInSeconds: number;
-};
-
-export type PresignedUpload = {
-  url: string;
-  method: 'PUT';
-  expiresInSeconds: number;
 };
 
 export type StoredObjectInfo = {
@@ -38,6 +34,8 @@ export type ListedObject = {
 
 export abstract class StorageService {
   abstract save(input: SaveFileInput): Promise<void>;
+  /** Guarda un archivo temporal del disco en el almacenamiento (streaming). */
+  abstract saveFromFile(input: SaveFilePathInput): Promise<void>;
   /**
    * Lee el objeto. `range` es el valor de la cabecera HTTP `Range`
    * (`bytes=0-1023`, `bytes=500-`) y se reenvía tal cual al proveedor, que
@@ -45,8 +43,8 @@ export abstract class StorageService {
    */
   abstract read(key: string, range?: string): Promise<StoredObject>;
   abstract delete(key: string): Promise<void>;
-  /** URL prefirmada para que el navegador suba un objeto directamente. */
-  abstract createUploadUrl(input: UploadUrlInput): Promise<PresignedUpload>;
+  /** Asegura que el bucket configurado exista, creándolo si hace falta. */
+  abstract ensureBucket(): Promise<void>;
   /** Metadatos del objeto, o `null` si no existe. */
   abstract stat(key: string): Promise<StoredObjectInfo | null>;
   /** Lista los objetos bajo un prefijo, paginando internamente. */

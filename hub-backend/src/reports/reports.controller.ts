@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -10,26 +11,27 @@ import {
   Post,
   Res,
   StreamableFile,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
+import { randomUUID } from 'node:crypto';
+import { tmpdir } from 'node:os';
+import { diskStorage } from 'multer';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { contentDisposition, normalizeRangeHeader } from '../common/http';
+import { MAX_REPORT_FILE_SIZE_BYTES } from '../attachments/attachments.constants';
 import {
-  ConfirmReportFileContentDto,
   CreateReportContentDto,
   CreateReportDto,
-  PresignReportFileContentDto,
   ReviewReportDto,
   UpdateReportContentDto,
   UpdateReportDto,
 } from './reports.dto';
 import { ProjectReportContentResponse } from './reports.select';
-import {
-  ProjectReportResponse,
-  ReportFileUploadTarget,
-  ReportsService,
-} from './reports.service';
+import { ProjectReportResponse, ReportsService } from './reports.service';
 
 @Controller('projects/:projectId/reports')
 export class ReportsController {
@@ -127,32 +129,30 @@ export class ReportsController {
     });
   }
 
-  @Post(':reportId/contents/files/presign')
-  presignReportContentFile(
+  @Post(':reportId/contents/files')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: tmpdir(),
+        filename: (_request, _file, callback) => callback(null, randomUUID()),
+      }),
+      limits: { fileSize: MAX_REPORT_FILE_SIZE_BYTES },
+    }),
+  )
+  uploadReportContentFile(
     @Param('projectId', ParseIntPipe) projectId: number,
     @Param('reportId', ParseIntPipe) reportId: number,
-    @Body() data: PresignReportFileContentDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ): Promise<ReportFileUploadTarget> {
-    return this.reportsService.presignFileContent({
-      projectId,
-      reportId,
-      data,
-      user,
-    });
-  }
-
-  @Post(':reportId/contents/files/confirm')
-  confirmReportContentFile(
-    @Param('projectId', ParseIntPipe) projectId: number,
-    @Param('reportId', ParseIntPipe) reportId: number,
-    @Body() data: ConfirmReportFileContentDto,
+    @UploadedFile() file: Express.Multer.File | undefined,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<ProjectReportContentResponse> {
-    return this.reportsService.confirmFileContent({
+    if (!file) {
+      throw new BadRequestException('A file is required');
+    }
+
+    return this.reportsService.uploadFileContent({
       projectId,
       reportId,
-      data,
+      file,
       user,
     });
   }

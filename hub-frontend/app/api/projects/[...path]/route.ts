@@ -3,10 +3,6 @@ import { proxyJson, proxyToBackend } from "@/app/api/proxy";
 
 type Params = Promise<{ path: string[] }>;
 
-// Tope de memoria del BFF para el multipart de anexos: el backend aplica el
-// límite real (`MAX_FILE_SIZE_BYTES`, 10 MB por defecto); aquí solo evitamos
-// bufferizar cuerpos descomunales antes de reenviarlos.
-const MAX_ATTACHMENT_BYTES = 32 * 1024 * 1024;
 const SAFE_SEGMENT = /^[a-zA-Z0-9_-]+$/;
 
 function invalidPath(): NextResponse {
@@ -32,6 +28,16 @@ function isStreamPath(path: string[]): boolean {
   return last === "download" || last === "stream";
 }
 
+function isMultipartUpload(path: string[]): boolean {
+  return (
+    (path.length === 2 && path[1] === "attachments") ||
+    (path.length === 5 &&
+      path[1] === "reports" &&
+      path[3] === "contents" &&
+      path[4] === "files")
+  );
+}
+
 async function handle(
   request: Request,
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
@@ -47,22 +53,15 @@ async function handle(
     return proxyToBackend(request, url, { cache: "no-store", stream: true });
   }
 
-  if (method === "POST" && path.length === 2 && path[1] === "attachments") {
-    const contentLength = Number(request.headers.get("content-length") ?? 0);
-
-    if (contentLength > MAX_ATTACHMENT_BYTES) {
-      return NextResponse.json(
-        { error: "File too large" },
-        { status: 413 },
-      );
-    }
-
+  // Subidas multipart (anexos y archivos de entrega): se reenvían por streaming
+  // para no bufferizar cuerpos de hasta 100 MB en el BFF.
+  if (method === "POST" && isMultipartUpload(path)) {
     const contentType = request.headers.get("content-type") ?? "";
-    const body = await request.arrayBuffer();
 
     return proxyToBackend(request, url, {
       method: "POST",
-      body,
+      body: request.body,
+      duplex: "half",
       headers: contentType ? { "Content-Type": contentType } : {},
     });
   }

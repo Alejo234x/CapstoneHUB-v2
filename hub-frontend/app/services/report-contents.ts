@@ -13,12 +13,6 @@ export type UpdateReportContentPayload = {
   label?: string | null;
 };
 
-export type ReportContentFileMetadata = {
-  fileName: string;
-  mimeType: string;
-  sizeBytes: number;
-};
-
 export function createReportContent(
   id: string,
   reportId: number,
@@ -35,44 +29,24 @@ export function createReportContent(
   );
 }
 
-export type ReportFileUploadTarget = {
-  storageKey: string;
-  uploadUrl: string;
-  method: "PUT";
-  expiresInSeconds: number;
-};
-
-export function presignReportContentFile(
-  id: string,
-  reportId: number,
-  metadata: ReportContentFileMetadata,
-): Promise<ReportFileUploadTarget> {
-  return apiRequest<ReportFileUploadTarget>(
-    `/api/projects/${id}/reports/${reportId}/contents/files/presign`,
-    {
-      method: "POST",
-      body: metadata,
-      action: "preparar la subida del contenido de la entrega",
-      conflictMessage: REPORT_CONFLICT_MESSAGE,
-    },
-  );
-}
-
 /**
- * Sube el archivo directamente al almacenamiento con la URL prefirmada. Usa
+ * Sube un archivo de entrega a través del backend (multipart). Usa
  * XMLHttpRequest porque `fetch` no expone el progreso de subida.
  */
-export function uploadFileToStorage(
-  uploadUrl: string,
+export function uploadReportContentFile(
+  id: string,
+  reportId: number,
   file: File,
   onProgress?: (fraction: number) => void,
-): Promise<void> {
+): Promise<ProjectReportContentItem> {
   return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
     const request = new XMLHttpRequest();
-    request.open("PUT", uploadUrl);
-    request.setRequestHeader(
-      "Content-Type",
-      file.type || "application/octet-stream",
+    request.open(
+      "POST",
+      getApiUrl(`/api/projects/${id}/reports/${reportId}/contents/files`),
     );
 
     request.upload.onprogress = (event) => {
@@ -83,39 +57,45 @@ export function uploadFileToStorage(
 
     request.onload = () => {
       if (request.status >= 200 && request.status < 300) {
-        resolve();
+        resolve(JSON.parse(request.responseText) as ProjectReportContentItem);
         return;
       }
 
-      reject(new Error(`No se pudo subir el archivo (HTTP ${request.status}).`));
+      reject(
+        new Error(readUploadError(request.responseText, request.status)),
+      );
     };
 
     request.onerror = () =>
       reject(
         new Error(
-          "No se pudo conectar con el almacenamiento para subir el archivo.",
+          "No se pudo conectar con el servidor para subir el archivo.",
         ),
       );
     request.onabort = () => reject(new Error("La subida fue cancelada."));
 
-    request.send(file);
+    request.send(formData);
   });
 }
 
-export function confirmReportContentFile(
-  id: string,
-  reportId: number,
-  metadata: ReportContentFileMetadata & { storageKey: string },
-): Promise<ProjectReportContentItem> {
-  return apiRequest<ProjectReportContentItem>(
-    `/api/projects/${id}/reports/${reportId}/contents/files/confirm`,
-    {
-      method: "POST",
-      body: metadata,
-      action: "confirmar la subida del contenido de la entrega",
-      conflictMessage: REPORT_CONFLICT_MESSAGE,
-    },
-  );
+function readUploadError(responseText: string, status: number): string {
+  try {
+    const body = JSON.parse(responseText) as {
+      message?: string | string[];
+    };
+
+    if (Array.isArray(body.message)) {
+      return body.message.join(" ");
+    }
+
+    if (typeof body.message === "string" && body.message.trim()) {
+      return body.message;
+    }
+  } catch {
+    // La respuesta no era JSON; se usa el mensaje genérico.
+  }
+
+  return `No se pudo subir el archivo (HTTP ${status}).`;
 }
 
 export function updateReportContent(

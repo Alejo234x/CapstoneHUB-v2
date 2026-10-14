@@ -87,7 +87,7 @@ También se puede ejecutar con flags:
 npm run seed -- --only=users
 npm run seed -- --only=projects,actors,status   # agrega dependencias automáticamente
 npm run seed -- --dry-run                        # no escribe en la base
-npm run seed -- --strict                         # falla si MinIO no está disponible
+npm run seed -- --strict                         # falla si RustFS no está disponible
 npm run seed -- --help
 ```
 
@@ -180,7 +180,7 @@ las dos suites (supertest y Playwright).
 - `prisma/fixtures/milestones.json` y `observations.json`: indexados por el
   nombre del proyecto.
 - `prisma/fixtures/attachments/`: archivos de ejemplo que se suben a
-  MinIO. Las portadas `portada-*.jpg` acompañan a los proyectos finalizados;
+  RustFS. Las portadas `portada-*.jpg` acompañan a los proyectos finalizados;
   por convención, la primera imagen de un proyecto es su portada.
 - El historial de estados reparte las transiciones entre la fecha de inicio y
   la de fin (o "hoy" si el proyecto sigue activo), de modo que los proyectos
@@ -200,14 +200,14 @@ Notas:
 
 - El hash de la contraseña solo se guarda en la base; la contraseña en claro
   está en `users.json`, por eso se puede iniciar sesión con esos valores.
-- Los anexos requieren el MinIO configurado; sin eso el seed avisa y los omite
+- Los anexos requieren el RustFS configurado; sin eso el seed avisa y los omite
   (usar `--strict` para que falle en su lugar).
 - Si corres el seed fuera de Docker, `DATABASE_URL` y `S3_ENDPOINT` en
   `hub-backend/.env` deben apuntar a `localhost` en vez del nombre del contenedor.
 
 # Anexos de proyecto (storage)
 
-Los anexos se guardan en MinIO/S3 a través de `StorageService`
+Los anexos se guardan en RustFS/S3 a través de `StorageService`
 (`hub-backend/src/storage`)
 
 Endpoints (requieren autenticación y ser participante del proyecto o admin):
@@ -225,41 +225,28 @@ Límite de 10 MB por archivo, y se permite PDF, Word, Excel, PNG y JPEG
 Cada entrega tiene un **tipo** fijo (`text`, `link` o `file`) definido al crearla
 y, para el tipo Archivo, los **MIME permitidos** (documentos, imágenes y videos)
 y el **máximo de archivos**; el estudiante solo aporta contenido que cumpla esa
-configuración. Los binarios se guardan en el mismo bucket con **subida directa
-desde el navegador** (URL prefirmada), de modo que el archivo no pasa por Nest ni
-por el BFF:
+configuración. Los binarios se guardan en el bucket a través de la API (subida
+multipart), de modo que el archivo pasa por el BFF y Nest en streaming:
 
 ```
-POST   /projects/:projectId/reports/:reportId/contents                 (JSON: texto o enlace)
-POST   /projects/:projectId/reports/:reportId/contents/files/presign   (JSON: metadatos → URL firmada)
-PUT    <uploadUrl>                                                     (navegador → MinIO/S3)
-POST   /projects/:projectId/reports/:reportId/contents/files/confirm   (JSON: storageKey → contenido)
+POST   /projects/:projectId/reports/:reportId/contents               (JSON: texto o enlace)
+POST   /projects/:projectId/reports/:reportId/contents/files         (multipart: archivo → contenido)
 PATCH  /projects/:projectId/reports/:reportId/contents/:id
 DELETE /projects/:projectId/reports/:reportId/contents/:id
-GET    /projects/:projectId/reports/:reportId/contents/:id/stream      (inline, soporta Range)
+GET    /projects/:projectId/reports/:reportId/contents/:id/stream    (inline, soporta Range)
 ```
 
-El flujo es: `presign` valida tipo/MIME/tamaño y devuelve una URL `PUT`; el
-navegador sube el binario; `confirm` verifica el objeto con `HeadObject` y crea
-el `ProjectAttachment` + `ProjectReportContent`. Todos los archivos de una
-entrega pueden pesar hasta `MAX_REPORT_FILE_SIZE_BYTES` (100 MB por defecto). Si
-el objeto real excede el límite, se borra y se rechaza. Los archivos de una
-entrega no se listan en Anexos.
-
-Requisitos de configuración para que funcione:
-
-- `S3_PUBLIC_ENDPOINT`: la URL de MinIO/S3 que alcanza el navegador
-  (`http://localhost:9000` en dev). La firma incluye el host, así que debe
-  coincidir con el usado al subir.
-- CORS: MinIO lo controla con la variable `MINIO_API_CORS_ALLOW_ORIGIN`
-  (por defecto `*`; en los compose se toma de `S3_CORS_ORIGINS`). Con S3 real hay
-  que configurar el CORS del bucket por separado (consola o `PutBucketCors`).
+El endpoint `files` valida tipo/MIME/tamaño, guarda el binario en el
+almacenamiento por streaming y crea el `ProjectAttachment` + `ProjectReportContent`
+en una transacción. Todos los archivos de una entrega pueden pesar hasta
+`MAX_REPORT_FILE_SIZE_BYTES` (100 MB por defecto). Los archivos de una entrega no
+se listan en Anexos. Como la subida pasa por la API, el almacenamiento no necesita
+`S3_PUBLIC_ENDPOINT` ni CORS.
 
 ## Limpieza de objetos huérfanos (storage gc)
 
-La subida directa es de dos pasos (`presign` → subir → `confirm`). Si el usuario
-cierra el navegador después de subir y antes de confirmar, el objeto queda en el
-bucket sin fila en `project_attachment` (huérfano). El recolector recorre el
+Si un guardado falla entre el almacenamiento y la base de datos, el objeto puede
+quedar sin fila en `project_attachment` (huérfano). El recolector recorre el
 prefijo `projects/`, lo compara con los `storageKey` registrados y borra los
 objetos sin fila que superan la antigüedad mínima (24 h por defecto).
 
@@ -287,14 +274,13 @@ No hay scheduler interno; se ejecuta a mano o desde un cron externo, por ejemplo
 0 4 * * * cd /workspace/hub-backend && npm run storage:gc >> /var/log/capstonehub-gc.log 2>&1
 ```
 
-## MinIO
+## RustFS (almacenamiento de objetos)
 
-`compose.yml` y `.devcontainer/docker-compose.yml` levantan `minio` en
-`localhost:9000` (API) y `localhost:9001` (consola). Un contenedor de un solo
-uso, `minio-init`, espera a MinIO y crea el bucket de forma idempotente antes de
-que arranque el backend, así que no hay que crearlo a mano. El CORS para las
-subidas directas se configura con `MINIO_API_CORS_ALLOW_ORIGIN` en el servicio
-`minio` (toma `S3_CORS_ORIGINS`, por defecto `*`).
+`compose.yml` y `.devcontainer/docker-compose.yml` levantan `rustfs` en
+`localhost:9000` (API S3) y `localhost:9001` (consola). El bucket se crea de
+forma idempotente desde el propio backend al arrancar (`HeadBucket` →
+`CreateBucket`), así que no hay que crearlo a mano. Como las subidas y descargas
+pasan por la API, no hace falta CORS ni endpoint público.
 
 Credenciales y bucket por defecto (`.env` raíz y `hub-backend/.env`):
 
@@ -307,33 +293,27 @@ S3_BUCKET="capstonehub"
 El backend se conecta con (`hub-backend/.env`):
 
 ```
-S3_ENDPOINT="http://minio:9000" # nombre del servicio dentro de Docker
+S3_ENDPOINT="http://localhost:9000" # host local; en Docker: http://rustfs:9000
 S3_BUCKET="capstonehub"
 S3_ACCESS_KEY="minioadmin"
 S3_SECRET_KEY="minioadmin"
 S3_REGION="us-east-1"
-S3_FORCE_PATH_STYLE="true" # obligatorio para MinIO
+S3_FORCE_PATH_STYLE="true" # obligatorio para RustFS
 ```
 
 Notas:
 
 - Si corres el backend **fuera de Docker** (por ejemplo `npm start dev` en tu
-  máquina), cambia `S3_ENDPOINT` a `http://localhost:9000`.
+  máquina), usa `S3_ENDPOINT="http://localhost:9000"`.
 - Consola web: http://localhost:9001 (usuario y clave de arriba).
-- El volumen `minio_data` conserva los objetos entre reinicios.
-- Verificar el bucket desde el host:
-
-  ```bash
-  docker run --rm --entrypoint /bin/sh --network prisma-network quay.io/minio/mc \
-    -c 'mc alias set local http://minio:9000 minioadmin minioadmin && mc ls local/capstonehub'
-  ```
+- El volumen `rustfs_data` conserva los objetos entre reinicios.
 
 ## en producción se debería usar S3, aunque no está  testeado:
 
 `S3StorageService` usa el SDK de AWS, así que apuntar a S3 es solo cambiar el
 entorno: credenciales reales, `S3_REGION`, `S3_BUCKET`, `S3_ENDPOINT` vacío y
 `S3_FORCE_PATH_STYLE="false"`. Algunas alternativas compatibles son LocalStack,
-SeaweedFS, Garage o `moto server`.
+SeaweedFS, Garage o RustFS.
 
 # Contraseñas de base de datos: usar valores URL-safe
 

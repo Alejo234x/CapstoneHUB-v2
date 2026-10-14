@@ -58,7 +58,7 @@ export async function resetSeed(
       }
     } else {
       log.warn(
-        'S3/MinIO is not configured; attachment objects will not be removed from storage.',
+        'S3/RustFS is not configured; attachment objects will not be removed from storage.',
       );
     }
   }

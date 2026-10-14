@@ -133,7 +133,7 @@ del avance y las filas quedan como registro histórico.
 
 ### ProjectAttachment
 
-Metadatos de un archivo subido. El binario se almacena en S3/MinIO;
+Metadatos de un archivo subido. El binario se almacena en S3/RustFS;
 `storageKey` es único y apunta al objeto. Cuando `reportId` está presente el
 archivo pertenece a una entrega y se muestra en su pestaña, no en Anexos.
 
@@ -154,7 +154,7 @@ Aporte dentro de una entrega. `kind` distingue `text`, `link` y `file` (los
 valores `image`/`video` del enum quedan como legacy tras unificar los tipos) y
 debe coincidir con el `type` de su entrega. Los tipos de texto y enlace usan
 `textContent`/`url`/`label`; los de archivo referencian un `ProjectAttachment`
-(`attachmentId`, único) y el binario vive en S3/MinIO. Cada fila guarda su autor
+(`attachmentId`, único) y el binario vive en S3/RustFS. Cada fila guarda su autor
 y su fecha de creación.
 
 ### MilestoneReportLink
