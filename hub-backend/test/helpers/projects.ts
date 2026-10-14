@@ -7,6 +7,7 @@ import { bearer, uniqueEmail } from './auth';
 export async function createProject(
   app: INestApplication<App>,
   accessToken: string,
+  overrides: Record<string, unknown> = {},
 ): Promise<{ id: number }> {
   const response = await request(app.getHttpServer())
     .post('/projects')
@@ -19,6 +20,7 @@ export async function createProject(
       correo: uniqueEmail('proponente'),
       isPrivate: true,
       submissionConsentAt: new Date().toISOString(),
+      ...overrides,
     })
     .expect(201);
 

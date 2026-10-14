@@ -14,24 +14,34 @@ import { AuthenticatedUser } from './auth.types';
 import { ACTOR_ROLE_LICENSES, hasActorRoleLicense } from './actor-role-license';
 import { PhaseApprovalKind } from '../projects/projects.phase';
 
+/**
+ * Estados en los que un proyecto no privado es visible para usuarios
+ * autenticados. Los visitantes anónimos solo ven los `closed`; `rejected`,
+ * `cancelled` y las propuestas (`proposed`/`under_review` legado) nunca se
+ * publican.
+ */
+export const PUBLIC_PROJECT_STATUSES: ProjectStatus[] = [
+  ProjectStatus.approved,
+  ProjectStatus.in_progress,
+  ProjectStatus.paused,
+  ProjectStatus.closed,
+];
+
 @Injectable()
 export class AuthorizationService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Acceso de LECTURA: un miembro del proyecto o, si el proyecto es público
-   * (cerrado y no privado), cualquier usuario autenticado. No autoriza
-   * mutaciones; para eso usa {@link assertCanWriteProjectData}.
+   * Acceso de LECTURA sensible (observaciones, hitos, anexos y entregas):
+   * reservado al proponente, los actores asignados y los revisores. Los
+   * proyectos públicos solo exponen su información base en el listado y el
+   * detalle; no autoriza mutaciones (ver {@link assertCanWriteProjectData}).
    */
   async assertProjectMember(
     user: AuthenticatedUser,
     projectId: number,
   ): Promise<void> {
     if (await this.canViewProject(user, projectId)) {
-      return;
-    }
-
-    if (await this.projectIsPublic(projectId)) {
       return;
     }
 
@@ -94,24 +104,6 @@ export class AuthorizationService {
   }
 
   /**
-   * Un proyecto es visible públicamente cuando ya finalizó (`closed`) y el
-   * proponente no pidió privacidad. Los proyectos rechazados nunca son
-   * públicos.
-   */
-  private async projectIsPublic(projectId: number): Promise<boolean> {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-      select: { status: true, isPrivate: true },
-    });
-
-    if (!project) {
-      throw new NotFoundException(`Project ${projectId} not found`);
-    }
-
-    return !project.isPrivate && project.status === ProjectStatus.closed;
-  }
-
-  /**
    * Los miembros son usuarios con una relación sensible con el proyecto: su
    * proponente, sus actores asignados o un evaluador global/admin.
    */
@@ -160,18 +152,17 @@ export class AuthorizationService {
 
   /**
    * Construye la cláusula `where` que limita los listados de proyectos a los
-   * que el espectador puede ver: los públicos más los propios.
+   * que el espectador puede ver. Sin sesión solo son públicos los finalizados;
+   * con sesión, además, los no privados ya aprobados o en ejecución.
    */
   projectVisibilityWhere(
     user: AuthenticatedUser | undefined,
   ): Prisma.ProjectWhereInput {
-    const publicWhere: Prisma.ProjectWhereInput = {
-      isPrivate: false,
-      status: ProjectStatus.closed,
-    };
-
     if (!user) {
-      return publicWhere;
+      return {
+        isPrivate: false,
+        status: ProjectStatus.closed,
+      };
     }
 
     if (this.canReviewAnyProject(user)) {
@@ -180,7 +171,7 @@ export class AuthorizationService {
 
     return {
       OR: [
-        publicWhere,
+        { isPrivate: false, status: { in: PUBLIC_PROJECT_STATUSES } },
         { proposerUserId: user.id },
         { actorAssignments: { some: { userId: user.id } } },
       ],

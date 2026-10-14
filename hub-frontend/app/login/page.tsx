@@ -25,9 +25,10 @@ export default function LoginPage() {
               </h1>
 
               <p className="max-w-lg text-sm leading-relaxed text-white/50">
-                Los visitantes públicos pueden consultar los proyectos, pero solo
-                los usuarios autenticados pueden crear propuestas, actualizar
-                estados y añadir observaciones.
+                Sin sesión solo puedes consultar los proyectos finalizados y
+                públicos. Con sesión verás además los aprobados o en ejecución,
+                y podrás crear propuestas, actualizar estados y añadir
+                observaciones.
               </p>
             </div>
           </div>

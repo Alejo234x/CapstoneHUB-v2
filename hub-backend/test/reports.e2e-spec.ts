@@ -120,4 +120,31 @@ describe('Reports (e2e)', () => {
       .send({ title: 'Entrega ajena', dueDate: futureIsoDate(), type: 'text' })
       .expect(403);
   });
+
+  it('no expone las entregas de un proyecto público a terceros', async () => {
+    const app = getApp();
+    const admin = await adminSession(app);
+    const { accessToken: proposerToken } = await registerUser(
+      app,
+      uniqueEmail('prop'),
+    );
+    const { accessToken: strangerToken } = await registerUser(
+      app,
+      uniqueEmail('ajeno'),
+    );
+    const { id: projectId } = await createProject(app, proposerToken, {
+      isPrivate: false,
+    });
+
+    await request(app.getHttpServer())
+      .patch(`/projects/${projectId}/status`)
+      .set(bearer(admin.accessToken))
+      .send({ status: 'approved' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get(`/projects/${projectId}/reports`)
+      .set(bearer(strangerToken))
+      .expect(403);
+  });
 });

@@ -150,6 +150,8 @@ pasa.
   `rejected` y `approved → rejected`) sin asignarse; las transiciones de
   ejecución requieren estar asignado como `teacher`.
 - `Crear proyecto` solo requiere que el usuario tenga al menos un rol global.
+- `Listar / ver proyectos`: sin sesión solo los finalizados y no privados; con
+  sesión, además los no privados en `approved`, `in_progress` o `paused`.
 - `Editar datos del proyecto`: lo permiten `admin` y cualquier `evaluator`
   global (sin asignarse); un `teacher` o `evaluator` asignado al proyecto con su
   rol correspondiente. Un proyecto `closed` o `rejected` es de solo lectura
@@ -403,7 +405,7 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 | `GET/POST` | `/auth/users` | Listar / crear usuarios (admin). |
 | `PATCH` | `/auth/users/:id/roles` | Reemplazar los roles de un usuario (admin). |
 | `PATCH` | `/auth/me/password` | Cambiar la contraseña propia (valida la actual; `400` si no coincide o si la nueva es igual). |
-| `GET` | `/projects` | Listar los proyectos visibles para el solicitante (público: solo finalizados y no privados). |
+| `GET` | `/projects` | Listar los proyectos visibles para el solicitante (sin sesión: solo finalizados y no privados; con sesión: además los no privados aprobados o en ejecución). |
 | `GET` | `/projects/mine` | Proyectos propuestos y asignados al usuario. |
 | `GET` | `/projects/:id` | Detalle (404 si el proyecto es privado y el solicitante no es miembro). |
 | `POST` | `/projects` | Crear un proyecto; `isPrivate` lo define el proponente. |
@@ -435,9 +437,11 @@ mostrados, y si es inválido se responde `401` en lugar de degradar a anónimo.
 
 `AuthorizationService` concentra las reglas:
 
-- `projectVisibilityWhere(viewer)` construye el `where` de Prisma usado por el
-  listado: público (`isPrivate = false` y estado `closed`) más `proposerUserId`
-  y asignaciones del solicitante; los roles `admin` y `evaluator` ven todo.
-- `assertProjectMember` (usado por observaciones, hitos, anexos y entregas)
-  permite el acceso al proponente, a los actores asignados y a los roles
-  revisores, o cuando el proyecto es público.
+- `projectVisibilityWhere(viewer)` construye el `where` de Prisma del listado y
+  el detalle: para visitantes anónimos, público es `isPrivate = false` y estado
+  `closed`; para usuarios autenticados, además los no privados en `approved`,
+  `in_progress` o `paused`. A eso se suman `proposerUserId` y las asignaciones
+  del solicitante; los roles `admin` y `evaluator` ven todo.
+- `assertProjectMember` (usado por observaciones, hitos, anexos y entregas) es
+  de miembros: proponente, actores asignados y roles revisores. Los proyectos
+  públicos solo exponen su información base en el listado y el detalle.

@@ -24,9 +24,9 @@ export default function ProjectDetailsHeader({
       {!isMember ? (
         <Alert className="mb-6">
           <AlertDescription>
-            Estás viendo la información pública de un proyecto finalizado. El
-            equipo, las observaciones, los anexos, los hitos y las entregas solo
-            son visibles para el proponente, los actores asignados y los
+            Estás viendo la información pública de un proyecto. El equipo, las
+            observaciones, los anexos, los hitos y las entregas solo son
+            visibles para el proponente, los actores asignados y los
             evaluadores.
           </AlertDescription>
         </Alert>

@@ -92,4 +92,38 @@ describe('Observations (e2e)', () => {
       .send({ content: 'No debería poder observar' })
       .expect(403);
   });
+
+  it('no expone las observaciones de un proyecto público a terceros', async () => {
+    const app = getApp();
+    const admin = await adminSession(app);
+    const { accessToken: proposerToken } = await registerUser(
+      app,
+      uniqueEmail('prop'),
+    );
+    const { accessToken: strangerToken } = await registerUser(
+      app,
+      uniqueEmail('ajeno'),
+    );
+    const { id: projectId } = await createProject(app, proposerToken, {
+      isPrivate: false,
+    });
+
+    await request(app.getHttpServer())
+      .patch(`/projects/${projectId}/status`)
+      .set(bearer(admin.accessToken))
+      .send({ status: 'approved' })
+      .expect(200);
+
+    // El detalle es público para usuarios con sesión, pero las secciones
+    // sensibles siguen reservadas a los miembros.
+    await request(app.getHttpServer())
+      .get(`/projects/${projectId}`)
+      .set(bearer(strangerToken))
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get(`/projects/${projectId}/observations`)
+      .set(bearer(strangerToken))
+      .expect(403);
+  });
 });
