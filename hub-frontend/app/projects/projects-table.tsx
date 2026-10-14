@@ -76,6 +76,8 @@ export default function ProjectsTable({
 
   const [searchFilter, setSearchFilter] = useState("");
 
+  const [pageDraft, setPageDraft] = useState<string | null>(null);
+
   const filteredProjects = useMemo(() => {
     const normalizedSearch = searchFilter.trim().toLowerCase();
 
@@ -121,6 +123,25 @@ export default function ProjectsTable({
     statusOptions.find(
       (status) => status.value === statusFilterValue,
     )?.label ?? "Estado";
+
+  const pageCount = Math.max(1, table.getPageCount());
+  const currentPage = Math.min(
+    table.state.pagination.pageIndex + 1,
+    pageCount,
+  );
+
+  function commitPage() {
+    const parsed = Number.parseInt(pageDraft ?? "", 10);
+
+    if (Number.isNaN(parsed)) {
+      setPageDraft(null);
+      return;
+    }
+
+    const target = Math.min(Math.max(parsed, 1), pageCount);
+    table.setPageIndex(target - 1);
+    setPageDraft(null);
+  }
 
   return (
     <div>
@@ -230,24 +251,49 @@ export default function ProjectsTable({
         </Table>
       </div>
 
-      <div className="flex items-center justify-end gap-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Anterior
-        </Button>
+      <div className="flex flex-wrap items-center justify-between gap-2 py-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <label htmlFor="projects-page-input">Página</label>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Siguiente
-        </Button>
+          <Input
+            id="projects-page-input"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={pageCount}
+            value={pageDraft ?? String(currentPage)}
+            onChange={(event) => setPageDraft(event.target.value)}
+            onBlur={commitPage}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                commitPage();
+              }
+            }}
+            className="h-7 w-14 px-1 text-center"
+          />
+
+          <span>de {pageCount}</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Anterior
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Siguiente
+          </Button>
+        </div>
       </div>
     </div>
   );

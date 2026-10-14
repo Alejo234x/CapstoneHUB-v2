@@ -43,12 +43,15 @@ export interface ProjectFixture {
   requiresLegalization?: boolean;
   isPrivate?: boolean;
   source?: ProjectSource;
+  sourceDetails?: string | null;
+  phase?: ProjectPhase;
   facultyAdvisor?: string | null;
   teamRequirements?: string | null;
   expectedOutcomes?: string | null;
   deliverables?: string[];
   startDate: string;
   endDate?: string | null;
+  submissionConsentAt?: string | null;
   schools?: string[];
   /**
    * Email del `User` sembrado que registra el proyecto. Cuando está presente, el
