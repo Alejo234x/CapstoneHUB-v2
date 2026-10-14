@@ -55,7 +55,7 @@ services:
       - capstone
 
   backend:
-    image: ${BACKEND_IMAGE:-ghcr.io/iscoutb/capstonehub-backend:latest}
+    image: ${BACKEND_IMAGE:-ghcr.io/iscoutb/capstonehub/capstonehub-backend:latest}
     restart: unless-stopped
     environment:
       PORT: "3001"
@@ -89,7 +89,7 @@ services:
       - dokploy-network
 
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/iscoutb/capstonehub-frontend:latest}
+    image: ${FRONTEND_IMAGE:-ghcr.io/iscoutb/capstonehub/capstonehub-frontend:latest}
     restart: unless-stopped
     environment:
       BACKEND_URL: http://backend:3001
