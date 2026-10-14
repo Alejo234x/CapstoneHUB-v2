@@ -3,8 +3,9 @@ import type { ProjectDetails } from "./schemas";
 /**
  * Reglas de permisos del proyecto en el cliente. Reflejan
  * `AuthorizationService` en el backend: el rol asignado al proyecto decide lo
- * que se puede hacer; los roles globales solo habilitan la asignación (más el
- * caso especial del evaluador global, que revisa cualquier proyecto).
+ * que se puede hacer; los roles globales solo habilitan la asignación, salvo el
+ * evaluador global (y el admin), que además asigna actores, comenta y gestiona
+ * o revisa entregas en cualquier proyecto sin asignarse.
  */
 
 export type ProjectViewer = {
@@ -39,6 +40,9 @@ const TEACHER_ROLES = ["teacher"] as const;
 
 /** Roles de proyecto que gestionan hitos, entregas y datos. */
 const MANAGEMENT_ROLES = ["teacher", "evaluator"] as const;
+
+/** Roles de proyecto que preparan y envían entregas. */
+const SUBMITTER_ROLES = ["student"] as const;
 
 export function isAdmin(viewer: ProjectViewer): boolean {
   return viewer.roles.includes("admin");
@@ -116,20 +120,28 @@ export function canEditProjectDetails(
   );
 }
 
-/** Gestionar el proyecto: asignar actores, borrarlo. */
-export function canManageProject(
+/** Asignar actores: admin, evaluador global o docente asignado. */
+export function canAssignActors(
   viewer: ProjectViewer,
   assignments: readonly ProjectAssignment[],
 ): boolean {
-  return isAdmin(viewer) || isAssignedTeacher(viewer, assignments);
+  return reviewsAnyProject(viewer) || isAssignedTeacher(viewer, assignments);
 }
 
-/** Gestionar hitos y entregas. */
+/** Gestionar hitos. */
 export function canManageMilestones(
   viewer: ProjectViewer,
   assignments: readonly ProjectAssignment[],
 ): boolean {
   return isAdmin(viewer) || isAssignedWith(viewer, assignments, MANAGEMENT_ROLES);
+}
+
+/** Gestionar y revisar entregas: admin, evaluador global o docentes/evaluadores asignados. */
+export function canManageReports(
+  viewer: ProjectViewer,
+  assignments: readonly ProjectAssignment[],
+): boolean {
+  return reviewsAnyProject(viewer) || isAssignedWith(viewer, assignments, MANAGEMENT_ROLES);
 }
 
 /** Avanzar de fase (semestre). */
@@ -140,20 +152,20 @@ export function canAdvancePhase(
   return isAdmin(viewer) || isAssignedTeacher(viewer, assignments);
 }
 
-/** Enviar entregas: cualquier miembro asignado (o un admin). */
+/** Preparar y enviar entregas: admin o estudiante asignado. */
 export function canSubmitReports(
   viewer: ProjectViewer,
   assignments: readonly ProjectAssignment[],
 ): boolean {
-  return isAdmin(viewer) || isAssignedMember(viewer, assignments);
+  return isAdmin(viewer) || isAssignedWith(viewer, assignments, SUBMITTER_ROLES);
 }
 
-/** Comentar/observar el proyecto: cualquier miembro asignado. */
+/** Comentar/observar el proyecto: admin, evaluador global o miembro asignado. */
 export function canComment(
   viewer: ProjectViewer,
   assignments: readonly ProjectAssignment[],
 ): boolean {
-  return isAssignedMember(viewer, assignments);
+  return reviewsAnyProject(viewer) || isAssignedMember(viewer, assignments);
 }
 
 export function canDeleteAttachment(

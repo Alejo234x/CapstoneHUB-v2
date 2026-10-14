@@ -219,7 +219,7 @@ export class ReportsService {
     user: AuthenticatedUser;
   }): Promise<ProjectReportResponse> {
     const { projectId, reportId, user } = params;
-    await this.assertCanWriteProject(projectId, user);
+    await this.assertCanSubmitReports(projectId, user);
     const existing = await assertReportBelongsToProject(
       this.prisma,
       projectId,
@@ -650,7 +650,7 @@ export class ReportsService {
     allowedMimeTypes: string[];
     maxFiles: number | null;
   }> {
-    await this.assertCanWriteProject(projectId, user);
+    await this.assertCanSubmitReports(projectId, user);
     const report = await assertReportBelongsToProject(
       this.prisma,
       projectId,
@@ -717,12 +717,12 @@ export class ReportsService {
     await this.authorization.assertProjectMember(user, projectId);
   }
 
-  private async assertCanWriteProject(
+  private async assertCanSubmitReports(
     projectId: number,
     user: AuthenticatedUser,
   ): Promise<void> {
     await assertProjectExists(this.prisma, projectId);
-    await this.authorization.assertCanWriteProjectData(user, projectId);
+    await this.authorization.assertCanSubmitReports(user, projectId);
   }
 
   private async assertCanManageReports(
@@ -730,7 +730,7 @@ export class ReportsService {
     user: AuthenticatedUser,
   ): Promise<void> {
     await assertProjectExists(this.prisma, projectId);
-    await this.authorization.assertCanManageMilestone(user, projectId);
+    await this.authorization.assertCanManageReports(user, projectId);
   }
 
   private async assertManageableReport(

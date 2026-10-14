@@ -352,7 +352,7 @@ export function ReportCard({
   }
 
   function canDeleteContent(content: ProjectReportContentItem): boolean {
-    if (!isEditable) {
+    if (!canEditContent) {
       return false;
     }
 

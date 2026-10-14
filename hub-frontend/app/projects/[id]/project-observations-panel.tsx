@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 
 import { createProjectObservation } from "../../services/observations";
+import { canComment } from "../../services/project-permissions";
 import { ProjectObservationItem } from "../../services/schemas";
 import { getInitials } from "../../services/utils";
 import { useAuth } from "../../components/auth-provider";
@@ -41,13 +42,6 @@ type ProjectObservationsPanelProps = {
   readonly onProjectChange: () => Promise<void>;
 };
 
-function canCreateObservation(
-  userId: number,
-  assignments: ProjectActorAssignment[],
-): boolean {
-  return assignments.some((assignment) => assignment.userId === userId);
-}
-
 function formatDate(dateValue: string): string {
   return new Intl.DateTimeFormat("es-CO", {
     dateStyle: "medium",
@@ -69,9 +63,7 @@ export default function ProjectObservationsPanel({
 
   const currentUser = session?.user;
 
-  const canCreate =
-    currentUser !== undefined &&
-    canCreateObservation(currentUser.id, assignments);
+  const canCreate = currentUser ? canComment(currentUser, assignments) : false;
 
   function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();

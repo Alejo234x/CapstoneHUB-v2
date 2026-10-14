@@ -113,8 +113,8 @@ describe('ReportsService', () => {
     );
     const authorization = {
       assertProjectMember: jest.fn(),
-      assertCanWriteProjectData: jest.fn(),
-      assertCanManageMilestone: jest.fn(),
+      assertCanSubmitReports: jest.fn(),
+      assertCanManageReports: jest.fn(),
     };
     const storage = {
       read: jest.fn(),
@@ -191,10 +191,7 @@ describe('ReportsService', () => {
       dueDate,
       type: ReportContentKind.file,
     });
-    expect(authorization.assertCanManageMilestone).toHaveBeenCalledWith(
-      user,
-      10,
-    );
+    expect(authorization.assertCanManageReports).toHaveBeenCalledWith(user, 10);
     const createArgs = prisma.projectReport.create.mock.calls[0]?.[0] as {
       data: {
         projectId: number;
@@ -287,10 +284,7 @@ describe('ReportsService', () => {
     });
 
     expect(result.status).toBe('submitted');
-    expect(authorization.assertCanWriteProjectData).toHaveBeenCalledWith(
-      user,
-      10,
-    );
+    expect(authorization.assertCanSubmitReports).toHaveBeenCalledWith(user, 10);
     expect(prisma.projectReport.update).toHaveBeenCalledWith({
       where: { id: 3 },
       data: {
@@ -357,10 +351,7 @@ describe('ReportsService', () => {
     });
 
     expect(result.textContent).toBe('Hola mundo');
-    expect(authorization.assertCanWriteProjectData).toHaveBeenCalledWith(
-      user,
-      10,
-    );
+    expect(authorization.assertCanSubmitReports).toHaveBeenCalledWith(user, 10);
     expect(prisma.projectReportContent.create).toHaveBeenCalledWith({
       data: {
         reportId: 3,
@@ -655,10 +646,7 @@ describe('ReportsService', () => {
     });
 
     expect(result.status).toBe('accepted');
-    expect(authorization.assertCanManageMilestone).toHaveBeenCalledWith(
-      user,
-      10,
-    );
+    expect(authorization.assertCanManageReports).toHaveBeenCalledWith(user, 10);
     expect(prisma.projectReport.update).toHaveBeenCalledWith({
       where: { id: 3 },
       data: {

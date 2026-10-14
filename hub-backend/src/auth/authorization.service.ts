@@ -187,17 +187,56 @@ export class AuthorizationService {
     };
   }
 
-  async assertAssignedProjectMember(
+  /**
+   * Comentar/observar está abierto a administradores y evaluadores globales
+   * (aunque no estén asignados) y a cualquier actor asignado al proyecto.
+   */
+  async assertCanComment(
     user: AuthenticatedUser,
     projectId: number,
   ): Promise<void> {
+    if (user.roles.includes(UserRole.admin)) {
+      return;
+    }
+
+    if (user.roles.includes(UserRole.evaluator)) {
+      return;
+    }
+
     const assignment = await this.prisma.projectActorAssignment.findFirst({
       where: { projectId, userId: user.id },
       select: { id: true },
     });
 
     if (!assignment) {
-      throw new ForbiddenException('Project assignment is required');
+      throw new ForbiddenException(
+        'A project assignment is required to comment',
+      );
+    }
+  }
+
+  /**
+   * Enviar entregas (y preparar su contenido) está reservado a
+   * administradores y estudiantes asignados al proyecto. Docentes,
+   * evaluadores y proponentes solo configuran y revisan la entrega.
+   */
+  async assertCanSubmitReports(
+    user: AuthenticatedUser,
+    projectId: number,
+  ): Promise<void> {
+    if (user.roles.includes(UserRole.admin)) {
+      return;
+    }
+
+    const assignment = await this.prisma.projectActorAssignment.findFirst({
+      where: { projectId, userId: user.id, role: ActorRole.student },
+      select: { id: true },
+    });
+
+    if (!assignment) {
+      throw new ForbiddenException(
+        'A project student assignment is required to submit reports',
+      );
     }
   }
 
@@ -298,6 +337,10 @@ export class AuthorizationService {
     );
   }
 
+  /**
+   * Asignar actores está disponible para administradores, evaluadores globales
+   * (sin necesidad de asignarse al proyecto) y docentes asignados.
+   */
   async assertCanAssignActors(
     user: AuthenticatedUser,
     projectId: number,
@@ -306,9 +349,18 @@ export class AuthorizationService {
       return;
     }
 
+    if (user.roles.includes(UserRole.evaluator)) {
+      return;
+    }
+
     await this.assertProjectAssignment(user, projectId, ActorRole.teacher);
   }
 
+  /**
+   * Gestionar hitos exige administrador o una asignación docente/evaluadora.
+   * El evaluador global sí entra en {@link assertCanManageReports}, pero los
+   * hitos quedan reservados a quien participa en el proyecto.
+   */
   async assertCanManageMilestone(
     user: AuthenticatedUser,
     projectId: number,
@@ -317,6 +369,32 @@ export class AuthorizationService {
       return;
     }
 
+    await this.assertProjectManagementAssignment(user, projectId);
+  }
+
+  /**
+   * Gestionar y revisar entregas está abierto a administradores y evaluadores
+   * globales (aunque no estén asignados) y a docentes/evaluadores asignados.
+   */
+  async assertCanManageReports(
+    user: AuthenticatedUser,
+    projectId: number,
+  ): Promise<void> {
+    if (user.roles.includes(UserRole.admin)) {
+      return;
+    }
+
+    if (user.roles.includes(UserRole.evaluator)) {
+      return;
+    }
+
+    await this.assertProjectManagementAssignment(user, projectId);
+  }
+
+  private async assertProjectManagementAssignment(
+    user: AuthenticatedUser,
+    projectId: number,
+  ): Promise<void> {
     const assignment = await this.prisma.projectActorAssignment.findFirst({
       where: {
         projectId,

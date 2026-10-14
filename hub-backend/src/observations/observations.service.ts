@@ -76,10 +76,7 @@ export class ObservationsService {
     user: AuthenticatedUser;
   }): Promise<ProjectObservationResponse> {
     await assertProjectExists(this.prisma, params.projectId);
-    await this.authorization.assertAssignedProjectMember(
-      params.user,
-      params.projectId,
-    );
+    await this.authorization.assertCanComment(params.user, params.projectId);
 
     const content = params.content?.trim();
 

@@ -8,27 +8,19 @@ import {
   userWithRole,
 } from './helpers/auth';
 import { createProject } from './helpers/projects';
-import { ActorRole, UserRole } from '../src/generated/prisma/client';
+import { UserRole } from '../src/generated/prisma/client';
 
 describe('Observations (e2e)', () => {
   const getApp = useTestApp();
 
-  it('agrega y lista observaciones de un proyecto', async () => {
+  it('un evaluador global sin asignación agrega y lista observaciones', async () => {
     const app = getApp();
-    const admin = await adminSession(app);
     const { accessToken: proposerToken } = await registerUser(
       app,
       uniqueEmail('prop'),
     );
     const evaluator = await userWithRole(app, UserRole.evaluator);
     const { id: projectId } = await createProject(app, proposerToken);
-
-    // El evaluador debe estar asignado para poder comentar.
-    await request(app.getHttpServer())
-      .post(`/projects/${projectId}/actors`)
-      .set(bearer(admin.accessToken))
-      .send({ userId: evaluator.user.id, role: ActorRole.evaluator })
-      .expect(201);
 
     const created = await request(app.getHttpServer())
       .post(`/projects/${projectId}/observations`)
@@ -55,6 +47,19 @@ describe('Observations (e2e)', () => {
     ).toBe(true);
   });
 
+  it('un admin sin asignación también puede observar', async () => {
+    const app = getApp();
+    const admin = await adminSession(app);
+    const { accessToken } = await registerUser(app, uniqueEmail('prop'));
+    const { id: projectId } = await createProject(app, accessToken);
+
+    await request(app.getHttpServer())
+      .post(`/projects/${projectId}/observations`)
+      .set(bearer(admin.accessToken))
+      .send({ content: 'Revisión administrativa' })
+      .expect(201);
+  });
+
   it('rechaza a un usuario ajeno listar las observaciones', async () => {
     const app = getApp();
     const { accessToken } = await registerUser(app, uniqueEmail('prop'));
@@ -68,6 +73,23 @@ describe('Observations (e2e)', () => {
     await request(app.getHttpServer())
       .get(`/projects/${projectId}/observations`)
       .set(bearer(strangerToken))
+      .expect(403);
+  });
+
+  it('rechaza a un usuario ajeno agregar observaciones', async () => {
+    const app = getApp();
+    const { accessToken } = await registerUser(app, uniqueEmail('prop'));
+    const { id: projectId } = await createProject(app, accessToken);
+
+    const { accessToken: strangerToken } = await registerUser(
+      app,
+      uniqueEmail('ajeno'),
+    );
+
+    await request(app.getHttpServer())
+      .post(`/projects/${projectId}/observations`)
+      .set(bearer(strangerToken))
+      .send({ content: 'No debería poder observar' })
       .expect(403);
   });
 });
