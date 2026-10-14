@@ -44,5 +44,193 @@
       "authorEmail": "eval.maria@capstonehub.test",
       "content": "La propuesta fue rechazada por falta de convenio firmado con la empresa y de presupuesto detallado."
     }
+  ],
+  "Trazabilidad de Cacao Fino de Aroma con Blockchain": [
+    {
+      "authorEmail": "eval.maria@capstonehub.test",
+      "content": "Los contratos inteligentes resuelven bien la cadena de custodia; documentar un respaldo verificable fuera de la cadena."
+    },
+    {
+      "authorEmail": "advisor.ricardo@capstonehub.test",
+      "content": "Incluir pruebas de resistencia de los sensores de humedad en condiciones de campo."
+    }
+  ],
+  "Sistema de Alerta Temprana de Deslizamientos": [
+    {
+      "authorEmail": "eval.carlos@capstonehub.test",
+      "content": "El diseño redundante de las alertas es adecuado para zonas sin cobertura; validar con la comunidad los protocolos de evacuación."
+    },
+    {
+      "authorEmail": "advisor.patricia@capstonehub.test",
+      "content": "Coordinar con la junta parroquial el mantenimiento de los nodos durante la temporada lluviosa."
+    }
+  ],
+  "Portal de Comercio Justo para Artesanos Salasacas": [
+    {
+      "authorEmail": "eval.maria@capstonehub.test",
+      "content": "La experiencia de compra es clara; añadir seguimiento de pedidos visible para los artesanos."
+    },
+    {
+      "authorEmail": "advisor.mercedes@capstonehub.test",
+      "content": "Preparar una guía de fotografía de producto para que el catálogo sea consistente."
+    }
+  ],
+  "Gemelo Digital para Riego de Invernaderos": [
+    {
+      "authorEmail": "eval.carlos@capstonehub.test",
+      "content": "La calibración del modelo es convincente; documentar los supuestos usados para estimar la evapotranspiración."
+    },
+    {
+      "authorEmail": "advisor.jorge@capstonehub.test",
+      "content": "Revisar el consumo energético del controlador para facilitar su adopción en invernaderos pequeños."
+    }
+  ],
+  "Kiosco de Salud Comunitaria Autónomo": [
+    {
+      "authorEmail": "eval.maria@capstonehub.test",
+      "content": "Alinear el flujo de consentimiento informado con la normativa de datos de salud."
+    },
+    {
+      "authorEmail": "advisor.patricia@capstonehub.test",
+      "content": "Capacitar al personal auxiliar de la parroquia antes del pilotaje con la comunidad."
+    }
+  ],
+  "Análisis de Flujo Turístico con Datos Abiertos": [
+    {
+      "authorEmail": "eval.carlos@capstonehub.test",
+      "content": "Las estimaciones deben explicar sus intervalos de confianza para evitar malas lecturas."
+    },
+    {
+      "authorEmail": "advisor.mercedes@capstonehub.test",
+      "content": "Incluir una vista por temporada que la dirección de turismo pueda compartir fácilmente."
+    }
+  ],
+  "Robot de Inspección para Galerías de Riego": [
+    {
+      "authorEmail": "eval.maria@capstonehub.test",
+      "content": "El protocolo de seguridad para espacios confinados debe quedar documentado antes del piloto."
+    },
+    {
+      "authorEmail": "advisor.jorge@capstonehub.test",
+      "content": "Verificar la autonomía del robot en pendientes pronunciadas dentro de la galería."
+    }
+  ],
+  "Optimización Logística de Última Milla": [
+    {
+      "authorEmail": "eval.carlos@capstonehub.test",
+      "content": "Medir la reducción de kilómetros con una línea base clara antes de operar con rutas optimizadas."
+    },
+    {
+      "authorEmail": "advisor.ricardo@capstonehub.test",
+      "content": "Considerar ventanas de entrega variables para no penalizar a los clientes pequeños."
+    }
+  ],
+  "Monitoreo Estructural de Puentes con Sensores IoT": [
+    {
+      "authorEmail": "eval.maria@capstonehub.test",
+      "content": "Definir los umbrales de alerta junto con el equipo de obras públicas."
+    },
+    {
+      "authorEmail": "advisor.patricia@capstonehub.test",
+      "content": "Documentar la metodología de instalación para replicar el monitoreo en más puentes."
+    }
+  ],
+  "Plataforma de Economía Circular para Mipymes": [
+    {
+      "authorEmail": "eval.carlos@capstonehub.test",
+      "content": "Verificar la trazabilidad ambiental de los intercambios para respaldar el informe de impacto."
+    },
+    {
+      "authorEmail": "advisor.mercedes@capstonehub.test",
+      "content": "Facilitar el registro de mipymes sin conocimientos técnicos con formularios simples."
+    }
+  ],
+  "Control de Calidad Textil con Visión por Computador": [
+    {
+      "authorEmail": "eval.maria@capstonehub.test",
+      "content": "Mantener una tasa de falsos positivos baja para que los operadores confíen en el sistema."
+    },
+    {
+      "authorEmail": "advisor.jorge@capstonehub.test",
+      "content": "Planificar el reentrenamiento del modelo cuando cambien los tipos de tela."
+    }
+  ],
+  "App de Senderismo Seguro para los Andes": [
+    {
+      "authorEmail": "eval.carlos@capstonehub.test",
+      "content": "El botón de emergencia debe funcionar con señal intermitente; documentar sus límites."
+    },
+    {
+      "authorEmail": "advisor.ricardo@capstonehub.test",
+      "content": "Incorporar a los guías locales en la validación de las rutas antes de publicarlas."
+    }
+  ],
+  "Módulo de Firma Electrónica para Trámites Académicos": [
+    {
+      "authorEmail": "eval.maria@capstonehub.test",
+      "content": "Registrar la evidencia de identidad de los firmantes para auditorías futuras."
+    },
+    {
+      "authorEmail": "advisor.mercedes@capstonehub.test",
+      "content": "Coordinar con secretaría la migración de documentos vigentes al módulo."
+    }
+  ],
+  "Predicción de Demanda Eléctrica con Machine Learning": [
+    {
+      "authorEmail": "eval.carlos@capstonehub.test",
+      "content": "Documentar el tratamiento de días feriados, que suelen distorsionar el pronóstico."
+    },
+    {
+      "authorEmail": "advisor.ricardo@capstonehub.test",
+      "content": "Comparar el modelo con el método actual de la distribuidora para cuantificar la mejora."
+    }
+  ],
+  "Trazabilidad de Donaciones para Fundaciones": [
+    {
+      "authorEmail": "eval.maria@capstonehub.test",
+      "content": "La evidencia fotográfica refuerza la transparencia; cuidar la privacidad de los beneficiarios."
+    },
+    {
+      "authorEmail": "advisor.patricia@capstonehub.test",
+      "content": "Automatizar el reporte mensual para los donantes recurrentes."
+    }
+  ],
+  "Auditoría de Seguridad de la Plataforma Académica": [
+    {
+      "authorEmail": "eval.carlos@capstonehub.test",
+      "content": "Priorizar los hallazgos críticos y acordar plazos de remediación con TI."
+    },
+    {
+      "authorEmail": "advisor.ricardo@capstonehub.test",
+      "content": "Repetir las pruebas de penetración tras aplicar las mitigaciones."
+    }
+  ],
+  "Historia Clínica Electrónica para Convenio Hospitalario": [
+    {
+      "authorEmail": "eval.maria@capstonehub.test",
+      "content": "La auditoría de accesos es clave; incluir alertas ante consultas fuera del horario del personal."
+    },
+    {
+      "authorEmail": "advisor.patricia@capstonehub.test",
+      "content": "Validar el consentimiento informado con el comité de ética del hospital."
+    }
+  ],
+  "Plataforma de Pasantías y Vinculación": [
+    {
+      "authorEmail": "advisor.mercedes@capstonehub.test",
+      "content": "Incluir recordatorios automáticos de horas pendientes para los estudiantes en vinculación."
+    }
+  ],
+  "Biofertilizantes a partir de Residuos Agroindustriales": [
+    {
+      "authorEmail": "eval.carlos@capstonehub.test",
+      "content": "Detallar el proceso de compostaje y sus tiempos para evaluar la escalabilidad."
+    }
+  ],
+  "Red de Monitoreo de Glaciares Andinos": [
+    {
+      "authorEmail": "advisor.ricardo@capstonehub.test",
+      "content": "Revisar los requisitos de permisos de acceso al área protegida antes de reinstalar los nodos."
+    }
   ]
 }

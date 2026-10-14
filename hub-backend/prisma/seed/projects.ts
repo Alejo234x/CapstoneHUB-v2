@@ -6,6 +6,7 @@ import { ProjectSource } from '../../src/generated/prisma/client';
 async function resolveProposerUserId(
   prisma: SeedContext['prisma'],
   project: ProjectFixture,
+  dryRun: boolean,
 ): Promise<number | null> {
   if (!project.proposerUserEmail) {
     return null;
@@ -18,6 +19,12 @@ async function resolveProposerUserId(
   });
 
   if (!proposerUser) {
+    if (dryRun) {
+      log.info(
+        `[dry-run] proposer user "${email}" does not exist yet (${project.name})`,
+      );
+      return null;
+    }
     throw new Error(
       `Proposer user "${project.proposerUserEmail}" was not found. Run the users section first or check the fixtures.`,
     );
@@ -40,11 +47,16 @@ function buildCreateData(
     requiresLegalization: project.requiresLegalization ?? false,
     isPrivate: project.isPrivate ?? true,
     source: project.source ?? ProjectSource.external_entity,
+    sourceDetails: project.sourceDetails ?? null,
+    phase: project.phase,
     facultyAdvisor: project.facultyAdvisor ?? null,
     teamRequirements: project.teamRequirements ?? null,
     expectedOutcomes: project.expectedOutcomes ?? null,
     startDate: new Date(project.startDate),
     endDate: project.endDate ? new Date(project.endDate) : null,
+    submissionConsentAt: project.submissionConsentAt
+      ? new Date(project.submissionConsentAt)
+      : null,
     proposerUserId,
     schools: project.schools?.length
       ? { create: project.schools.map((schoolName) => ({ schoolName })) }
@@ -83,6 +95,8 @@ async function updateExistingProject(
     where: { id: projectId },
     data: {
       isPrivate: project.isPrivate ?? true,
+      sourceDetails: project.sourceDetails ?? null,
+      ...(project.phase ? { phase: project.phase } : {}),
       proposerUserId,
     },
   });
@@ -109,11 +123,15 @@ async function createProject(
 }
 
 export async function seedProjects(context: SeedContext): Promise<void> {
-  const { prisma } = context;
+  const { prisma, options } = context;
   const { projects } = loadProjects();
 
   for (const project of projects) {
-    const proposerUserId = await resolveProposerUserId(prisma, project);
+    const proposerUserId = await resolveProposerUserId(
+      prisma,
+      project,
+      options.dryRun,
+    );
     const existing = await prisma.project.findFirst({
       where: { name: project.name },
       select: { id: true },

@@ -5,6 +5,34 @@ import { authorRoleForTransition, statusPathFor } from './status-machine';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRANSITION_SPACING_DAYS = 12;
 
+/**
+ * Fechas para las transiciones de estado: si el proyecto tiene fecha de fin,
+ * se reparten entre el inicio y esa fecha (o "hoy" si aún está en el futuro);
+ * si no, se mantiene el espaciado fijo entre transiciones.
+ */
+function transitionDates(
+  startDate: Date,
+  endDate: Date | null,
+  count: number,
+): Date[] {
+  const fallback = (index: number): Date =>
+    new Date(startDate.getTime() + index * TRANSITION_SPACING_DAYS * DAY_MS);
+
+  const span = endDate
+    ? Math.min(endDate.getTime(), Date.now()) - startDate.getTime()
+    : 0;
+
+  if (count <= 0 || span <= 0) {
+    return Array.from({ length: count }, (_, index) => fallback(index));
+  }
+
+  return Array.from(
+    { length: count },
+    (_, index) =>
+      new Date(startDate.getTime() + (span * (index + 1)) / (count + 1)),
+  );
+}
+
 export async function seedProjectStatus({
   prisma,
   options,
@@ -41,6 +69,11 @@ export async function seedProjectStatus({
     }
 
     const startDate = new Date(project.startDate);
+    const dates = transitionDates(
+      startDate,
+      project.endDate ? new Date(project.endDate) : null,
+      transitions.length,
+    );
     let createdCount = 0;
 
     for (let index = 0; index < transitions.length; index++) {
@@ -68,9 +101,7 @@ export async function seedProjectStatus({
             project.statusDescription ??
             `Cambio de estado de ${transition.previous} a ${transition.next} (datos de prueba)`,
           authorUserId: assignment?.userId ?? null,
-          changedAt: new Date(
-            startDate.getTime() + index * TRANSITION_SPACING_DAYS * DAY_MS,
-          ),
+          changedAt: dates[index],
         },
       });
       createdCount++;

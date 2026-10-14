@@ -136,5 +136,497 @@
       "reviewComment": "Documento final aprobado.",
       "milestoneTitles": ["Documento final"]
     }
+  ],
+  "Trazabilidad de Cacao Fino de Aroma con Blockchain": [
+    {
+      "title": "Prototipo de trazabilidad por lotes",
+      "description": "Demostración del registro de lotes con contratos inteligentes.",
+      "dueDate": "2022-07-15",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "image/png", "image/jpeg"],
+      "maxFiles": 2,
+      "status": "accepted",
+      "submittedAt": "2022-07-12T16:40:00.000Z",
+      "reviewComment": "Prototipo funcional; se recomienda documentar el manejo de claves.",
+      "milestoneTitles": ["Prototipo de trazabilidad por lotes"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2022-12-01",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2022-11-28T18:10:00.000Z",
+      "reviewComment": "El piloto demuestra trazabilidad completa de una cosecha.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Sistema de Alerta Temprana de Deslizamientos": [
+    {
+      "title": "Instalación en la ladera piloto",
+      "description": "Evidencia de instalación de los nodos y pruebas de alerta.",
+      "dueDate": "2022-12-10",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "image/png", "image/jpeg"],
+      "maxFiles": 3,
+      "status": "accepted",
+      "submittedAt": "2022-12-07T19:20:00.000Z",
+      "reviewComment": "Instalación verificada; las alertas comunitarias funcionan sin internet.",
+      "milestoneTitles": ["Instalación en la ladera piloto"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2023-02-10",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2023-02-07T15:45:00.000Z",
+      "reviewComment": "Informe completo con datos de la temporada lluviosa.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Portal de Comercio Justo para Artesanos Salasacas": [
+    {
+      "title": "Plataforma de ventas y pagos",
+      "description": "Enlace a la tienda en línea con el catálogo piloto.",
+      "dueDate": "2023-08-18",
+      "type": "link",
+      "status": "accepted",
+      "submittedAt": "2023-08-15T14:30:00.000Z",
+      "reviewComment": "Pasarela de pagos operativa y catálogo cargado.",
+      "milestoneTitles": ["Plataforma de ventas y pagos"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2023-12-05",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2023-12-01T17:05:00.000Z",
+      "reviewComment": "Ventas de prueba documentadas con veinte artesanos activos.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Gemelo Digital para Riego de Invernaderos": [
+    {
+      "title": "Controlador de riego integrado",
+      "description": "Firmware del controlador y esquema de integración con el gemelo digital.",
+      "dueDate": "2024-03-01",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf"],
+      "maxFiles": 2,
+      "status": "accepted",
+      "submittedAt": "2024-02-27T16:15:00.000Z",
+      "reviewComment": "Controlador estable durante las pruebas de carga.",
+      "milestoneTitles": ["Controlador de riego integrado"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2024-06-28",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2024-06-25T18:00:00.000Z",
+      "reviewComment": "Ahorro hídrico demostrado y documentado.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Kiosco de Salud Comunitaria Autónomo": [
+    {
+      "title": "Módulo de teleconsulta asíncrona",
+      "description": "Flujo de tamizaje, derivación y respuesta médica diferida.",
+      "dueDate": "2023-10-05",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "image/png", "image/jpeg"],
+      "maxFiles": 2,
+      "status": "accepted",
+      "submittedAt": "2023-10-02T15:10:00.000Z",
+      "reviewComment": "Flujo validado con el personal médico del distrito.",
+      "milestoneTitles": ["Módulo de teleconsulta asíncrona"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2024-01-12",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2024-01-09T17:40:00.000Z",
+      "reviewComment": "Piloto comunitario documentado con derivaciones registradas.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Análisis de Flujo Turístico con Datos Abiertos": [
+    {
+      "title": "Panel de indicadores turísticos",
+      "description": "Enlace al panel público de afluencia turística.",
+      "dueDate": "2024-09-10",
+      "type": "link",
+      "status": "accepted",
+      "submittedAt": "2024-09-06T14:50:00.000Z",
+      "reviewComment": "Panel claro y alimentado con datos actualizados.",
+      "milestoneTitles": ["Panel de indicadores turísticos"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2024-12-06",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2024-12-03T16:30:00.000Z",
+      "reviewComment": "Estimaciones contrastadas con los registros municipales.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Robot de Inspección para Galerías de Riego": [
+    {
+      "title": "Sistema de telemetría y video",
+      "description": "Registro videográfico y telemetría del recorrido del robot.",
+      "dueDate": "2024-10-15",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "image/png", "image/jpeg", "video/mp4"],
+      "maxFiles": 3,
+      "status": "accepted",
+      "submittedAt": "2024-10-11T18:25:00.000Z",
+      "reviewComment": "Video y telemetría cumplen con lo planificado.",
+      "milestoneTitles": ["Sistema de telemetría y video"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2025-01-24",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2025-01-21T17:00:00.000Z",
+      "reviewComment": "Inspección piloto completa, con hallazgos priorizados.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Optimización Logística de Última Milla": [
+    {
+      "title": "Aplicación de despacho",
+      "description": "Enlace a la aplicación de despacho usada en el piloto.",
+      "dueDate": "2024-09-20",
+      "type": "link",
+      "status": "accepted",
+      "submittedAt": "2024-09-17T15:35:00.000Z",
+      "reviewComment": "Aplicación operativa y adoptada por los repartidores.",
+      "milestoneTitles": ["Aplicación de despacho"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2024-11-28",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2024-11-25T18:15:00.000Z",
+      "reviewComment": "Reducción de kilómetros medida y contrastada.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Monitoreo Estructural de Puentes con Sensores IoT": [
+    {
+      "title": "Plataforma de monitoreo",
+      "description": "Enlace al tablero de monitoreo estructural.",
+      "dueDate": "2025-03-10",
+      "type": "link",
+      "status": "accepted",
+      "submittedAt": "2025-03-06T16:45:00.000Z",
+      "reviewComment": "Umbrales de alerta configurados y probados.",
+      "milestoneTitles": ["Plataforma de monitoreo"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2025-06-10",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2025-06-06T17:20:00.000Z",
+      "reviewComment": "Línea base de comportamiento estructural documentada.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Plataforma de Economía Circular para Mipymes": [
+    {
+      "title": "Plataforma de matchmaking",
+      "description": "Enlace a la plataforma de intercambio de subproductos.",
+      "dueDate": "2025-09-05",
+      "type": "link",
+      "status": "accepted",
+      "submittedAt": "2025-09-02T15:50:00.000Z",
+      "reviewComment": "Emparejamiento automático probado con casos reales.",
+      "milestoneTitles": ["Plataforma de matchmaking"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2025-12-01",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2025-11-26T18:05:00.000Z",
+      "reviewComment": "Intercambios concretados superan la meta planteada.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Control de Calidad Textil con Visión por Computador": [
+    {
+      "title": "Modelo de visión por computador",
+      "description": "Métricas del detector de defectos y matriz de confusión.",
+      "dueDate": "2025-10-20",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "image/png", "image/jpeg"],
+      "maxFiles": 2,
+      "status": "accepted",
+      "submittedAt": "2025-10-16T17:30:00.000Z",
+      "reviewComment": "Precisión superior al 90% en el conjunto de validación.",
+      "milestoneTitles": ["Modelo de visión por computador"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2026-01-16",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2026-01-13T18:40:00.000Z",
+      "reviewComment": "Estación en línea validada en producción.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "App de Senderismo Seguro para los Andes": [
+    {
+      "title": "Aplicación móvil con botón de emergencia",
+      "description": "Enlace de descarga de la aplicación para el piloto.",
+      "dueDate": "2025-09-25",
+      "type": "link",
+      "status": "accepted",
+      "submittedAt": "2025-09-22T14:20:00.000Z",
+      "reviewComment": "Seguimiento GPS y botón de emergencia operativos.",
+      "milestoneTitles": ["Aplicación móvil con botón de emergencia"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2025-11-24",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2025-11-20T17:55:00.000Z",
+      "reviewComment": "Rutas verificadas y protocolo validado con los guías.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Módulo de Firma Electrónica para Trámites Académicos": [
+    {
+      "title": "Validador de documentos",
+      "description": "Servicio de verificación pública de documentos firmados.",
+      "dueDate": "2023-03-15",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2023-03-10T16:05:00.000Z",
+      "reviewComment": "Verificación pública funcionando con sellado de tiempo.",
+      "milestoneTitles": ["Validador de documentos"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2023-06-23",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2023-06-20T17:30:00.000Z",
+      "reviewComment": "Piloto de secretaría documentado con métricas de uso.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Predicción de Demanda Eléctrica con Machine Learning": [
+    {
+      "title": "Modelos de pronóstico comparados",
+      "description": "Comparación de modelos con métricas de error por horizonte.",
+      "dueDate": "2023-10-10",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+      "maxFiles": 2,
+      "status": "accepted",
+      "submittedAt": "2023-10-05T15:25:00.000Z",
+      "reviewComment": "Comparación metodológicamente sólida.",
+      "milestoneTitles": ["Modelos de pronóstico comparados"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2024-01-08",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2024-01-04T17:10:00.000Z",
+      "reviewComment": "Error de pronóstico dentro de la meta planteada.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Trazabilidad de Donaciones para Fundaciones": [
+    {
+      "title": "Portal de transparencia",
+      "description": "Enlace al portal público de rendición de cuentas.",
+      "dueDate": "2024-10-20",
+      "type": "link",
+      "status": "accepted",
+      "submittedAt": "2024-10-16T15:00:00.000Z",
+      "reviewComment": "Reportes automáticos por donante funcionando.",
+      "milestoneTitles": ["Portal de transparencia"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2025-01-03",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2024-12-30T17:45:00.000Z",
+      "reviewComment": "Campaña completa trazada de punta a punta.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Auditoría de Seguridad de la Plataforma Académica": [
+    {
+      "title": "Plan de remediación priorizado",
+      "description": "Acciones correctivas con severidad, responsables y plazos.",
+      "dueDate": "2024-03-10",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+      "maxFiles": 2,
+      "status": "accepted",
+      "submittedAt": "2024-03-06T16:20:00.000Z",
+      "reviewComment": "Plan claro y priorizado por riesgo.",
+      "milestoneTitles": ["Plan de remediación priorizado"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2024-05-24",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2024-05-21T16:50:00.000Z",
+      "reviewComment": "Mitigaciones validadas con el área de TI.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Historia Clínica Electrónica para Convenio Hospitalario": [
+    {
+      "title": "Módulo de historia clínica",
+      "description": "Registro clínico con auditoría de accesos y consentimiento informado.",
+      "dueDate": "2024-09-15",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "image/png", "image/jpeg"],
+      "maxFiles": 2,
+      "status": "accepted",
+      "submittedAt": "2024-09-11T17:15:00.000Z",
+      "reviewComment": "Auditoría de accesos verificada con el personal médico.",
+      "milestoneTitles": ["Módulo de historia clínica"]
+    },
+    {
+      "title": "Documento final",
+      "description": "Artículo o documento final del proyecto.",
+      "dueDate": "2024-12-13",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "maxFiles": 1,
+      "status": "accepted",
+      "submittedAt": "2024-12-10T18:20:00.000Z",
+      "reviewComment": "Piloto hospitalario conforme a la normativa de datos de salud.",
+      "milestoneTitles": ["Documento final"]
+    }
+  ],
+  "Plataforma de Pasantías y Vinculación": [
+    {
+      "title": "Módulo de oferta y postulación",
+      "description": "Publicación de vacantes y postulación en línea de estudiantes.",
+      "dueDate": "2026-05-15",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "image/png", "image/jpeg"],
+      "maxFiles": 2,
+      "status": "accepted",
+      "submittedAt": "2026-05-12T16:00:00.000Z",
+      "reviewComment": "Flujo de postulación probado con dos coordinaciones.",
+      "milestoneTitles": ["Módulo de oferta y postulación"]
+    },
+    {
+      "title": "Gestión de convenios y horas",
+      "description": "Registro de convenios y seguimiento de horas de vinculación.",
+      "dueDate": "2026-08-28",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+      "maxFiles": 2,
+      "status": "submitted",
+      "submittedAt": "2026-08-25T17:35:00.000Z",
+      "milestoneTitles": ["Gestión de convenios y horas"]
+    }
+  ],
+  "Biofertilizantes a partir de Residuos Agroindustriales": [
+    {
+      "title": "Caracterización de residuos",
+      "description": "Composición química y disponibilidad de los residuos de la zona.",
+      "dueDate": "2026-05-20",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+      "maxFiles": 2,
+      "status": "submitted",
+      "submittedAt": "2026-05-18T16:30:00.000Z",
+      "milestoneTitles": ["Caracterización de residuos"]
+    }
+  ],
+  "Asistente de Lengua de Señas con Visión Artificial": [
+    {
+      "title": "Conjunto de datos de señas",
+      "description": "Grabación y anotación del vocabulario básico de señas.",
+      "dueDate": "2026-07-15",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "video/mp4"],
+      "maxFiles": 3,
+      "status": "pending",
+      "milestoneTitles": ["Conjunto de datos de señas"]
+    }
+  ],
+  "Red de Monitoreo de Glaciares Andinos": [
+    {
+      "title": "Diseño de los nodos de medición",
+      "description": "Esquemáticos y lista de materiales de los nodos de medición.",
+      "dueDate": "2025-11-10",
+      "type": "file",
+      "allowedMimeTypes": ["application/pdf", "image/png", "image/jpeg"],
+      "maxFiles": 2,
+      "status": "accepted",
+      "submittedAt": "2025-11-06T17:10:00.000Z",
+      "reviewComment": "Diseño consistente con las condiciones del glaciar piloto.",
+      "milestoneTitles": ["Diseño de los nodos de medición"]
+    }
   ]
 }

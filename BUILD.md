@@ -174,11 +174,17 @@ las dos suites (supertest y Playwright).
   `defaultPassword` `Capstone123!` se usa para todos, salvo que un usuario
   defina su propia contraseña.
 - `prisma/fixtures/projects.json`: proyectos con proponente (natural o legal),
-  escuelas, actores, estado objetivo y anexos.
+  escuelas, actores, estado objetivo y anexos. Incluye proyectos históricos
+  finalizados (`targetStatus: closed` e `isPrivate: false`) pensados para la
+  galería pública; los privados cerrados sirven como control negativo.
 - `prisma/fixtures/milestones.json` y `observations.json`: indexados por el
   nombre del proyecto.
 - `prisma/fixtures/attachments/`: archivos de ejemplo que se suben a
-  MinIO.
+  MinIO. Las portadas `portada-*.jpg` acompañan a los proyectos finalizados;
+  por convención, la primera imagen de un proyecto es su portada.
+- El historial de estados reparte las transiciones entre la fecha de inicio y
+  la de fin (o "hoy" si el proyecto sigue activo), de modo que los proyectos
+  cerrados quedan con una cronología coherente.
 
 Credenciales de ejemplo (los emails de los fixtures terminan en
 `@capstonehub.test`):

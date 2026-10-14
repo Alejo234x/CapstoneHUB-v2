@@ -75,6 +75,81 @@
       "fullName": "Verónica Chicaiza",
       "email": "proposer.veronica@capstonehub.test",
       "roles": ["proposer"]
+    },
+    {
+      "fullName": "Mateo Guamán",
+      "email": "student.mateo@capstonehub.test",
+      "roles": ["student"]
+    },
+    {
+      "fullName": "Valentina Ortiz",
+      "email": "student.valentina@capstonehub.test",
+      "roles": ["student"]
+    },
+    {
+      "fullName": "Sebastián Mera",
+      "email": "student.sebastian@capstonehub.test",
+      "roles": ["student"]
+    },
+    {
+      "fullName": "Camila Villalba",
+      "email": "student.camila@capstonehub.test",
+      "roles": ["student"]
+    },
+    {
+      "fullName": "Esteban Puente",
+      "email": "student.esteban@capstonehub.test",
+      "roles": ["student"]
+    },
+    {
+      "fullName": "Daniela Robayo",
+      "email": "student.daniela@capstonehub.test",
+      "roles": ["student"]
+    },
+    {
+      "fullName": "Martín Salinas",
+      "email": "student.martin@capstonehub.test",
+      "roles": ["student"]
+    },
+    {
+      "fullName": "Isabela Freire",
+      "email": "student.isabela@capstonehub.test",
+      "roles": ["student"]
+    },
+    {
+      "fullName": "Patricia Villacrés",
+      "email": "advisor.patricia@capstonehub.test",
+      "roles": ["advisor"]
+    },
+    {
+      "fullName": "Ricardo Bonilla",
+      "email": "advisor.ricardo@capstonehub.test",
+      "roles": ["advisor"]
+    },
+    {
+      "fullName": "Mercedes Jaramillo",
+      "email": "advisor.mercedes@capstonehub.test",
+      "roles": ["advisor"]
+    },
+    {
+      "fullName": "Jorge Espinoza",
+      "email": "advisor.jorge@capstonehub.test",
+      "roles": ["advisor"]
+    },
+    {
+      "fullName": "Paola Ordóñez",
+      "email": "proposer.paola@capstonehub.test",
+      "roles": ["proposer"]
+    },
+    {
+      "fullName": "Andrés Villavicencio",
+      "email": "proposer.andres@capstonehub.test",
+      "roles": ["proposer"]
+    },
+    {
+      "fullName": "Ximena Barros",
+      "email": "proposer.ximena@capstonehub.test",
+      "roles": ["proposer"]
     }
   ]
 }
