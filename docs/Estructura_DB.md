@@ -64,7 +64,7 @@ Enum ProjectType
 
 Enum ProjectStatus
 - proposed
-- under_review
+- under_review (legado: solo salida hacia approved | rejected)
 - approved
 - in_progress
 - paused
@@ -106,8 +106,8 @@ Actor "0..1" -- "0..*" HistorialEstadoProyecto : autor
 
 Transiciones de estado controladas
 - Se permiten solo estas transiciones:
-  - proposed -> under_review | rejected
-  - under_review -> approved | rejected
+  - proposed -> approved | rejected
+  - under_review -> approved | rejected (solo proyectos legados)
   - approved -> in_progress | rejected
   - in_progress -> paused | closed | cancelled
   - paused -> in_progress | cancelled

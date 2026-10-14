@@ -208,7 +208,7 @@ describe('ProjectsService', () => {
   });
 
   it.each([
-    [ProjectStatus.proposed, ProjectStatus.under_review],
+    [ProjectStatus.proposed, ProjectStatus.approved],
     [ProjectStatus.proposed, ProjectStatus.rejected],
     [ProjectStatus.under_review, ProjectStatus.approved],
     [ProjectStatus.under_review, ProjectStatus.rejected],
@@ -226,7 +226,8 @@ describe('ProjectsService', () => {
   });
 
   it.each([
-    [ProjectStatus.proposed, ProjectStatus.approved],
+    [ProjectStatus.proposed, ProjectStatus.under_review],
+    [ProjectStatus.proposed, ProjectStatus.in_progress],
     [ProjectStatus.under_review, ProjectStatus.in_progress],
     [ProjectStatus.approved, ProjectStatus.closed],
     [ProjectStatus.in_progress, ProjectStatus.rejected],
@@ -250,20 +251,20 @@ describe('ProjectsService', () => {
     await service.transitionProjectStatus({
       user: EVALUATOR_USER,
       projectId: 10,
-      nextStatus: ProjectStatus.under_review,
+      nextStatus: ProjectStatus.approved,
       description: 'Initial review',
     });
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(projectUpdateMany).toHaveBeenCalledWith({
       where: { id: 10, status: ProjectStatus.proposed },
-      data: { status: ProjectStatus.under_review },
+      data: { status: ProjectStatus.approved },
     });
     expect(historyCreate).toHaveBeenCalledWith({
       data: {
         projectId: 10,
         previousStatus: ProjectStatus.proposed,
-        nextStatus: ProjectStatus.under_review,
+        nextStatus: ProjectStatus.approved,
         description: 'Initial review',
         authorUserId: 4,
       },
@@ -279,7 +280,7 @@ describe('ProjectsService', () => {
       service.transitionProjectStatus({
         user: EVALUATOR_USER,
         projectId: 10,
-        nextStatus: ProjectStatus.under_review,
+        nextStatus: ProjectStatus.approved,
       }),
     ).rejects.toThrow('A reason is required');
   });
@@ -293,14 +294,14 @@ describe('ProjectsService', () => {
     await service.transitionProjectStatus({
       user: ADMIN_USER,
       projectId: 10,
-      nextStatus: ProjectStatus.under_review,
+      nextStatus: ProjectStatus.approved,
     });
 
     expect(historyCreate).toHaveBeenCalledWith({
       data: {
         projectId: 10,
         previousStatus: ProjectStatus.proposed,
-        nextStatus: ProjectStatus.under_review,
+        nextStatus: ProjectStatus.approved,
         description: null,
         authorUserId: 1,
       },
@@ -316,7 +317,7 @@ describe('ProjectsService', () => {
       service.transitionProjectStatus({
         user: ADMIN_USER,
         projectId: 10,
-        nextStatus: ProjectStatus.approved,
+        nextStatus: ProjectStatus.in_progress,
       }),
     ).rejects.toThrow('Invalid project status transition');
     expect(authorization.assertCanTransitionProject).not.toHaveBeenCalled();

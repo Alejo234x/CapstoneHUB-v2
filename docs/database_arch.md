@@ -8,8 +8,9 @@ Ver también: [Arquitectura del backend](./backend_arch.md).
 
 ## Enums
 
-- `ProjectStatus`: `proposed`, `under_review`, `approved`, `in_progress`,
-  `paused`, `closed`, `cancelled`, `rejected`.
+- `ProjectStatus`: `proposed`, `approved`, `in_progress`, `paused`, `closed`,
+  `cancelled`, `rejected`. `under_review` se conserva solo como **legado** para
+  los proyectos antiguos, que pueden salir hacia `approved` o `rejected`.
 - `UserRole`: `admin`, `evaluator`, `teacher`, `proposer`, `student`.
 - `ActorRole`: `teacher`, `evaluator`, `student`.
 - `ProjectSource`: `external_entity`, `research`, `internal_need`,
@@ -338,6 +339,7 @@ classDiagram
         +DateTime createdAt
     }
 
+    %% `under_review` se conserva solo por los datos legados.
     class ProjectStatus {
         <<enumeration>>
         proposed
