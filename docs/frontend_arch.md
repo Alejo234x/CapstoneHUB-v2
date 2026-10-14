@@ -33,6 +33,7 @@ Ver también: [Arquitectura del backend](./backend_arch.md),
 | `/projects/[id]` | Detalle por pestañas (general, equipo, hitos, entregas, anexos, historial). |
 | `/projects/[id]/edit` | Edición de los datos del proyecto (admin o evaluador). |
 | `/submit`, `/submit/natural` | Propuesta de proyecto. |
+| `/profile/kpis` | Panel de indicadores (KPIs) para docentes, evaluadores y administradores. |
 | `/admin/users` | Administración de usuarios y roles. |
 
 ## Patrón BFF (Backend For Frontend)
@@ -63,6 +64,7 @@ descarga/reproducción sigue pasando por el proxy `stream`, que reenvía `Range`
   (`ActorRole`), y qué roles de proyecto habilita cada rol global.
 - `project-permissions.ts` — reglas de permisos del cliente (editar, gestionar,
   hitos, estados), espejo de `AuthorizationService`.
+- `stats.ts` — indicadores (KPIs) del panel de docentes, evaluadores y admin.
 - `utils.ts` — helpers de formato (estados, fechas, roles).
 
 Cada petición autenticada lee el token de `auth.ts` y agrega

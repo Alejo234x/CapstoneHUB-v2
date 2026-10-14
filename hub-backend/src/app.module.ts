@@ -12,6 +12,7 @@ import { ObservationsModule } from './observations/observations.module';
 import { MilestonesModule } from './milestones/milestones.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { ReportsModule } from './reports/reports.module';
+import { StatsModule } from './stats/stats.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
@@ -29,6 +30,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     MilestonesModule,
     AttachmentsModule,
     ReportsModule,
+    StatsModule,
     AuthModule,
     HealthModule,
     ThrottlerModule.forRoot({

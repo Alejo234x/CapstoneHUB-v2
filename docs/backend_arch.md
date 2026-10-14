@@ -78,6 +78,8 @@ de datos y mantener estable el contrato de la API aunque cambie el esquema.
 | **Observations** | Observaciones de texto libre asociadas a un proyecto. |
 | **Milestones** | Entregables programados por proyecto. |
 | **Attachments** | Subida, listado, descarga y borrado de archivos. |
+| **Reports** | Entregas por proyecto, su contenido y su revisión. |
+| **Stats** | Indicadores (KPIs) agregados para docentes, evaluadores y administradores. |
 | **Storage** | Expone `StorageService` para el módulo de anexos (S3/RustFS). |
 
 ## Autenticación y autorización
@@ -426,6 +428,7 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 | `POST/PATCH/DELETE` | `/projects/:id/reports/:rid/contents[/:cid]` | Añadir, editar o borrar contenido de la entrega. |
 | `POST` | `/projects/:id/reports/:rid/contents/files` | Sube un archivo de entrega (multipart) y lo registra como contenido. |
 | `GET` | `/projects/:id/reports/:rid/contents/:cid/stream` | Ver o reproducir el archivo inline, con `Range`. |
+| `GET` | `/stats/kpis` | Indicadores agregados: pendientes, distribución de proyectos y actividad de revisión (admin, docente o evaluador; el alcance es global para admin/evaluador global y los proyectos asignados o propuestos para el resto). |
 
 La autenticación es **global** (`AuthGuard` como `APP_GUARD`): todas las rutas
 requieren token salvo las marcadas con `@Public()` (`/health`, `/auth/register`,

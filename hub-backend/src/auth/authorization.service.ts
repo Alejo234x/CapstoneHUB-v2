@@ -96,7 +96,7 @@ export class AuthorizationService {
    * administradores pasan siempre. El resto de roles solo ve proyectos en los
    * que participa (proponente o actor asignado).
    */
-  private canReviewAnyProject(user: AuthenticatedUser): boolean {
+  canReviewAnyProject(user: AuthenticatedUser): boolean {
     return (
       user.roles.includes(UserRole.admin) ||
       user.roles.includes(UserRole.evaluator)
@@ -235,6 +235,26 @@ export class AuthorizationService {
     if (user.roles.length === 0) {
       throw new ForbiddenException('A role is required to create projects');
     }
+  }
+
+  /**
+   * El panel de indicadores está disponible para administradores, docentes y
+   * evaluadores.
+   */
+  assertCanViewKpis(user: AuthenticatedUser): void {
+    const allowed = [
+      UserRole.admin,
+      UserRole.teacher,
+      UserRole.evaluator,
+    ] as const;
+
+    if (allowed.some((role) => user.roles.includes(role))) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      'A teacher, evaluator or admin role is required to view the KPIs',
+    );
   }
 
   async assertCanManageProject(
