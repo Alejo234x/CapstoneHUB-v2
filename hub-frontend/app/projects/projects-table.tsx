@@ -76,6 +76,8 @@ export default function ProjectsTable({
 
   const [searchFilter, setSearchFilter] = useState("");
 
+  const [pageDraft, setPageDraft] = useState<string | null>(null);
+
   const filteredProjects = useMemo(() => {
     const normalizedSearch = searchFilter.trim().toLowerCase();
 
@@ -127,6 +129,19 @@ export default function ProjectsTable({
     table.state.pagination.pageIndex + 1,
     pageCount,
   );
+
+  function commitPage() {
+    const parsed = Number.parseInt(pageDraft ?? "", 10);
+
+    if (Number.isNaN(parsed)) {
+      setPageDraft(null);
+      return;
+    }
+
+    const target = Math.min(Math.max(parsed, 1), pageCount);
+    table.setPageIndex(target - 1);
+    setPageDraft(null);
+  }
 
   return (
     <div>
@@ -237,12 +252,28 @@ export default function ProjectsTable({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 py-4">
-        <p
-          className="text-sm text-muted-foreground"
-          aria-live="polite"
-        >
-          Página {currentPage} de {pageCount}
-        </p>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <label htmlFor="projects-page-input">Página</label>
+
+          <Input
+            id="projects-page-input"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={pageCount}
+            value={pageDraft ?? String(currentPage)}
+            onChange={(event) => setPageDraft(event.target.value)}
+            onBlur={commitPage}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                commitPage();
+              }
+            }}
+            className="h-7 w-14 px-1 text-center"
+          />
+
+          <span>de {pageCount}</span>
+        </div>
 
         <div className="flex items-center gap-2">
           <Button
