@@ -70,11 +70,11 @@ describe('Auth admin (e2e)', () => {
     const updated = await request(app.getHttpServer())
       .patch(`/auth/users/${id}/roles`)
       .set(bearer(admin.accessToken))
-      .send({ roles: [UserRole.coordinator] })
+      .send({ roles: [UserRole.teacher] })
       .expect(200);
 
     expect((updated.body as { roles: string[] }).roles).toEqual([
-      UserRole.coordinator,
+      UserRole.teacher,
     ]);
   });
 

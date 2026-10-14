@@ -5,6 +5,8 @@ type ProjectNaturalProposer = {
   email: string | null;
 };
 
+import type { ActorRole, UserRole } from "./roles";
+
 export type ProjectProposer = ProjectNaturalProposer;
 
 export type ProjectSource =
@@ -19,7 +21,7 @@ type ProjectActor = {
   id: number;
   projectId: number;
   userId: number;
-  role: string;
+  role: ActorRole;
   assignedAt: string;
   user: {
     id: number;
@@ -32,7 +34,7 @@ export type UserSummary = {
   id: number;
   fullName: string;
   email: string;
-  roles: string[];
+  roles: UserRole[];
 };
 
 export type ProjectObservationItem = {
@@ -213,7 +215,7 @@ export type MyProject = {
   startDate: string | null;
   location: string | null;
   isPrivate?: boolean;
-  myRole: string | null;
+  myRole: ActorRole | null;
   isProposer: boolean;
 };
 

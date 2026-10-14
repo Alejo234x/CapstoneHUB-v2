@@ -11,17 +11,12 @@ import {
 } from '../generated/prisma/client';
 import { PrismaService } from '../prisma.service';
 import { AuthenticatedUser } from './auth.types';
+import { ACTOR_ROLE_LICENSES, hasActorRoleLicense } from './actor-role-license';
 import { PhaseApprovalKind } from '../projects/projects.phase';
 
 @Injectable()
 export class AuthorizationService {
   constructor(private readonly prisma: PrismaService) {}
-
-  assertRole(user: AuthenticatedUser, role: UserRole): void {
-    if (!user.roles.includes(role)) {
-      throw new ForbiddenException(`The ${role} role is required`);
-    }
-  }
 
   /**
    * Acceso de LECTURA: un miembro del proyecto o, si el proyecto es público
@@ -46,8 +41,8 @@ export class AuthorizationService {
   /**
    * Acceso de ESCRITURA: solo administradores, el proponente o un actor
    * asignado al proyecto. A diferencia de la lectura, un revisor global
-   * (evaluator/coordinator) sin asignación NO puede escribir en proyectos
-   * ajenos, y los proyectos públicos no otorgan escritura a extraños.
+   * (evaluator) sin asignación NO puede escribir en proyectos ajenos, y los
+   * proyectos públicos no otorgan escritura a extraños.
    */
   async assertCanWriteProjectData(
     user: AuthenticatedUser,
@@ -87,14 +82,14 @@ export class AuthorizationService {
   }
 
   /**
-   * Roles que pueden revisar o supervisar cualquier proyecto sin importar si
-   * están asignados a él.
+   * Los evaluadores globales revisan cualquier proyecto sin asignarse y los
+   * administradores pasan siempre. El resto de roles solo ve proyectos en los
+   * que participa (proponente o actor asignado).
    */
   private canReviewAnyProject(user: AuthenticatedUser): boolean {
     return (
       user.roles.includes(UserRole.admin) ||
-      user.roles.includes(UserRole.evaluator) ||
-      user.roles.includes(UserRole.coordinator)
+      user.roles.includes(UserRole.evaluator)
     );
   }
 
@@ -118,16 +113,12 @@ export class AuthorizationService {
 
   /**
    * Los miembros son usuarios con una relación sensible con el proyecto: su
-   * proponente, sus actores asignados o un admin/evaluator/coordinator.
+   * proponente, sus actores asignados o un evaluador global/admin.
    */
   async canViewProject(
     user: AuthenticatedUser,
     projectId: number,
   ): Promise<boolean> {
-    if (user.roles.includes(UserRole.admin)) {
-      return true;
-    }
-
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       select: {
@@ -140,19 +131,31 @@ export class AuthorizationService {
       return false;
     }
 
+    return this.canViewProjectData(user, project);
+  }
+
+  /**
+   * Variante pura para quien ya tiene el proyecto cargado (por ejemplo los
+   * listados), de modo que no se dispare una consulta por proyecto.
+   */
+  canViewProjectData(
+    user: AuthenticatedUser,
+    project: {
+      proposerUserId: number | null;
+      actorAssignments: readonly { userId: number }[];
+    },
+  ): boolean {
+    if (this.canReviewAnyProject(user)) {
+      return true;
+    }
+
     if (project.proposerUserId === user.id) {
       return true;
     }
 
-    if (
-      project.actorAssignments.some(
-        (assignment) => assignment.userId === user.id,
-      )
-    ) {
-      return true;
-    }
-
-    return this.canReviewAnyProject(user);
+    return project.actorAssignments.some(
+      (assignment) => assignment.userId === user.id,
+    );
   }
 
   /**
@@ -212,8 +215,7 @@ export class AuthorizationService {
       return;
     }
 
-    this.assertRole(user, UserRole.coordinator);
-    await this.assertProjectAssignment(user, projectId, ActorRole.coordinator);
+    await this.assertProjectAssignment(user, projectId, ActorRole.teacher);
   }
 
   /**
@@ -249,9 +251,9 @@ export class AuthorizationService {
 
   /**
    * Editar los datos del proyecto está disponible para administradores,
-   * evaluadores globales, coordinadores/asesores asignados con su rol
-   * correspondiente y, mientras el proyecto siga en propuesta o revisión, para
-   * su proponente (sea cual sea su rol global).
+   * evaluadores globales, docentes/evaluadores asignados al proyecto y,
+   * mientras el proyecto siga en propuesta o revisión, para su proponente (sea
+   * cual sea su rol global).
    */
   async assertCanEditProjectDetails(
     user: AuthenticatedUser,
@@ -269,27 +271,17 @@ export class AuthorizationService {
       return;
     }
 
-    const editorRoles: ActorRole[] = [];
-    if (user.roles.includes(UserRole.coordinator)) {
-      editorRoles.push(ActorRole.coordinator);
-    }
-    if (user.roles.includes(UserRole.advisor)) {
-      editorRoles.push(ActorRole.advisor);
-    }
+    const assignment = await this.prisma.projectActorAssignment.findFirst({
+      where: {
+        projectId: project.id,
+        userId: user.id,
+        role: { in: [ActorRole.teacher, ActorRole.evaluator] },
+      },
+      select: { id: true },
+    });
 
-    if (editorRoles.length > 0) {
-      const assignment = await this.prisma.projectActorAssignment.findFirst({
-        where: {
-          projectId: project.id,
-          userId: user.id,
-          role: { in: editorRoles },
-        },
-        select: { id: true },
-      });
-
-      if (assignment) {
-        return;
-      }
+    if (assignment) {
+      return;
     }
 
     const isEditableProposer =
@@ -314,8 +306,7 @@ export class AuthorizationService {
       return;
     }
 
-    this.assertRole(user, UserRole.coordinator);
-    await this.assertProjectAssignment(user, projectId, ActorRole.coordinator);
+    await this.assertProjectAssignment(user, projectId, ActorRole.teacher);
   }
 
   async assertCanManageMilestone(
@@ -326,31 +317,18 @@ export class AuthorizationService {
       return;
     }
 
-    const roles: ActorRole[] = [];
-    if (user.roles.includes(UserRole.coordinator)) {
-      roles.push(ActorRole.coordinator);
-    }
-    if (user.roles.includes(UserRole.evaluator)) {
-      roles.push(ActorRole.evaluator);
-    }
-    if (user.roles.includes(UserRole.advisor)) {
-      roles.push(ActorRole.advisor);
-    }
-
-    if (roles.length === 0) {
-      throw new ForbiddenException(
-        'A coordinator, evaluator, or advisor role is required',
-      );
-    }
-
     const assignment = await this.prisma.projectActorAssignment.findFirst({
-      where: { projectId, userId: user.id, role: { in: roles } },
+      where: {
+        projectId,
+        userId: user.id,
+        role: { in: [ActorRole.teacher, ActorRole.evaluator] },
+      },
       select: { id: true },
     });
 
     if (!assignment) {
       throw new ForbiddenException(
-        'A project coordinator, evaluator, or advisor assignment is required for this action',
+        'A project teacher or evaluator assignment is required for this action',
       );
     }
   }
@@ -372,13 +350,11 @@ export class AuthorizationService {
         nextStatus === ProjectStatus.rejected);
 
     if (evaluatorTransitions) {
-      this.assertRole(user, UserRole.evaluator);
       await this.assertProjectAssignment(user, projectId, ActorRole.evaluator);
       return;
     }
 
-    this.assertRole(user, UserRole.coordinator);
-    await this.assertProjectAssignment(user, projectId, ActorRole.coordinator);
+    await this.assertProjectAssignment(user, projectId, ActorRole.teacher);
   }
 
   async assertAssignableUser(userId: number, role: ActorRole): Promise<void> {
@@ -399,9 +375,12 @@ export class AuthorizationService {
       throw new ForbiddenException('Inactive users cannot be assigned');
     }
 
-    if (!user.roleAssignments.some((assignment) => assignment.role === role)) {
+    const globalRoles = user.roleAssignments.map(({ role: r }) => r);
+
+    if (!hasActorRoleLicense(globalRoles, role)) {
+      const licenses = ACTOR_ROLE_LICENSES[role];
       throw new ForbiddenException(
-        `User ${userId} does not have the global ${role} role`,
+        `User ${userId} needs a global ${licenses.join(' or ')} role to be assigned as ${role}`,
       );
     }
   }

@@ -11,7 +11,7 @@ describe('MilestonesService', () => {
     id: 7,
     fullName: 'Coordinator',
     email: 'coordinator@example.com',
-    roles: ['coordinator'],
+    roles: ['teacher'],
   } as never;
 
   function createService() {

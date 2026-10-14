@@ -55,10 +55,8 @@ export function formatRole(role: string): string {
       return "Administrador";
     case "evaluator":
       return "Evaluador";
-    case "coordinator":
-      return "Coordinador";
-    case "advisor":
-      return "Asesor";
+    case "teacher":
+      return "Docente";
     case "student":
       return "Estudiante";
     case "proposer":

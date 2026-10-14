@@ -60,21 +60,25 @@ proxy `stream`, que reenvía `Range`.
   entregas (texto, enlaces y archivos), incluida la configuración de tipo, MIME
   permitidos y máximo de archivos, y la edición de los datos del proyecto.
 - `schemas.ts` — tipos TypeScript compartidos (`ProjectDetails`, etc.).
-- `utils.ts` — helpers de formato (estados, fechas).
+- `roles.ts` — vocabulario de roles globales (`UserRole`) y de proyecto
+  (`ActorRole`), y qué roles de proyecto habilita cada rol global.
+- `project-permissions.ts` — reglas de permisos del cliente (editar, gestionar,
+  hitos, estados), espejo de `AuthorizationService`.
+- `utils.ts` — helpers de formato (estados, fechas, roles).
 
 Cada petición autenticada lee el token de `auth.ts` y agrega
 `Authorization: Bearer <token>`.
 
 En el detalle del proyecto, debajo de las pestañas, hay una barra persistente
-visible desde cualquier pestaña. A la izquierda, los administradores y
-coordinadores asignados ven el control compacto **Fase** con el botón para
+visible desde cualquier pestaña. A la izquierda, los administradores y docentes
+asignados ven el control compacto **Fase** con el botón para
 avanzar de semestre; se habilita cuando los hitos mínimos de la fase actual
 están completos (al pulsarlo con pendientes, avisa cuáles faltan). A la derecha,
-quienes pueden editar (administradores, evaluadores, coordinadores/asesores
-asignados al proyecto y el proponente mientras esté en revisión) ven el botón
-**Editar proyecto** que abre la pantalla dedicada `/projects/[id]/edit` (los
-mismos campos de la propuesta, salvo el proponente). Los cambios se envían por
-`PUT` y la pestaña **Historial** muestra, junto al historial de estados, una
+quienes pueden editar (administradores, evaluadores globales, docentes y
+evaluadores asignados al proyecto y el proponente mientras esté en revisión) ven
+el botón **Editar proyecto** que abre la pantalla dedicada `/projects/[id]/edit`
+(los mismos campos de la propuesta, salvo el proponente). Los cambios se envían
+por `PUT` y la pestaña **Historial** muestra, junto al historial de estados, una
 entrada por cada campo modificado con su valor anterior y nuevo. Al desmarcar
 «Proyecto privado» se muestra una advertencia y una confirmación antes de
 publicarlo.

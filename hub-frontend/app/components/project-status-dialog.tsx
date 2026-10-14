@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { RiFlagLine } from "@remixicon/react";
 import { useAuth } from "./auth-provider";
-import ProjectStatusEditForm, {
-  canManageStatus,
-} from "./project-status-edit-form";
+import ProjectStatusEditForm from "./project-status-edit-form";
+import { canManageStatus } from "../services/project-permissions";
 import { ProjectMilestoneItem } from "../services/schemas";
 import {
   Dialog,
@@ -45,10 +44,9 @@ export default function ProjectStatusDialog({
   }
 
   const canManage = canManageStatus(
-    session.user.id,
-    session.user.roles,
-    currentStatus,
+    session.user,
     assignments,
+    currentStatus,
   );
 
   if (!canManage) {

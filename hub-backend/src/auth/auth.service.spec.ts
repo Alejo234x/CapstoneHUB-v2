@@ -63,7 +63,7 @@ describe('AuthService role management', () => {
         id: 2,
         fullName: 'Coordinator',
         email: 'coordinator@example.com',
-        roleAssignments: [{ role: UserRole.coordinator }],
+        roleAssignments: [{ role: UserRole.teacher }],
       });
     const prisma = {
       user: {
@@ -77,14 +77,14 @@ describe('AuthService role management', () => {
       fullName: 'Coordinator',
       email: 'COORDINATOR@example.com',
       password: 'password123',
-      roles: [UserRole.coordinator],
+      roles: [UserRole.teacher],
     });
 
     expect(result).toEqual({
       id: 2,
       fullName: 'Coordinator',
       email: 'coordinator@example.com',
-      roles: [UserRole.coordinator],
+      roles: [UserRole.teacher],
     });
     expect(result).not.toHaveProperty('passwordHash');
     expect(createUser).toHaveBeenCalledTimes(1);
@@ -94,7 +94,7 @@ describe('AuthService role management', () => {
       throw new Error('Expected the user create mock to be called');
     }
     expect(createCall[0].data.roleAssignments.create).toEqual([
-      { role: UserRole.coordinator },
+      { role: UserRole.teacher },
     ]);
   });
 

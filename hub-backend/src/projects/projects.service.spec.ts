@@ -105,6 +105,22 @@ function createAuthorizationMock() {
     assertCanEditProjectDetails: jest.fn().mockResolvedValue(undefined),
     assertCanApproveProjectPhase: jest.fn().mockResolvedValue('proposer'),
     projectVisibilityWhere: jest.fn().mockReturnValue({}),
+    // Espejo de la lógica real, para no duplicar reglas en cada test.
+    canViewProjectData: jest.fn(
+      (
+        viewer: { id: number; roles: UserRole[] },
+        project: {
+          proposerUserId: number | null;
+          actorAssignments: { userId: number }[];
+        },
+      ) =>
+        viewer.roles.includes(UserRole.admin) ||
+        viewer.roles.includes(UserRole.evaluator) ||
+        project.proposerUserId === viewer.id ||
+        project.actorAssignments.some(
+          (assignment) => assignment.userId === viewer.id,
+        ),
+    ),
   };
 }
 
@@ -654,7 +670,7 @@ describe('ProjectsService', () => {
         id: 4,
         fullName: 'Coordinator',
         email: 'coordinator@example.com',
-        roleAssignments: [{ role: UserRole.coordinator }],
+        roleAssignments: [{ role: UserRole.teacher }],
       },
     ]);
     const prisma = { user: { findMany } };
@@ -675,7 +691,7 @@ describe('ProjectsService', () => {
         id: 4,
         fullName: 'Coordinator',
         email: 'coordinator@example.com',
-        roles: [UserRole.coordinator],
+        roles: [UserRole.teacher],
       },
     ]);
   });

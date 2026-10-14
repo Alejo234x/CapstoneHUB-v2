@@ -7,6 +7,12 @@ import {
   getAssignableUsers,
 } from "../../services/projects";
 import { UserSummary } from "../../services/schemas";
+import {
+  ActorRole,
+  assignableActorRoles,
+  isActorRole,
+} from "../../services/roles";
+import { canManageProject } from "../../services/project-permissions";
 import { formatRole, getInitials } from "../../services/utils";
 import { useAuth } from "../../components/auth-provider";
 import AccessNotice from "../../components/access-notice";
@@ -33,19 +39,19 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Item,
   ItemContent,
   ItemDescription,
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
-
-const assignableRoles = new Set([
-  "advisor",
-  "coordinator",
-  "student",
-  "evaluator",
-]);
 
 type ProjectActorAssignment = {
   id: number;
@@ -66,36 +72,22 @@ type ProjectActorAssignmentPanelProps = {
   onProjectChange: () => Promise<void>;
 };
 
-function canAssignActors(
-  userId: number,
-  roles: string[],
-  assignments: ProjectActorAssignment[],
-): boolean {
-  if (roles.includes("admin")) {
-    return true;
-  }
-
-  if (!roles.includes("coordinator")) {
-    return false;
-  }
-
-  return assignments.some(
-    (assignment) =>
-      assignment.userId === userId &&
-      assignment.role === "coordinator",
-  );
-}
-
-function getUserProjectRole(user: UserSummary): string | null {
-  return user.roles.find((role) => assignableRoles.has(role)) ?? null;
-}
-
 function getRoleLabel(role: string | null): string {
   if (!role) {
     return "Sin rol asignable";
   }
 
   return formatRole(role);
+}
+
+function getAssignableRoleLabel(user: UserSummary): string {
+  const roles = assignableActorRoles(user.roles);
+
+  if (roles.length === 0) {
+    return "Sin rol asignable";
+  }
+
+  return roles.map((role) => formatRole(role)).join(" / ");
 }
 
 function formatDate(dateValue: string): string {
@@ -171,6 +163,7 @@ function AssignmentForm({
   onProjectChange,
 }: Readonly<AssignmentFormProps>) {
   const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null);
+  const [selectedRole, setSelectedRole] = useState<ActorRole | null>(null);
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -192,18 +185,20 @@ function AssignmentForm({
     });
   }, [search, users]);
 
-  const selectedRole = selectedUser
-    ? getUserProjectRole(selectedUser)
-    : null;
+  const selectedRoles = selectedUser
+    ? assignableActorRoles(selectedUser.roles)
+    : [];
 
   function handleSelectUser(user: UserSummary) {
     setSelectedUser(user);
+    setSelectedRole(assignableActorRoles(user.roles)[0] ?? null);
     setSearch("");
     onErrorChange(null);
   }
 
   function handleSearchChange(value: string) {
     setSelectedUser(null);
+    setSelectedRole(null);
     setSearch(value);
   }
 
@@ -231,6 +226,7 @@ function AssignmentForm({
         });
 
         setSelectedUser(null);
+        setSelectedRole(null);
         setSearch("");
         await onProjectChange();
       } catch (error) {
@@ -266,7 +262,11 @@ function AssignmentForm({
               onSelectUser={handleSelectUser}
             />
 
-            <RoleDisplay role={selectedRole} />
+            <RoleField
+              roles={selectedRoles}
+              value={selectedRole}
+              onChange={setSelectedRole}
+            />
 
             <Button
               type="submit"
@@ -401,26 +401,59 @@ function UserSearchResults({
             <ItemDescription>{user.email}</ItemDescription>
           </ItemContent>
 
-          <Badge variant="outline">
-            {getRoleLabel(getUserProjectRole(user))}
-          </Badge>
+          <Badge variant="outline">{getAssignableRoleLabel(user)}</Badge>
         </Item>
       ))}
     </div>
   );
 }
 
-function RoleDisplay({ role }: Readonly<{ role: string | null }>) {
+function RoleField({
+  roles,
+  value,
+  onChange,
+}: Readonly<{
+  roles: ActorRole[];
+  value: ActorRole | null;
+  onChange: (role: ActorRole) => void;
+}>) {
   return (
     <Field>
       <FieldLabel htmlFor="project-role">Rol</FieldLabel>
 
-      <Input
-        id="project-role"
-        value={role ? getRoleLabel(role) : "Selecciona un usuario"}
-        readOnly
-        disabled
-      />
+      {roles.length > 1 ? (
+        <Select
+          value={value ?? undefined}
+          onValueChange={(nextValue) => {
+            if (nextValue && isActorRole(nextValue)) {
+              onChange(nextValue);
+            }
+          }}
+        >
+          <SelectTrigger id="project-role" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+
+          <SelectContent>
+            {roles.map((role) => (
+              <SelectItem key={role} value={role}>
+                {getRoleLabel(role)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : (
+        <Input
+          id="project-role"
+          value={
+            roles.length === 1
+              ? getRoleLabel(roles[0])
+              : "Selecciona un usuario"
+          }
+          readOnly
+          disabled
+        />
+      )}
     </Field>
   );
 }
@@ -489,10 +522,9 @@ export default function ProjectActorAssignmentPanel({
   const { session, isAuthenticated, ready } = useAuth();
 
   const currentUser = session?.user;
-  const userRoles = currentUser?.roles ?? [];
 
   const canAssign = currentUser
-    ? canAssignActors(currentUser.id, userRoles, assignments)
+    ? canManageProject(currentUser, assignments)
     : false;
 
   const { users, errorMessage, setErrorMessage } = useProjectUsers(

@@ -4,6 +4,8 @@ import FormActions from "@/app/components/form-actions";
 import PasswordInput from "@/app/components/password-input";
 import { useState } from "react";
 import { createUser, AuthUser } from "../../services/auth";
+import { USER_ROLES, UserRole, isUserRole } from "../../services/roles";
+import { formatRole } from "../../services/utils";
 import {
   Dialog,
   DialogContent,
@@ -27,14 +29,10 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { isValidEmail } from "@/lib/validation";
 
-const roles = [
-  { value: "student", label: "Estudiante" },
-  { value: "advisor", label: "Asesor" },
-  { value: "coordinator", label: "Coordinador" },
-  { value: "evaluator", label: "Evaluador" },
-  { value: "proposer", label: "Proponente" },
-  { value: "admin", label: "Administrador" },
-];
+const roles = USER_ROLES.map((role) => ({
+  value: role,
+  label: formatRole(role),
+}));
 
 type CreateUserDialogProps = {
   onUserCreated: (user: AuthUser) => void;
@@ -48,7 +46,7 @@ export default function CreateUserDialog({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("student");
+  const [role, setRole] = useState<UserRole>("student");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -167,7 +165,7 @@ export default function CreateUserDialog({
               <Select
                 value={role}
                 onValueChange={(value) => {
-                  if (value) {
+                  if (value && isUserRole(value)) {
                     setRole(value);
                   }
                 }}

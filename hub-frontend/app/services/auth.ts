@@ -1,10 +1,11 @@
 import { apiErrorMessage, apiRequest, apiRequestVoid } from "@/lib/http";
+import type { UserRole } from "./roles";
 
 export type AuthUser = {
   id: number;
   fullName: string;
   email: string;
-  roles: string[];
+  roles: UserRole[];
 };
 
 /**

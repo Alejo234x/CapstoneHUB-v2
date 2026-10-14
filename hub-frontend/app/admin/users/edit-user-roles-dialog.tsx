@@ -3,6 +3,8 @@
 import FormActions from "@/app/components/form-actions";
 import { useEffect, useState } from "react";
 import { updateUserRoles, AuthUser } from "@/app/services/auth";
+import { USER_ROLES, UserRole } from "@/app/services/roles";
+import { formatRole } from "@/app/services/utils";
 import {
   Dialog,
   DialogContent,
@@ -22,13 +24,10 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 
-const availableRoles = [
-  { value: "admin", label: "Administrador" },
-  { value: "evaluator", label: "Evaluador" },
-  { value: "coordinator", label: "Coordinador" },
-  { value: "advisor", label: "Asesor" },
-  { value: "student", label: "Estudiante" },
-];
+const availableRoles = USER_ROLES.map((role) => ({
+  value: role,
+  label: formatRole(role),
+}));
 
 type EditUserRolesDialogProps = {
   user: AuthUser;
@@ -40,7 +39,7 @@ export default function EditUserRolesDialog({
   onUserUpdated,
 }: EditUserRolesDialogProps) {
   const [open, setOpen] = useState(false);
-  const [selectedRoles, setSelectedRoles] = useState<string[]>(user.roles);
+  const [selectedRoles, setSelectedRoles] = useState<UserRole[]>(user.roles);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +50,7 @@ export default function EditUserRolesDialog({
     }
   }, [open, user.roles]);
 
-  function toggleRole(role: string) {
+  function toggleRole(role: UserRole) {
     setSelectedRoles((currentRoles) =>
       currentRoles.includes(role)
         ? currentRoles.filter((currentRole) => currentRole !== role)

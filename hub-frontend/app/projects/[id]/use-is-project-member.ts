@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { ProjectDetails } from "../../services/schemas";
+import { canViewSensitiveData } from "../../services/project-permissions";
 import { useAuth } from "../../components/auth-provider";
 
 /**
@@ -27,18 +28,6 @@ export function useIsProjectMember(project: ProjectDetails | null): boolean {
       return false;
     }
 
-    const roles = session.user.roles;
-
-    if (
-      roles.includes("admin") ||
-      roles.includes("evaluator") ||
-      roles.includes("coordinator")
-    ) {
-      return true;
-    }
-
-    return (project.actorAssignments ?? []).some(
-      (assignment) => assignment.userId === session.user.id,
-    );
+    return canViewSensitiveData(session.user, project);
   }, [ready, session, project]);
 }
