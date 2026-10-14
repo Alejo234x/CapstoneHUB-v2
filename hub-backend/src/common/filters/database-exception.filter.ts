@@ -27,7 +27,7 @@ const DATABASE_UNAVAILABLE_SYSTEM_CODES = new Set([
 /**
  * Determina si un error corresponde a una base de datos inalcanzable y no a un
  * error de negocio ni al fallo de otro servicio. La detección se limita a los
- * errores de Prisma: otros clientes (por ejemplo el SDK de S3/MinIO) también
+ * errores de Prisma: otros clientes (por ejemplo el SDK de S3/RustFS) también
  * lanzan `ECONNREFUSED`, y no deben reportarse como caída de la base de datos.
  */
 export function isDatabaseUnavailable(error: unknown): boolean {

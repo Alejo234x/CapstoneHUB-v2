@@ -18,7 +18,7 @@ export async function seedAttachments({
 
   if (!storage) {
     const message =
-      'S3/MinIO is not configured (S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY). Skipping attachments.';
+      'S3/RustFS is not configured (S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY). Skipping attachments.';
     if (options.strict) {
       throw new Error(message);
     }

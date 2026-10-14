@@ -11,9 +11,9 @@ Actions) y el despliegue en un servidor con **Dokploy**.
    construye las imágenes Docker y las publica en **GHCR**, y luego dispara el
    webhook de Dokploy si `DOKPLOY_WEBHOOK_URL` está configurado. Los releases
    solo se publican con tags; `main` no publica imágenes.
-3. **Dokploy** hace `pull` de las imágenes y levanta `compose.dokploy.yml`
-   (`db`, `minio`, `minio-init`, `backend`, `frontend`). Las migraciones de
-   Prisma se aplican al arrancar el backend (`npm run db:deploy`).
+3. **Dokploy** compila o baja las imágenes y levanta `compose.dokploy.yml`
+   (`rustfs`, `backend`, `frontend`; la base de datos la gestiona Dokploy). Las
+   migraciones de Prisma se aplican al arrancar el backend (`npm run db:deploy`).
 
 Ver también [BUILD.md](../BUILD.md) para el entorno local y
 [backend_arch.md](./backend_arch.md).
@@ -25,13 +25,13 @@ de entorno, así que "local" y "producción" son distintos valores y comandos.
 
 | Aspecto | Local | Producción |
 | --- | --- | --- |
-| Cómo se ejecuta | `npm run start:dev` / `next dev` o `compose.yml` | imágenes de GHCR vía `compose.dokploy.yml` |
+| Cómo se ejecuta | `npm run start:dev` / `next dev` o `compose.yml` | imágenes compiladas en Dokploy vía `compose.dokploy.yml` |
 | Build | ts-node watch / Next dev | `nest build` → `node dist/src/main`; Next standalone |
 | `NODE_ENV` | desarrollo | `production` (imagen) |
 | Base de datos | contenedor en `localhost:5432` | contenedor `db:5432` (o gestionada) |
 | Migraciones | `prisma migrate dev` | `prisma migrate deploy` al arrancar |
 | Seed | `npm run seed` | nunca (el seeder se bloquea si `NODE_ENV=production`) |
-| Almacenamiento | MinIO en `http://localhost:9000` | MinIO/S3 con dominio HTTPS público |
+| Almacenamiento | RustFS en `http://localhost:9000` | RustFS interno (solo accesible desde el backend) |
 | `BACKEND_URL` | `http://localhost:3001` | `http://backend:3001` |
 | Swagger `/api` | habilitado | deshabilitado (`SWAGGER_ENABLED=false`) |
 | TLS / dominio | no | Traefik + Let's Encrypt |
@@ -101,15 +101,12 @@ las referencia con `${VAR}`.
 
 | Variable | Descripción |
 | --- | --- |
-| `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | Credenciales de PostgreSQL. |
+| `DATABASE_URL` | Conexión al servicio de base de datos de Dokploy (host interno). |
 | `AUTH_SECRET` | Firma de tokens (mínimo 32 caracteres, aleatoria). |
 | `INITIAL_ADMIN_*` | Admin inicial si la base está vacía. |
-| `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET` | Credenciales y bucket de MinIO. |
-| `S3_PUBLIC_ENDPOINT` | URL **pública** de MinIO que alcanza el navegador. |
-| `S3_CORS_ORIGINS` | Origen del frontend permitido por CORS. |
+| `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET` | Credenciales y bucket del almacenamiento RustFS. |
 | `MAX_FILE_SIZE_BYTES`, `MAX_REPORT_FILE_SIZE_BYTES` | Límites de archivos. |
 | `SWAGGER_ENABLED` | `true` habilita Swagger en `/api`; está **deshabilitado por defecto**. |
-| `BACKEND_IMAGE`, `FRONTEND_IMAGE` | (Opcional) tags concretos de las imágenes. |
 
 > **No ejecutes el seed en producción.** El seeder se niega a correr cuando
 > `NODE_ENV=production`; si de verdad lo necesitas, usa `--force`
@@ -129,17 +126,15 @@ En la pestaña **Domains** agrega:
 | Servicio | Puerto | Ejemplo |
 | --- | --- | --- |
 | `frontend` | `3000` | `https://app.example.com` |
-| `minio` | `9000` | `https://minio.example.com` |
 
 - El dominio del **frontend** es la app.
-- El dominio de **minio** es obligatorio para las subidas directas: el navegador
-  sube a `S3_PUBLIC_ENDPOINT`, que **debe coincidir** con este dominio (la firma
-  incluye el host).
+- El almacenamiento (RustFS) es **solo interno**: las subidas y descargas pasan
+  por la API, así que **no necesita dominio público ni CORS**.
 - Activa HTTPS (Dokploy gestiona los certificados con Let's Encrypt). Crea los
   registros `A` correspondientes.
 
-`S3_CORS_ORIGINS` debe incluir el origen del frontend para permitir la subida
-directa.
+Opcionalmente, si quieres administrar el almacenamiento, expón la consola de
+RustFS (`9001`) con otro dominio protegido.
 
 ### 5. Deploy y auto deploy
 
@@ -151,23 +146,21 @@ directa.
 
 ### 6. Respaldos
 
-Usa **Volume Backups** de Dokploy sobre `db_data` y `minio_data` (volúmenes
+Usa **Volume Backups** de Dokploy sobre `db_data` y `rustfs_data` (volúmenes
 nombrados, aptos para respaldo). Si migras a S3 externo, solo respalda `db_data`.
 
-> **Limpieza de subidas huérfanas.** Los objetos subidos directamente y nunca
-> confirmados se limpian con `npm run storage:gc` (ver `docs/backend_arch.md`).
-> En producción, programa ese comando periódicamente (p. ej. un cron diario en el
-> contenedor del backend). No hace falta una regla de ciclo de vida de MinIO:
-> borraría también adjuntos confirmados.
+> **Limpieza de objetos huérfanos.** Si un guardado falla entre el almacenamiento
+> y la base de datos, el objeto queda sin fila; `npm run storage:gc` lo limpia
+> (ver `docs/backend_arch.md`). En producción, prográmalo periódicamente
+> (p. ej. un cron diario en el contenedor del backend).
 
 ## S3 real en producción
 
-El compose incluye MinIO para simplicidad. Para usar S3 (AWS u otro compatible),
-quita los servicios `minio` y `minio-init` y ajusta en el backend:
+El compose incluye RustFS para simplicidad. Para usar S3 (AWS u otro compatible),
+quita el servicio `rustfs` y ajusta en el backend:
 
 ```
 S3_ENDPOINT=""            # vacío usa el endpoint de AWS
-S3_PUBLIC_ENDPOINT=""     # opcional; sin esto las URLs apuntan a S3_ENDPOINT
 S3_REGION="us-east-1"
 S3_BUCKET="..."
 S3_ACCESS_KEY="..."
@@ -175,14 +168,15 @@ S3_SECRET_KEY="..."
 S3_FORCE_PATH_STYLE="false"
 ```
 
-Y configura el CORS del bucket por separado (consola o `PutBucketCors`).
+Como las subidas pasan por la API, no hace falta configurar CORS ni un endpoint
+público.
 
 ## Solución de problemas
 
 - **`401` al bajar imágenes**: el registry de GHCR en Dokploy no está bien
   configurado o el paquete es privado sin token. Revísalo en **Registry**.
-- **Subidas que fallan**: `S3_PUBLIC_ENDPOINT` no coincide con el dominio de
-  MinIO, o falta el origen en `S3_CORS_ORIGINS`.
+- **Subidas que fallan**: revisa que el backend alcance `S3_ENDPOINT` (el
+  servicio `rustfs`) y que `S3_BUCKET` exista (el backend lo crea al arrancar).
 - **La base no migra**: revisa los logs del servicio `backend`; el comando de
   arranque aplica `prisma migrate deploy`.
 - **El deploy no se dispara**: `DOKPLOY_WEBHOOK_URL` no está configurado, o no

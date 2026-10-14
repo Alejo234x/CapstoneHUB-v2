@@ -3,16 +3,16 @@
 CapstoneHUB manages university capstone projects end to end: proposals, team
 assignment, milestones, observations, status transitions and attachments. This
 repository is a monorepo with a NestJS API and a Next.js web app sharing one
-PostgreSQL database and a MinIO/S3 bucket for files.
+PostgreSQL database and a RustFS (S3-compatible) bucket for files.
 
 ## Layout
 
 | Path | What it is |
 | --- | --- |
-| `hub-backend/` | REST API — NestJS 11, Prisma 7 (pg adapter), PostgreSQL 15, MinIO/S3. |
+| `hub-backend/` | REST API — NestJS 11, Prisma 7 (pg adapter), PostgreSQL 15, RustFS/S3. |
 | `hub-frontend/` | Web app — Next.js 16 (App Router), React 19, Tailwind v4, shadcn/ui. |
 | `docs/` | Architecture and product documentation (see below). |
-| `compose.yml` | Full stack: `db`, `backend`, `frontend`, `minio`, `minio-init`. |
+| `compose.yml` | Full stack: `db`, `backend`, `frontend`, `rustfs`. |
 | `.devcontainer/` | Recommended development environment. |
 | `BUILD.md` | Setup, Prisma seeds, storage and deployment details. |
 | `data/` | Local Postgres data volume (git-ignored; do not edit). |

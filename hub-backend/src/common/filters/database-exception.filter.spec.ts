@@ -46,7 +46,7 @@ describe('isDatabaseUnavailable', () => {
     ).toBe(true);
   });
 
-  it('ignores connection errors from other services (e.g. S3/MinIO)', () => {
+  it('ignores connection errors from other services (e.g. S3/RustFS)', () => {
     const error = Object.assign(
       new AggregateError([], 'connect ECONNREFUSED'),
       { code: 'ECONNREFUSED' },

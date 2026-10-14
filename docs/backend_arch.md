@@ -1,7 +1,7 @@
 # Arquitectura del Backend
 
 API REST construida con **NestJS 11** sobre **Node.js 26**, usando **Prisma 7**
-(adaptador `pg`) y **PostgreSQL 15**. Los archivos se guardan en **MinIO/S3**.
+(adaptador `pg`) y **PostgreSQL 15**. Los archivos se guardan en **RustFS** (S3).
 La especificación OpenAPI se publica con Swagger.
 
 Ver también: [Esquema de base de datos](./database_arch.md),
@@ -15,7 +15,7 @@ Ver también: [Esquema de base de datos](./database_arch.md),
 | Framework | NestJS 11 (módulos, controllers, services, guards) |
 | Lenguaje | TypeScript sobre Node.js 26 |
 | Base de datos | PostgreSQL 15 vía Prisma 7 (adaptador `pg`) |
-| Almacenamiento | MinIO localmente, compatible con S3 en producción |
+| Almacenamiento | RustFS (S3-compatible) localmente y en producción |
 | Autenticación | JWT HS256 (`@nestjs/jwt`) + hash de contraseñas con scrypt |
 | Documentación | Swagger / OpenAPI en `/api` |
 | Pruebas | Tests unitarios con Jest y e2e con Supertest |
@@ -78,7 +78,7 @@ de datos y mantener estable el contrato de la API aunque cambie el esquema.
 | **Observations** | Observaciones de texto libre asociadas a un proyecto. |
 | **Milestones** | Entregables programados por proyecto. |
 | **Attachments** | Subida, listado, descarga y borrado de archivos. |
-| **Storage** | Expone `StorageService` para el módulo de anexos (S3/MinIO). |
+| **Storage** | Expone `StorageService` para el módulo de anexos (S3/RustFS). |
 
 ## Autenticación y autorización
 
@@ -270,7 +270,7 @@ El esquema Prisma completo está documentado en
   `ProjectStatusHistory`, `ProjectChangeHistory`, `ProjectMilestones`,
   `MilestoneReportLink`.
 - **Archivos**: `ProjectAttachment` (solo metadatos; el binario vive en
-  S3/MinIO).
+  S3/RustFS).
 
 ## Anexos
 
@@ -302,18 +302,17 @@ Cada entrega expone en la API los hitos a los que está vinculada
 (`milestones`), y cada hito expone sus entregas vinculadas (`reports`) con su
 estado. Ver [Hitos y entregas](#hitos-y-entregas).
 
-`POST .../contents/files/presign` acepta documentos (PDF, Word, Excel), imágenes
-(PNG, JPEG, WebP, GIF) y videos (MP4, WebM, OGG) hasta
+`POST .../contents/files` (multipart, campo `file`) acepta documentos (PDF, Word,
+Excel), imágenes (PNG, JPEG, WebP, GIF) y videos (MP4, WebM, OGG) hasta
 `MAX_REPORT_FILE_SIZE_BYTES` (100 MB por defecto); valida que el MIME esté entre
 los `allowedMimeTypes` de la entrega y que no se haya superado `maxFiles` (si no,
-`409`), y devuelve una URL `PUT` prefirmada con `S3_PUBLIC_ENDPOINT`. El navegador
-sube el binario directamente a MinIO/S3 y luego `POST .../contents/files/confirm`
-verifica el objeto con `HeadObject` (tamaño real, existencia) y crea
-`ProjectAttachment` + `ProjectReportContent`. Si el objeto excede el límite, se
-borra y se responde `400`. `GET .../contents/:cid/stream` sirve el archivo inline
-y reenvía la cabecera `Range` a S3 para responder `206 Partial Content`, lo que
-permite reproducir y buscar dentro de un video. Los objetos subidos pero nunca
-confirmados se limpian con `npm run storage:gc`.
+`409`), guarda el archivo en el almacenamiento por streaming y crea
+`ProjectAttachment` + `ProjectReportContent` en una transacción. La subida pasa
+por la API, así que el almacenamiento no necesita endpoint público ni CORS.
+`GET .../contents/:cid/stream` sirve el archivo inline y reenvía la cabecera
+`Range` a S3 para responder `206 Partial Content`, lo que permite reproducir y
+buscar dentro de un video. Los objetos que quedan sin fila en la base de datos se
+limpian con `npm run storage:gc`.
 
 ## Manejo de errores
 
@@ -349,9 +348,7 @@ rutas que la necesitan.
 | `MAX_FILE_SIZE_BYTES` | Límite de tamaño de anexos (por defecto 10 MB). |
 | `MAX_REPORT_FILE_SIZE_BYTES` | Límite de tamaño de archivos de una entrega (100 MB por defecto). |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | Almacenamiento de archivos. |
-| `S3_REGION`, `S3_FORCE_PATH_STYLE` | Ajustes del cliente S3 (`true` para MinIO). |
-| `S3_PUBLIC_ENDPOINT` | Host de S3/MinIO que alcanza el navegador; usado para firmar las subidas directas. |
-| `S3_UPLOAD_URL_TTL_SECONDS` | Vigencia de la URL prefirmada de subida (900 s por defecto). |
+| `S3_REGION`, `S3_FORCE_PATH_STYLE` | Ajustes del cliente S3 (`true` para RustFS/S3 path-style). |
 | `LOG_LEVEL` | Nivel mínimo del log de peticiones (`error`, `warn`, `log`/`info` o `debug`; `log` por defecto). |
 
 ## Semillas y migraciones
@@ -367,9 +364,9 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 
 ## Mantenimiento
 
-- `npm run storage:gc` — borra de MinIO/S3 los objetos sin `ProjectAttachment`
-  (subidas que nunca se confirmaron). Flags: `--dry-run` y
-  `--max-age-hours=N` (24 h por defecto). Entrada en
+- `npm run storage:gc` — borra del almacenamiento los objetos sin
+  `ProjectAttachment` (guardados que no llegaron a confirmarse). Flags:
+  `--dry-run` y `--max-age-hours=N` (24 h por defecto). Entrada en
   `src/storage/gc-cli.ts`; lógica en `src/storage/storage-gc.service.ts`.
 
 ## Pruebas
@@ -408,8 +405,7 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 | `POST` | `/projects/:id/reports/:rid/submit` | Enviar una entrega con contenido. |
 | `POST` | `/projects/:id/reports/:rid/review` | Aceptar o rechazar una entrega. |
 | `POST/PATCH/DELETE` | `/projects/:id/reports/:rid/contents[/:cid]` | Añadir, editar o borrar contenido de la entrega. |
-| `POST` | `/projects/:id/reports/:rid/contents/files/presign` | Firma y devuelve la URL para subir el archivo directamente. |
-| `POST` | `/projects/:id/reports/:rid/contents/files/confirm` | Verifica el objeto subido y registra el contenido. |
+| `POST` | `/projects/:id/reports/:rid/contents/files` | Sube un archivo de entrega (multipart) y lo registra como contenido. |
 | `GET` | `/projects/:id/reports/:rid/contents/:cid/stream` | Ver o reproducir el archivo inline, con `Range`. |
 
 La autenticación es **global** (`AuthGuard` como `APP_GUARD`): todas las rutas

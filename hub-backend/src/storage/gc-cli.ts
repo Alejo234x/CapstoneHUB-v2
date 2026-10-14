@@ -1,5 +1,5 @@
 /**
- * Recolector de objetos huérfanos en MinIO/S3.
+ * Recolector de objetos huérfanos en RustFS/S3.
  *
  * Las entregas suben los binarios directamente al bucket con una URL
  * prefirmada y confirman después. Si el usuario cierra el navegador entre

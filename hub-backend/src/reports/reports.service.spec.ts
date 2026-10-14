@@ -119,9 +119,7 @@ describe('ReportsService', () => {
     const storage = {
       read: jest.fn(),
       delete: jest.fn(),
-      createUploadUrl: jest.fn(),
-      stat: jest.fn(),
-      listObjects: jest.fn(),
+      saveFromFile: jest.fn(),
     };
 
     return {
@@ -425,136 +423,13 @@ describe('ReportsService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('presigns a direct upload for an editable report', async () => {
+  it('uploads a file for an editable report and creates the content', async () => {
     const { service, prisma, storage } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
       pendingReport({ type: 'file' }),
     );
-    storage.createUploadUrl.mockResolvedValue({
-      url: 'http://localhost:9000/capstonehub/projects/10/foto.png?X-Amz',
-      method: 'PUT',
-      expiresInSeconds: 900,
-    });
-
-    const result = await service.presignFileContent({
-      projectId: 10,
-      reportId: 3,
-      user,
-      data: {
-        fileName: 'foto.png',
-        mimeType: 'image/png',
-        sizeBytes: 1024,
-      },
-    });
-
-    expect(result.storageKey).toMatch(/^projects\/10\/.+\.png$/);
-    expect(result.method).toBe('PUT');
-    expect(result.uploadUrl).toContain('X-Amz');
-    expect(storage.createUploadUrl).toHaveBeenCalledWith({
-      key: result.storageKey,
-      expiresInSeconds: 900,
-    });
-  });
-
-  it('rejects presigning a MIME type not allowed by the report', async () => {
-    const { service, prisma, storage } = createService();
-    prisma.project.findUnique.mockResolvedValue({ id: 10 });
-    prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'file', allowedMimeTypes: ['image/png'] }),
-    );
-
-    await expect(
-      service.presignFileContent({
-        projectId: 10,
-        reportId: 3,
-        user,
-        data: {
-          fileName: 'foto.gif',
-          mimeType: 'image/gif',
-          sizeBytes: 10,
-        },
-      }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    expect(storage.createUploadUrl).not.toHaveBeenCalled();
-  });
-
-  it('rejects presigning when the report reached its max files', async () => {
-    const { service, prisma, storage } = createService();
-    prisma.project.findUnique.mockResolvedValue({ id: 10 });
-    prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'file', maxFiles: 1 }),
-    );
-    prisma.projectReportContent.count.mockResolvedValue(1);
-
-    await expect(
-      service.presignFileContent({
-        projectId: 10,
-        reportId: 3,
-        user,
-        data: {
-          fileName: 'foto.png',
-          mimeType: 'image/png',
-          sizeBytes: 10,
-        },
-      }),
-    ).rejects.toBeInstanceOf(ConflictException);
-    expect(storage.createUploadUrl).not.toHaveBeenCalled();
-  });
-
-  it('rejects presigning an unsupported file type', async () => {
-    const { service, prisma, storage } = createService();
-    prisma.project.findUnique.mockResolvedValue({ id: 10 });
-    prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'file', allowedMimeTypes: ['application/zip'] }),
-    );
-
-    await expect(
-      service.presignFileContent({
-        projectId: 10,
-        reportId: 3,
-        user,
-        data: {
-          fileName: 'archivo.zip',
-          mimeType: 'application/zip',
-          sizeBytes: 1024,
-        },
-      }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    expect(storage.createUploadUrl).not.toHaveBeenCalled();
-  });
-
-  it('rejects presigning a file over the size limit', async () => {
-    const { service, prisma } = createService();
-    prisma.project.findUnique.mockResolvedValue({ id: 10 });
-    prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'file' }),
-    );
-
-    await expect(
-      service.presignFileContent({
-        projectId: 10,
-        reportId: 3,
-        user,
-        data: {
-          fileName: 'clip.mp4',
-          mimeType: 'video/mp4',
-          sizeBytes: 200 * 1024 * 1024,
-        },
-      }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('confirms a direct upload and creates the content', async () => {
-    const { service, prisma, storage } = createService();
-    prisma.project.findUnique.mockResolvedValue({ id: 10 });
-    prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'file' }),
-    );
-    storage.stat.mockResolvedValue({
-      sizeBytes: 1234,
-      contentType: 'image/png',
-    });
+    storage.saveFromFile.mockResolvedValue(undefined);
     prisma.projectAttachment.create.mockResolvedValue({ id: 55 });
     prisma.projectReportContent.create.mockResolvedValue(
       selectedContent({
@@ -564,105 +439,144 @@ describe('ReportsService', () => {
       }),
     );
 
-    const result = await service.confirmFileContent({
+    const result = await service.uploadFileContent({
       projectId: 10,
       reportId: 3,
       user,
-      data: {
-        storageKey: 'projects/10/foto.png',
-        fileName: 'foto.png',
-        mimeType: 'image/png',
-        sizeBytes: 1234,
-      },
+      file: {
+        originalname: 'foto.png',
+        mimetype: 'image/png',
+        size: 1234,
+        path: '/tmp/foto-123',
+      } as never,
     });
 
     expect(result.kind).toBe('file');
-    expect(storage.stat).toHaveBeenCalledWith('projects/10/foto.png');
-    expect(prisma.projectAttachment.create).toHaveBeenCalledWith({
-      data: {
-        projectId: 10,
-        reportId: 3,
-        uploadedByUserId: 7,
-        originalName: 'foto.png',
-        storageKey: 'projects/10/foto.png',
-        mimeType: 'image/png',
-        sizeBytes: 1234,
-      },
-      select: { id: true },
+
+    const [[saveCall]] = storage.saveFromFile.mock.calls as unknown as [
+      [
+        {
+          key: string;
+          filePath: string;
+          contentType: string;
+          sizeBytes: number;
+        },
+      ],
+    ];
+    expect(saveCall.key).toMatch(/^projects\/10\/.+\.png$/);
+    expect(saveCall.filePath).toBe('/tmp/foto-123');
+    expect(saveCall.contentType).toBe('image/png');
+    expect(saveCall.sizeBytes).toBe(1234);
+
+    const [[attachmentCall]] = prisma.projectAttachment.create.mock
+      .calls as unknown as [
+      [{ data: { originalName: string; sizeBytes: number } }],
+    ];
+    expect(attachmentCall.data).toMatchObject({
+      originalName: 'foto.png',
+      sizeBytes: 1234,
     });
   });
 
-  it('rejects confirming a storage key from another project', async () => {
+  it('rejects a MIME type not allowed by the report', async () => {
     const { service, prisma, storage } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'file' }),
+      pendingReport({ type: 'file', allowedMimeTypes: ['image/png'] }),
     );
 
     await expect(
-      service.confirmFileContent({
+      service.uploadFileContent({
         projectId: 10,
         reportId: 3,
         user,
-        data: {
-          storageKey: 'projects/99/foto.png',
-          fileName: 'foto.png',
-          mimeType: 'image/png',
-          sizeBytes: 10,
-        },
+        file: {
+          originalname: 'foto.gif',
+          mimetype: 'image/gif',
+          size: 10,
+          path: '/tmp/foto',
+        } as never,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(storage.stat).not.toHaveBeenCalled();
+    expect(storage.saveFromFile).not.toHaveBeenCalled();
   });
 
-  it('rejects confirming when the uploaded object is missing', async () => {
+  it('rejects when the report reached its max files', async () => {
     const { service, prisma, storage } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
-      pendingReport({ type: 'file' }),
+      pendingReport({ type: 'file', maxFiles: 1 }),
     );
-    storage.stat.mockResolvedValue(null);
+    prisma.projectReportContent.count.mockResolvedValue(1);
 
     await expect(
-      service.confirmFileContent({
+      service.uploadFileContent({
         projectId: 10,
         reportId: 3,
         user,
-        data: {
-          storageKey: 'projects/10/foto.png',
-          fileName: 'foto.png',
-          mimeType: 'image/png',
-          sizeBytes: 10,
-        },
+        file: {
+          originalname: 'foto.png',
+          mimetype: 'image/png',
+          size: 10,
+          path: '/tmp/foto',
+        } as never,
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(storage.saveFromFile).not.toHaveBeenCalled();
   });
 
-  it('deletes an oversized upload and rejects it', async () => {
+  it('rejects a file over the size limit', async () => {
     const { service, prisma, storage } = createService();
     prisma.project.findUnique.mockResolvedValue({ id: 10 });
     prisma.projectReport.findFirst.mockResolvedValue(
       pendingReport({ type: 'file' }),
     );
-    storage.stat.mockResolvedValue({
-      sizeBytes: 200 * 1024 * 1024,
-      contentType: 'video/mp4',
-    });
 
     await expect(
-      service.confirmFileContent({
+      service.uploadFileContent({
         projectId: 10,
         reportId: 3,
         user,
-        data: {
-          storageKey: 'projects/10/clip.mp4',
-          fileName: 'clip.mp4',
-          mimeType: 'video/mp4',
-          sizeBytes: 1024,
-        },
+        file: {
+          originalname: 'clip.mp4',
+          mimetype: 'video/mp4',
+          size: 200 * 1024 * 1024,
+          path: '/tmp/clip',
+        } as never,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(storage.delete).toHaveBeenCalledWith('projects/10/clip.mp4');
+    expect(storage.saveFromFile).not.toHaveBeenCalled();
+  });
+
+  it('deletes the orphan object when the content row cannot be created', async () => {
+    const { service, prisma, storage } = createService();
+    prisma.project.findUnique.mockResolvedValue({ id: 10 });
+    prisma.projectReport.findFirst.mockResolvedValue(
+      pendingReport({ type: 'file' }),
+    );
+    storage.saveFromFile.mockResolvedValue(undefined);
+    prisma.projectAttachment.create.mockResolvedValue({ id: 55 });
+    prisma.projectReportContent.create.mockRejectedValue(
+      new Error('db failure'),
+    );
+
+    await expect(
+      service.uploadFileContent({
+        projectId: 10,
+        reportId: 3,
+        user,
+        file: {
+          originalname: 'foto.png',
+          mimetype: 'image/png',
+          size: 1234,
+          path: '/tmp/foto',
+        } as never,
+      }),
+    ).rejects.toThrow('db failure');
+
+    expect(storage.delete).toHaveBeenCalledWith(
+      expect.stringMatching(/^projects\/10\/.+\.png$/),
+    );
   });
 
   it('deletes file content along with its attachment', async () => {

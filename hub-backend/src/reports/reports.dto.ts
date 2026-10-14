@@ -153,33 +153,6 @@ export class CreateReportContentDto {
   label?: string;
 }
 
-export class PresignReportFileContentDto {
-  @ApiProperty({ description: 'Original file name' })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(255)
-  fileName!: string;
-
-  @ApiProperty({ description: 'Declared MIME type' })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(127)
-  mimeType!: string;
-
-  @ApiProperty({ description: 'Declared file size in bytes' })
-  @IsInt()
-  @Min(1)
-  sizeBytes!: number;
-}
-
-export class ConfirmReportFileContentDto extends PresignReportFileContentDto {
-  @ApiProperty({ description: 'Storage key returned by the presign endpoint' })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(512)
-  storageKey!: string;
-}
-
 export class UpdateReportContentDto {
   @ApiPropertyOptional({ description: 'Body of a text content' })
   @IsString()

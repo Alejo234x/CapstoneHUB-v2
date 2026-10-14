@@ -1,26 +1,28 @@
 import {
+  CreateBucketCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  OnModuleInit,
 } from '@nestjs/common';
+import { createReadStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import {
   ListedObject,
-  PresignedUpload,
   SaveFileInput,
+  SaveFilePathInput,
   StorageService,
   StoredObject,
   StoredObjectInfo,
-  UploadUrlInput,
 } from './storage.service';
 
 function requireEnv(name: string): string {
@@ -34,11 +36,11 @@ function requireEnv(name: string): string {
 }
 
 @Injectable()
-export class S3StorageService extends StorageService {
+export class S3StorageService extends StorageService implements OnModuleInit {
   private readonly logger = new Logger(S3StorageService.name);
   private readonly bucket: string;
   private readonly client: S3Client;
-  private readonly publicClient: S3Client;
+  private bucketEnsured = false;
 
   constructor() {
     super();
@@ -58,32 +60,66 @@ export class S3StorageService extends StorageService {
       forcePathStyle,
       credentials,
     });
+  }
 
-    const publicEndpoint = process.env.S3_PUBLIC_ENDPOINT?.trim();
-
-    if (publicEndpoint) {
-      // La firma incluye el host, así que se firma con el endpoint que el
-      // navegador puede alcanzar, no con el interno de Docker.
-      this.publicClient = new S3Client({
-        region,
-        endpoint: publicEndpoint,
-        forcePathStyle,
-        credentials,
-      });
-    } else {
-      this.publicClient = this.client;
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.ensureBucketReady();
+    } catch (error) {
+      // El servicio arranca igual aunque el storage aún no responda; el bucket
+      // se reintentará en la primera escritura.
       this.logger.warn(
-        'S3_PUBLIC_ENDPOINT is not set; presigned upload URLs will use S3_ENDPOINT and may be unreachable from the browser',
+        'No se pudo asegurar el bucket de almacenamiento al iniciar',
+        error instanceof Error ? error.message : String(error),
       );
     }
   }
 
+  async ensureBucket(): Promise<void> {
+    try {
+      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+    } catch (error) {
+      if (this.isNotFound(error)) {
+        await this.client.send(
+          new CreateBucketCommand({ Bucket: this.bucket }),
+        );
+        return;
+      }
+      throw error;
+    }
+  }
+
+  private async ensureBucketReady(): Promise<void> {
+    if (this.bucketEnsured) {
+      return;
+    }
+
+    await this.ensureBucket();
+    this.bucketEnsured = true;
+  }
+
   async save(input: SaveFileInput): Promise<void> {
+    await this.ensureBucketReady();
+
     await this.client.send(
       new PutObjectCommand({
         Bucket: this.bucket,
         Key: input.key,
         Body: input.buffer,
+        ContentType: input.contentType,
+      }),
+    );
+  }
+
+  async saveFromFile(input: SaveFilePathInput): Promise<void> {
+    await this.ensureBucketReady();
+
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: input.key,
+        Body: createReadStream(input.filePath),
+        ContentLength: input.sizeBytes,
         ContentType: input.contentType,
       }),
     );
@@ -109,20 +145,6 @@ export class S3StorageService extends StorageService {
     await this.client.send(
       new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
     );
-  }
-
-  async createUploadUrl(input: UploadUrlInput): Promise<PresignedUpload> {
-    const url = await getSignedUrl(
-      this.publicClient,
-      new PutObjectCommand({ Bucket: this.bucket, Key: input.key }),
-      { expiresIn: input.expiresInSeconds },
-    );
-
-    return {
-      url,
-      method: 'PUT',
-      expiresInSeconds: input.expiresInSeconds,
-    };
   }
 
   async stat(key: string): Promise<StoredObjectInfo | null> {
@@ -183,6 +205,7 @@ export class S3StorageService extends StorageService {
     return (
       candidate.name === 'NotFound' ||
       candidate.name === 'NoSuchKey' ||
+      candidate.name === 'NoSuchBucket' ||
       candidate.$metadata?.httpStatusCode === 404
     );
   }

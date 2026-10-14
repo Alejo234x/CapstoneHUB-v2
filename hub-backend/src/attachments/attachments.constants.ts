@@ -54,9 +54,3 @@ export const REPORT_FILE_MIME_TYPES: ReadonlySet<string> = new Set([
   ...REPORT_IMAGE_MIME_TYPES,
   ...REPORT_VIDEO_MIME_TYPES,
 ]);
-
-/** Vigencia de la URL prefirmada de subida (15 minutos por defecto). */
-export const UPLOAD_URL_TTL_SECONDS = positiveInt(
-  process.env.S3_UPLOAD_URL_TTL_SECONDS,
-  15 * 60,
-);

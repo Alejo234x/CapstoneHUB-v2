@@ -19,15 +19,10 @@ import {
   assertReportBelongsToProject,
 } from '../common/lookups';
 import {
-  MAX_REPORT_FILE_SIZE_BYTES,
-  UPLOAD_URL_TTL_SECONDS,
-} from '../attachments/attachments.constants';
-import {
   assertFileMatchesKind,
   assertKindMatchesReportType,
   assertMimeAllowed,
   assertReportAcceptsFiles,
-  megabytes,
   normalizeTextContent,
   normalizeTitle,
   normalizeUrl,
@@ -39,7 +34,6 @@ import {
   StorageService,
   StoredObject,
   buildStorageKey,
-  projectStoragePrefix,
 } from '../storage/storage.service';
 import {
   ProjectReportContentResponse,
@@ -50,14 +44,13 @@ import {
   reportSelect,
 } from './reports.select';
 import {
-  ConfirmReportFileContentDto,
   CreateReportContentDto,
   CreateReportDto,
-  PresignReportFileContentDto,
   ReviewReportDto,
   UpdateReportContentDto,
   UpdateReportDto,
 } from './reports.dto';
+import { unlink } from 'node:fs/promises';
 
 export type { ProjectReportResponse } from './reports.select';
 
@@ -68,19 +61,6 @@ export type ReportContentStream = {
   contentRange?: string;
   fileName: string;
   mimeType: string;
-};
-
-export type ReportFileUploadTarget = {
-  storageKey: string;
-  uploadUrl: string;
-  method: 'PUT';
-  expiresInSeconds: number;
-};
-
-export type ReportFileMetadata = {
-  fileName: string;
-  mimeType: string;
-  sizeBytes: number;
 };
 
 @Injectable()
@@ -337,154 +317,95 @@ export class ReportsService {
     });
   }
 
-  async presignFileContent(params: {
+  async uploadFileContent(params: {
     projectId: number;
     reportId: number;
-    data: PresignReportFileContentDto;
-    user: AuthenticatedUser;
-  }): Promise<ReportFileUploadTarget> {
-    const { projectId, reportId, data, user } = params;
-    const report = await this.assertContentMutationAllowed(
-      projectId,
-      reportId,
-      user,
-    );
-    assertReportAcceptsFiles(report.type);
-    assertMimeAllowed(data.mimeType, report.allowedMimeTypes);
-    await this.assertWithinMaxFiles(reportId, report.type, report.maxFiles);
-    assertFileMatchesKind({
-      mimeType: data.mimeType,
-      sizeBytes: data.sizeBytes,
-    });
-
-    const storageKey = buildStorageKey(projectId, data.fileName);
-    const upload = await this.storage.createUploadUrl({
-      key: storageKey,
-      expiresInSeconds: UPLOAD_URL_TTL_SECONDS,
-    });
-
-    return {
-      storageKey,
-      uploadUrl: upload.url,
-      method: upload.method,
-      expiresInSeconds: upload.expiresInSeconds,
-    };
-  }
-
-  async confirmFileContent(params: {
-    projectId: number;
-    reportId: number;
-    data: ConfirmReportFileContentDto;
+    file: Express.Multer.File;
     user: AuthenticatedUser;
   }): Promise<ProjectReportContentResponse> {
-    const { projectId, reportId, data, user } = params;
-    const report = await this.assertContentMutationAllowed(
-      projectId,
-      reportId,
-      user,
-    );
-    assertReportAcceptsFiles(report.type);
-    assertMimeAllowed(data.mimeType, report.allowedMimeTypes);
-    await this.assertWithinMaxFiles(reportId, report.type, report.maxFiles);
-
-    if (!data.storageKey.startsWith(projectStoragePrefix(projectId))) {
-      throw new BadRequestException(
-        'Storage key does not belong to this project',
-      );
-    }
-
-    assertFileMatchesKind({
-      mimeType: data.mimeType,
-      sizeBytes: data.sizeBytes,
-    });
-
-    const stored = await this.storage.stat(data.storageKey);
-
-    if (!stored) {
-      throw new BadRequestException('Uploaded file was not found in storage');
-    }
-
-    if (stored.sizeBytes > MAX_REPORT_FILE_SIZE_BYTES) {
-      await this.safeDelete(data.storageKey);
-      throw new BadRequestException(
-        `File exceeds the ${megabytes(MAX_REPORT_FILE_SIZE_BYTES)} MB limit`,
-      );
-    }
+    const { projectId, reportId, file, user } = params;
 
     try {
-      const content = await this.prisma.$transaction(
-        async (transaction) => {
-          // Re-verifica el tope de archivos dentro de la transacción para que
-          // dos confirmaciones concurrentes no lo excedan.
-          await this.assertWithinMaxFiles(
-            reportId,
-            report.type,
-            report.maxFiles,
-            transaction,
-          );
+      const report = await this.assertContentMutationAllowed(
+        projectId,
+        reportId,
+        user,
+      );
+      assertReportAcceptsFiles(report.type);
+      assertMimeAllowed(file.mimetype, report.allowedMimeTypes);
+      assertFileMatchesKind({
+        mimeType: file.mimetype,
+        sizeBytes: file.size,
+      });
+      await this.assertWithinMaxFiles(reportId, report.type, report.maxFiles);
 
-          let attachment: { id: number };
+      const storageKey = buildStorageKey(projectId, file.originalname);
 
-          try {
-            attachment = await transaction.projectAttachment.create({
+      await this.storage.saveFromFile({
+        key: storageKey,
+        filePath: file.path,
+        contentType: file.mimetype,
+        sizeBytes: file.size,
+      });
+
+      try {
+        const content = await this.prisma.$transaction(
+          async (transaction) => {
+            // Re-verifica el tope de archivos dentro de la transacción para que
+            // dos subidas concurrentes no lo excedan.
+            await this.assertWithinMaxFiles(
+              reportId,
+              report.type,
+              report.maxFiles,
+              transaction,
+            );
+
+            const attachment = await transaction.projectAttachment.create({
               data: {
                 projectId,
                 reportId,
                 uploadedByUserId: user.id,
-                originalName: data.fileName,
-                storageKey: data.storageKey,
-                mimeType: data.mimeType,
-                sizeBytes: stored.sizeBytes,
+                originalName: file.originalname,
+                storageKey,
+                mimeType: file.mimetype,
+                sizeBytes: file.size,
               },
               select: { id: true },
             });
-          } catch (error) {
-            // La clave de almacenamiento es única: un doble envío (o una carrera)
-            // choca aquí en lugar de duplicar el adjunto.
-            if (
-              error instanceof Prisma.PrismaClientKnownRequestError &&
-              error.code === 'P2002'
-            ) {
-              throw new ConflictException(
-                'This file has already been added to the report',
-              );
-            }
 
-            throw error;
-          }
-
-          return transaction.projectReportContent.create({
-            data: {
-              reportId,
-              createdByUserId: user.id,
-              kind: report.type,
-              attachmentId: attachment.id,
-            },
-            select: reportContentSelect,
-          });
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
-
-      return mapReportContent(content);
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2034'
-      ) {
-        throw new ConflictException(
-          'The report changed concurrently; please retry',
+            return transaction.projectReportContent.create({
+              data: {
+                reportId,
+                createdByUserId: user.id,
+                kind: report.type,
+                attachmentId: attachment.id,
+              },
+              select: reportContentSelect,
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         );
-      }
 
-      // En el caso "archivo ya añadido" (P2002) el objeto sigue en uso; el GC
-      // limpiará el resto. Cualquier otro fallo deja el adjunto revertido y el
-      // objeto huérfano: se elimina.
-      if (!(error instanceof ConflictException)) {
-        await this.safeDelete(data.storageKey);
-      }
+        return mapReportContent(content);
+      } catch (error) {
+        // El objeto se guardó antes de la transacción; si la fila no se crea,
+        // queda huérfano y se elimina.
+        await this.safeDelete(storageKey);
 
-      throw error;
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2034'
+        ) {
+          throw new ConflictException(
+            'The report changed concurrently; please retry',
+          );
+        }
+
+        throw error;
+      }
+    } finally {
+      // Multer (diskStorage) deja el archivo temporal; se elimina siempre.
+      await unlink(file.path).catch(() => undefined);
     }
   }
 

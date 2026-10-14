@@ -14,6 +14,8 @@ export type ProxyOptions = {
   cache?: RequestCache;
   /** Reenvía la respuesta sin bufferizar (streaming de archivos) y `Range`. */
   stream?: boolean;
+  /** Stream de subida del cuerpo de la petición (sin bufferizar). */
+  duplex?: "half";
 };
 
 /** Tope de cuerpo JSON: protege al BFF de cuerpos gigantes antes de reenviar. */
@@ -119,16 +121,19 @@ export async function proxyToBackend(
   let response: Response;
 
   try {
-    response = await fetch(`${backendUrl}${path}`, {
+    const init: RequestInit & { duplex?: "half" } = {
       method: options.method,
       body: options.body,
       cache: options.cache,
+      duplex: options.duplex,
       headers: {
         ...options.headers,
         ...(range ? { Range: range } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-    });
+    };
+
+    response = await fetch(`${backendUrl}${path}`, init);
   } catch {
     return backendUnavailableResponse();
   }

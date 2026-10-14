@@ -42,11 +42,10 @@ recibe la petición, reenvía el header `Authorization` y hace `fetch` a
 `BACKEND_URL` (por defecto `http://localhost:3001`), devolviendo la respuesta
 tal cual. Esto evita CORS y oculta la URL del backend.
 
-La excepción son los binarios de las entregas: el frontend pide una URL
-prefirmada (`.../contents/files/presign`), sube el archivo **directo a
-MinIO/S3** con `XMLHttpRequest` (para mostrar progreso) y confirma
-(`.../contents/files/confirm`). La descarga/reproducción sigue pasando por el
-proxy `stream`, que reenvía `Range`.
+Los binarios de las entregas también pasan por el proxy: se suben como multipart
+(`.../contents/files`) con `XMLHttpRequest` (para mostrar progreso) y el BFF los
+reenvía por streaming al backend, que los guarda en el almacenamiento. La
+descarga/reproducción sigue pasando por el proxy `stream`, que reenvía `Range`.
 
 `app/api/auth/proxy.ts` es un helper reutilizable para login y usuarios.
 

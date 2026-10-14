@@ -223,7 +223,7 @@ Options:
   --dry-run          Log what would happen without writing to the database.
   --force            Allow seeding when NODE_ENV=production (use with care).
   --strict           Fail instead of warning when attachments cannot be
-                     uploaded (S3/MinIO unavailable).
+                     uploaded (S3/RustFS unavailable).
   -h, --help         Show this help.
 
 Examples:

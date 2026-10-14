@@ -19,8 +19,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
+      rustfs:
+        condition: service_started
     networks:
       - capstone
 
@@ -44,44 +44,21 @@ services:
     networks:
       - capstone
 
-  minio:
-    image: quay.io/minio/minio:latest
+  rustfs:
+    image: rustfs/rustfs:latest
     restart: unless-stopped
-    command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
-      # Orígenes permitidos para las subidas directas desde el navegador.
-      MINIO_API_CORS_ALLOW_ORIGIN: ${S3_CORS_ORIGINS:-*}
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_OBS_LOGGER_LEVEL: error
     ports:
       - "9000:9000"
       - "9001:9001"
     volumes:
-      - minio_data:/data
-    networks:
-      - capstone
-
-  # One-shot task that creates the bucket before the app starts.
-  minio-init:
-    image: quay.io/minio/mc:latest
-    restart: "no"
-    depends_on:
-      minio:
-        condition: service_started
-    environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
-      S3_BUCKET: ${S3_BUCKET:-capstonehub}
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        until mc alias set local "http://minio:9000" "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do
-          echo "waiting for minio...";
-          sleep 2;
-        done
-        mc mb --ignore-existing "local/$$S3_BUCKET"
-        echo "bucket $$S3_BUCKET ready"
+      - rustfs_data:/data
     networks:
       - capstone
 
@@ -89,7 +66,7 @@ volumes:
   backend_node_modules:
   frontend_node_modules:
   postgres_data:
-  minio_data:
+  rustfs_data:
 
 networks:
   capstone:
