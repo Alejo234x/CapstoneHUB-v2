@@ -520,7 +520,7 @@ export default function ProjectGeneralEditForm({
               <Alert>
                 <AlertDescription>
                   {isPublishing
-                    ? "Vas a hacer público este proyecto: cuando su estado sea «Finalizado», cualquiera podrá verlo y dejará de estar restringido al proponente, los actores y los evaluadores."
+                    ? "Vas a hacer público este proyecto: desde que sea aprobado, cualquier usuario con sesión podrá verlo; sin sesión, solo cuando esté finalizado. Un proyecto rechazado nunca se publica."
                     : "Vas a hacer privado este proyecto: solo el proponente, los actores asignados y los evaluadores podrán verlo, incluso después de finalizar."}
                 </AlertDescription>
               </Alert>
@@ -555,8 +555,9 @@ export default function ProjectGeneralEditForm({
           <AlertDialogHeader>
             <AlertDialogTitle>Publicar proyecto</AlertDialogTitle>
             <AlertDialogDescription>
-              Al guardar, el proyecto dejará de ser privado. Cuando su estado
-              sea «Finalizado», cualquier persona podrá verlo. ¿Deseas continuar?
+              Al guardar, el proyecto dejará de ser privado. Desde que sea
+              aprobado podrá verlo cualquier usuario con sesión; sin sesión,
+              solo cuando esté finalizado. ¿Deseas continuar?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

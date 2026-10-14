@@ -62,11 +62,14 @@ listando quién falta; el bloqueo también aplica al `admin`.
   `ProjectProposedBy`, `SetNull` al eliminar el usuario). Permite que el
   proponente consulte sus proyectos aunque no tenga una asignación de actor.
 - Reglas de visibilidad:
-  - `closed` y `isPrivate = false` → **público**: cualquier visitante (incluso
-    sin sesión) puede verlo en el listado y el detalle.
-  - `rejected` → **siempre privado**, nunca se publica.
-  - Cualquier otro estado → privado: visible solo para `admin`, `evaluator`, el
-    proponente y los usuarios con `ProjectActorAssignment`.
+  - **Sin sesión**: `closed` y `isPrivate = false` → **público**: cualquier
+    visitante puede verlo en el listado y el detalle. Cualquier otro estado
+    queda oculto.
+  - **Con sesión**, sin ser revisor: además de los finalizados públicos, ve los
+    no privados en `approved`, `in_progress` o `paused`, y por supuesto los que
+    propuso y en los que está asignado. `proposed`, el legado `under_review`,
+    `cancelled` y `rejected` **nunca** se publican.
+  - `admin` y `evaluator` global ven todos los proyectos.
 - A los visitantes que solo pueden ver la información pública se les ocultan las
   secciones sensibles (equipo, observaciones, hitos, entregas, anexos e
   historial) tanto en la API como en la interfaz.

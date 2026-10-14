@@ -7,8 +7,12 @@ import {
   uniqueEmail,
   userWithRole,
 } from './helpers/auth';
-import { createProject } from './helpers/projects';
-import { UserRole } from '../src/generated/prisma/client';
+import {
+  createProject,
+  createProjectWithProposer,
+  transitionProjectStatus,
+} from './helpers/projects';
+import { ProjectStatus, UserRole } from '../src/generated/prisma/client';
 
 describe('Observations (e2e)', () => {
   const getApp = useTestApp();
@@ -90,6 +94,35 @@ describe('Observations (e2e)', () => {
       .post(`/projects/${projectId}/observations`)
       .set(bearer(strangerToken))
       .send({ content: 'No debería poder observar' })
+      .expect(403);
+  });
+
+  it('no expone las observaciones de un proyecto público a terceros', async () => {
+    const app = getApp();
+    const admin = await adminSession(app);
+    const { projectId } = await createProjectWithProposer(app, false);
+    const { accessToken: strangerToken } = await registerUser(
+      app,
+      uniqueEmail('ajeno'),
+    );
+
+    await transitionProjectStatus(
+      app,
+      projectId,
+      admin.accessToken,
+      ProjectStatus.approved,
+    );
+
+    // El detalle es público para usuarios con sesión, pero las secciones
+    // sensibles siguen reservadas a los miembros.
+    await request(app.getHttpServer())
+      .get(`/projects/${projectId}`)
+      .set(bearer(strangerToken))
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get(`/projects/${projectId}/observations`)
+      .set(bearer(strangerToken))
       .expect(403);
   });
 });

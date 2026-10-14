@@ -12,7 +12,7 @@ export default function ProjectsPage() {
         <ModuleHeader
           eyebrow="Gestión de proyectos"
           title="Lista de proyectos"
-          subtitle="Consulta los proyectos Capstone que puedes ver: los finalizados y públicos, los que propusiste y los que tienes asignados."
+          subtitle="Consulta los proyectos Capstone que puedes ver: los públicos, los que propusiste y los que tienes asignados."
           actions={
             <Link
               href="/submit"

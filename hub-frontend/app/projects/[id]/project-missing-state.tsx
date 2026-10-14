@@ -20,7 +20,9 @@ export default function ProjectMissingState({
         <EmptyHeader>
           <EmptyTitle>Proyecto no disponible</EmptyTitle>
           <EmptyDescription>
-            Este proyecto no existe o es privado. Los proyectos privados solo son
+            Este proyecto no existe, es privado o todavía no se ha publicado:
+            las propuestas se publican al ser aprobadas, y sin sesión solo se
+            ven los proyectos finalizados. Los proyectos privados solo son
             visibles para el proponente, los actores asignados y los evaluadores
             o administradores. Si ya iniciaste sesión con una cuenta autorizada,
             verifica el enlace.

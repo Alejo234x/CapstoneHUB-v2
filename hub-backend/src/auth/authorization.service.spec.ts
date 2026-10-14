@@ -598,7 +598,7 @@ describe('AuthorizationService', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
-    it('allows anonymous viewers when the project is closed and not private', async () => {
+    it('rejects non-members even when the project is public', async () => {
       const service = new AuthorizationService(
         visibilityPrisma({
           proposerUserId: 999,
@@ -610,7 +610,7 @@ describe('AuthorizationService', () => {
 
       await expect(
         service.assertProjectMember(user([UserRole.student]), 10),
-      ).resolves.toBeUndefined();
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
     it('keeps a private closed project hidden from strangers', async () => {
@@ -645,24 +645,44 @@ describe('AuthorizationService', () => {
       );
     });
 
-    it('scopes teacher listings to public, proposed and assigned projects', () => {
+    it('scopes teacher listings to public, own and assigned projects', () => {
       const service = new AuthorizationService({} as never);
 
       expect(service.projectVisibilityWhere(user([UserRole.teacher]))).toEqual({
         OR: [
-          { isPrivate: false, status: ProjectStatus.closed },
+          {
+            isPrivate: false,
+            status: {
+              in: [
+                ProjectStatus.approved,
+                ProjectStatus.in_progress,
+                ProjectStatus.paused,
+                ProjectStatus.closed,
+              ],
+            },
+          },
           { proposerUserId: 7 },
           { actorAssignments: { some: { userId: 7 } } },
         ],
       });
     });
 
-    it('scopes listings to public, proposed and assigned projects', () => {
+    it('scopes listings to public, own and assigned projects', () => {
       const service = new AuthorizationService({} as never);
 
       expect(service.projectVisibilityWhere(user([UserRole.student]))).toEqual({
         OR: [
-          { isPrivate: false, status: ProjectStatus.closed },
+          {
+            isPrivate: false,
+            status: {
+              in: [
+                ProjectStatus.approved,
+                ProjectStatus.in_progress,
+                ProjectStatus.paused,
+                ProjectStatus.closed,
+              ],
+            },
+          },
           { proposerUserId: 7 },
           { actorAssignments: { some: { userId: 7 } } },
         ],
