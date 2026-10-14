@@ -25,9 +25,9 @@
       "deliverables": ["Documento de arquitectura de la solución", "Prototipo de sensores funcionando", "Manual de usuario y despliegue"],
       "targetStatus": "in_progress",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.sofia@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.sofia@capstonehub.test", "role": "teacher" },
         { "email": "student.juan@capstonehub.test", "role": "student" },
         { "email": "student.andrea@capstonehub.test", "role": "student" }
       ],
@@ -55,9 +55,9 @@
       "deliverables": ["Diseño del sistema de monitoreo", "Prototipo de hardware", "Informe de validación en campo"],
       "targetStatus": "paused",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.diego@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.diego@capstonehub.test", "role": "teacher" },
         { "email": "student.pedro@capstonehub.test", "role": "student" }
       ],
       "attachments": ["anteproyecto.pdf"]
@@ -87,7 +87,7 @@
       "deliverables": ["Prototipo de alta fidelidad", "Aplicación móvil funcional", "Conjunto de datos abiertos"],
       "targetStatus": "under_review",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" }
       ],
       "attachments": []
@@ -116,9 +116,9 @@
       "deliverables": ["Plataforma de teleconsulta", "Módulo de sincronización offline", "Documentación técnica"],
       "targetStatus": "approved",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.sofia@capstonehub.test", "role": "advisor" }
+        { "email": "advisor.sofia@capstonehub.test", "role": "teacher" }
       ],
       "attachments": ["logo-proyecto.png"]
     },
@@ -144,7 +144,7 @@
       "deliverables": ["Modelo de visión por computador", "Prototipo de clasificación", "Informe de métricas"],
       "targetStatus": "rejected",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" }
       ],
       "attachments": []
@@ -173,7 +173,7 @@
       "deliverables": ["Diseño del controlador", "Prototipo instalado", "Guía de operación"],
       "targetStatus": "proposed",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" }
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" }
       ],
       "attachments": []
     },
@@ -202,9 +202,9 @@
       "deliverables": ["Modelo de orientación vocacional", "Prototipo del asistente", "Informe de validación"],
       "targetStatus": "proposed",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.sofia@capstonehub.test", "role": "advisor" }
+        { "email": "advisor.sofia@capstonehub.test", "role": "teacher" }
       ],
       "attachments": []
     },
@@ -233,9 +233,9 @@
       "deliverables": ["Diseño de la red de sensores", "Nodos desplegados", "Panel de datos abiertos"],
       "targetStatus": "in_progress",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.diego@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.diego@capstonehub.test", "role": "teacher" },
         { "email": "student.juan@capstonehub.test", "role": "student" },
         { "email": "student.lucia@capstonehub.test", "role": "student" }
       ],
@@ -263,9 +263,9 @@
       "deliverables": ["Diseño de la solución", "Prototipo de trazabilidad", "Manual de uso"],
       "targetStatus": "cancelled",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.sofia@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.sofia@capstonehub.test", "role": "teacher" },
         { "email": "student.pedro@capstonehub.test", "role": "student" }
       ],
       "attachments": []
@@ -295,9 +295,9 @@
       "deliverables": ["MVP de tutorías", "Piloto documentado", "Documento final"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.diego@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.diego@capstonehub.test", "role": "teacher" },
         { "email": "student.andrea@capstonehub.test", "role": "student" },
         { "email": "student.lucia@capstonehub.test", "role": "student" }
       ],
@@ -329,9 +329,9 @@
       "deliverables": ["Diseño de la arquitectura de trazabilidad", "Prototipo con contratos inteligentes", "Manual de uso para asociaciones"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.ricardo@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.ricardo@capstonehub.test", "role": "teacher" },
         { "email": "student.mateo@capstonehub.test", "role": "student" },
         { "email": "student.valentina@capstonehub.test", "role": "student" },
         { "email": "student.sebastian@capstonehub.test", "role": "student" }
@@ -363,9 +363,9 @@
       "deliverables": ["Estudio geotécnico preliminar", "Nodos sensores instalados", "Protocolo comunitario de alerta"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.patricia@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.patricia@capstonehub.test", "role": "teacher" },
         { "email": "student.camila@capstonehub.test", "role": "student" },
         { "email": "student.esteban@capstonehub.test", "role": "student" }
       ],
@@ -397,9 +397,9 @@
       "deliverables": ["Identidad visual del portal", "Plataforma de ventas funcional", "Guía de autogestión para artesanos"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.mercedes@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.mercedes@capstonehub.test", "role": "teacher" },
         { "email": "student.daniela@capstonehub.test", "role": "student" },
         { "email": "student.isabela@capstonehub.test", "role": "student" }
       ],
@@ -431,9 +431,9 @@
       "deliverables": ["Modelo de simulación del invernadero", "Controlador de riego integrado", "Informe de ahorro hídrico"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.jorge@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.jorge@capstonehub.test", "role": "teacher" },
         { "email": "student.martin@capstonehub.test", "role": "student" },
         { "email": "student.mateo@capstonehub.test", "role": "student" }
       ],
@@ -465,9 +465,9 @@
       "deliverables": ["Estación de signos vitales", "Módulo de teleconsulta asíncrona", "Protocolo de derivación y consentimiento"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.patricia@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.patricia@capstonehub.test", "role": "teacher" },
         { "email": "student.valentina@capstonehub.test", "role": "student" },
         { "email": "student.camila@capstonehub.test", "role": "student" }
       ],
@@ -498,9 +498,9 @@
       "deliverables": ["Pipeline de datos abiertos", "Panel de indicadores turísticos", "Informe metodológico"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.mercedes@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.mercedes@capstonehub.test", "role": "teacher" },
         { "email": "student.sebastian@capstonehub.test", "role": "student" },
         { "email": "student.daniela@capstonehub.test", "role": "student" },
         { "email": "student.esteban@capstonehub.test", "role": "student" }
@@ -533,9 +533,9 @@
       "deliverables": ["Diseño mecánico del robot", "Sistema de telemetría y video", "Informe de inspección piloto"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.jorge@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.jorge@capstonehub.test", "role": "teacher" },
         { "email": "student.esteban@capstonehub.test", "role": "student" },
         { "email": "student.martin@capstonehub.test", "role": "student" }
       ],
@@ -567,9 +567,9 @@
       "deliverables": ["Modelo de optimización de rutas", "Aplicación de despacho", "Informe de resultados del piloto"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.ricardo@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.ricardo@capstonehub.test", "role": "teacher" },
         { "email": "student.mateo@capstonehub.test", "role": "student" },
         { "email": "student.valentina@capstonehub.test", "role": "student" }
       ],
@@ -600,9 +600,9 @@
       "deliverables": ["Instrumentación de los puentes", "Plataforma de monitoreo", "Informe de comportamiento estructural"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.patricia@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.patricia@capstonehub.test", "role": "teacher" },
         { "email": "student.camila@capstonehub.test", "role": "student" },
         { "email": "student.martin@capstonehub.test", "role": "student" }
       ],
@@ -633,9 +633,9 @@
       "deliverables": ["Catálogo de subproductos", "Plataforma de matchmaking", "Informe de impacto ambiental"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.mercedes@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.mercedes@capstonehub.test", "role": "teacher" },
         { "email": "student.isabela@capstonehub.test", "role": "student" },
         { "email": "student.daniela@capstonehub.test", "role": "student" }
       ],
@@ -667,9 +667,9 @@
       "deliverables": ["Modelo de visión por computador", "Estación de inspección en línea", "Informe de métricas de calidad"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.jorge@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.jorge@capstonehub.test", "role": "teacher" },
         { "email": "student.sebastian@capstonehub.test", "role": "student" },
         { "email": "student.esteban@capstonehub.test", "role": "student" }
       ],
@@ -700,9 +700,9 @@
       "deliverables": ["Catálogo de rutas verificadas", "Aplicación móvil con botón de emergencia", "Protocolo de respuesta con guías"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.ricardo@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.ricardo@capstonehub.test", "role": "teacher" },
         { "email": "student.valentina@capstonehub.test", "role": "student" },
         { "email": "student.camila@capstonehub.test", "role": "student" }
       ],
@@ -734,9 +734,9 @@
       "deliverables": ["Módulo de firma electrónica", "Validador de documentos", "Manual de administración"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.mercedes@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.mercedes@capstonehub.test", "role": "teacher" },
         { "email": "student.daniela@capstonehub.test", "role": "student" },
         { "email": "student.mateo@capstonehub.test", "role": "student" }
       ],
@@ -768,9 +768,9 @@
       "deliverables": ["Conjunto de datos depurado", "Modelos de pronóstico comparados", "Informe técnico de resultados"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.ricardo@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.ricardo@capstonehub.test", "role": "teacher" },
         { "email": "student.esteban@capstonehub.test", "role": "student" },
         { "email": "student.isabela@capstonehub.test", "role": "student" }
       ],
@@ -801,9 +801,9 @@
       "deliverables": ["Registro de donaciones con evidencia", "Portal de transparencia", "Informe de uso para donantes"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.patricia@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.patricia@capstonehub.test", "role": "teacher" },
         { "email": "student.martin@capstonehub.test", "role": "student" },
         { "email": "student.valentina@capstonehub.test", "role": "student" }
       ],
@@ -835,9 +835,9 @@
       "deliverables": ["Informe de pruebas de penetración", "Plan de remediación priorizado", "Política de hardening"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.ricardo@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.ricardo@capstonehub.test", "role": "teacher" },
         { "email": "student.mateo@capstonehub.test", "role": "student" },
         { "email": "student.sebastian@capstonehub.test", "role": "student" }
       ],
@@ -869,9 +869,9 @@
       "deliverables": ["Modelo de datos clínicos", "Módulo de historia clínica", "Protocolo de seguridad y auditoría"],
       "targetStatus": "closed",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.patricia@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.patricia@capstonehub.test", "role": "teacher" },
         { "email": "student.camila@capstonehub.test", "role": "student" },
         { "email": "student.daniela@capstonehub.test", "role": "student" }
       ],
@@ -902,9 +902,9 @@
       "deliverables": ["Módulo de oferta y postulación", "Gestión de convenios y horas", "Reportes de vinculación"],
       "targetStatus": "in_progress",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.mercedes@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.mercedes@capstonehub.test", "role": "teacher" },
         { "email": "student.isabela@capstonehub.test", "role": "student" },
         { "email": "student.martin@capstonehub.test", "role": "student" }
       ],
@@ -934,7 +934,7 @@
       "deliverables": ["Caracterización de residuos", "Formulación del biofertilizante", "Ensayo agronómico piloto"],
       "targetStatus": "under_review",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" }
       ],
       "attachments": []
@@ -964,9 +964,9 @@
       "deliverables": ["Conjunto de datos de señas", "Modelo de reconocimiento", "Aplicación de ventanilla"],
       "targetStatus": "approved",
       "actors": [
-        { "email": "coord.ana@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.ana@capstonehub.test", "role": "teacher" },
         { "email": "eval.maria@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.jorge@capstonehub.test", "role": "advisor" }
+        { "email": "advisor.jorge@capstonehub.test", "role": "teacher" }
       ],
       "attachments": ["logo-proyecto.png"]
     },
@@ -993,9 +993,9 @@
       "deliverables": ["Diseño de los nodos de medición", "Instalación en el glaciar piloto", "Conjunto de datos abiertos"],
       "targetStatus": "paused",
       "actors": [
-        { "email": "coord.luis@capstonehub.test", "role": "coordinator" },
+        { "email": "coord.luis@capstonehub.test", "role": "teacher" },
         { "email": "eval.carlos@capstonehub.test", "role": "evaluator" },
-        { "email": "advisor.ricardo@capstonehub.test", "role": "advisor" },
+        { "email": "advisor.ricardo@capstonehub.test", "role": "teacher" },
         { "email": "student.esteban@capstonehub.test", "role": "student" },
         { "email": "student.camila@capstonehub.test", "role": "student" }
       ],

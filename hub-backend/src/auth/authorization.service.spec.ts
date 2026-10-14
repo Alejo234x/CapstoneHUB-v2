@@ -21,7 +21,56 @@ describe('AuthorizationService', () => {
     expect(findAssignment).not.toHaveBeenCalled();
   });
 
-  it('requires an evaluator assignment for evaluator transitions', async () => {
+  it('requires a teacher assignment to manage a project', async () => {
+    const findAssignment = jest.fn().mockResolvedValue({ id: 3 });
+    const prisma = {
+      projectActorAssignment: { findFirst: findAssignment },
+    };
+    const service = new AuthorizationService(prisma as never);
+
+    await expect(
+      service.assertCanManageProject(user([UserRole.teacher]), 10),
+    ).resolves.toBeUndefined();
+    expect(findAssignment).toHaveBeenCalledWith({
+      where: { projectId: 10, userId: 7, role: ActorRole.teacher },
+      select: { id: true },
+    });
+  });
+
+  it('rejects an unassigned teacher from managing a project', async () => {
+    const findAssignment = jest.fn().mockResolvedValue(null);
+    const prisma = {
+      projectActorAssignment: { findFirst: findAssignment },
+    };
+    const service = new AuthorizationService(prisma as never);
+
+    await expect(
+      service.assertCanManageProject(user([UserRole.teacher]), 10),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('only requires a project assignment for evaluator transitions', async () => {
+    const findAssignment = jest.fn().mockResolvedValue({ id: 3 });
+    const prisma = {
+      projectActorAssignment: { findFirst: findAssignment },
+    };
+    const service = new AuthorizationService(prisma as never);
+
+    await expect(
+      service.assertCanTransitionProject(
+        user([UserRole.teacher]),
+        10,
+        'proposed',
+        'under_review',
+      ),
+    ).resolves.toBeUndefined();
+    expect(findAssignment).toHaveBeenCalledWith({
+      where: { projectId: 10, userId: 7, role: ActorRole.evaluator },
+      select: { id: true },
+    });
+  });
+
+  it('rejects evaluator transitions without an evaluator assignment', async () => {
     const findAssignment = jest.fn().mockResolvedValue(null);
     const prisma = {
       projectActorAssignment: { findFirst: findAssignment },
@@ -32,8 +81,8 @@ describe('AuthorizationService', () => {
       service.assertCanTransitionProject(
         user([UserRole.evaluator]),
         10,
-        'proposed',
         'under_review',
+        'approved',
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(findAssignment).toHaveBeenCalledWith({
@@ -42,24 +91,7 @@ describe('AuthorizationService', () => {
     });
   });
 
-  it('rejects inactive or globally incompatible assignees', async () => {
-    const prisma = {
-      user: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 8,
-          isActive: false,
-          roleAssignments: [{ role: UserRole.student }],
-        }),
-      },
-    };
-    const service = new AuthorizationService(prisma as never);
-
-    await expect(
-      service.assertAssignableUser(8, ActorRole.coordinator),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-  });
-
-  it('requires a matching coordinator or evaluator assignment for milestones', async () => {
+  it('requires a teacher assignment for post-approval transitions', async () => {
     const findAssignment = jest.fn().mockResolvedValue({ id: 3 });
     const prisma = {
       projectActorAssignment: { findFirst: findAssignment },
@@ -67,13 +99,109 @@ describe('AuthorizationService', () => {
     const service = new AuthorizationService(prisma as never);
 
     await expect(
-      service.assertCanManageMilestone(user([UserRole.evaluator]), 10),
+      service.assertCanTransitionProject(
+        user([UserRole.teacher]),
+        10,
+        'approved',
+        'in_progress',
+      ),
+    ).resolves.toBeUndefined();
+    expect(findAssignment).toHaveBeenCalledWith({
+      where: { projectId: 10, userId: 7, role: ActorRole.teacher },
+      select: { id: true },
+    });
+  });
+
+  describe('assertAssignableUser', () => {
+    const userWith = (overrides: Record<string, unknown>) =>
+      ({
+        id: 8,
+        isActive: true,
+        roleAssignments: [{ role: UserRole.student }],
+        ...overrides,
+      }) as never;
+
+    it('rejects inactive users', async () => {
+      const prisma = {
+        user: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue(userWith({ isActive: false })),
+        },
+      };
+      const service = new AuthorizationService(prisma as never);
+
+      await expect(
+        service.assertAssignableUser(8, ActorRole.teacher),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rejects users whose global role does not license the actor role', async () => {
+      const prisma = {
+        user: { findUnique: jest.fn().mockResolvedValue(userWith({})) },
+      };
+      const service = new AuthorizationService(prisma as never);
+
+      await expect(
+        service.assertAssignableUser(8, ActorRole.teacher),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('allows teachers to be assigned as project evaluators', async () => {
+      const prisma = {
+        user: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue(
+              userWith({ roleAssignments: [{ role: UserRole.teacher }] }),
+            ),
+        },
+      };
+      const service = new AuthorizationService(prisma as never);
+
+      await expect(
+        service.assertAssignableUser(8, ActorRole.evaluator),
+      ).resolves.toBeUndefined();
+    });
+
+    it('allows students to be assigned as students', async () => {
+      const prisma = {
+        user: { findUnique: jest.fn().mockResolvedValue(userWith({})) },
+      };
+      const service = new AuthorizationService(prisma as never);
+
+      await expect(
+        service.assertAssignableUser(8, ActorRole.student),
+      ).resolves.toBeUndefined();
+    });
+
+    it('rejects missing users', async () => {
+      const prisma = {
+        user: { findUnique: jest.fn().mockResolvedValue(null) },
+      };
+      const service = new AuthorizationService(prisma as never);
+
+      await expect(
+        service.assertAssignableUser(999, ActorRole.student),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  it('requires an assigned teacher or evaluator for milestones', async () => {
+    const findAssignment = jest.fn().mockResolvedValue({ id: 3 });
+    const prisma = {
+      projectActorAssignment: { findFirst: findAssignment },
+    };
+    const service = new AuthorizationService(prisma as never);
+
+    await expect(
+      service.assertCanManageMilestone(user([UserRole.teacher]), 10),
     ).resolves.toBeUndefined();
     expect(findAssignment).toHaveBeenCalledWith({
       where: {
         projectId: 10,
         userId: 7,
-        role: { in: [ActorRole.evaluator] },
+        role: { in: [ActorRole.teacher, ActorRole.evaluator] },
       },
       select: { id: true },
     });
@@ -114,7 +242,7 @@ describe('AuthorizationService', () => {
     } as never);
 
     await expect(
-      service.assertCanApproveProjectPhase(user([UserRole.evaluator]), {
+      service.assertCanApproveProjectPhase(user([UserRole.teacher]), {
         id: 10,
         proposerUserId: null,
       }),
@@ -181,40 +309,60 @@ describe('AuthorizationService', () => {
     expect(findAssignment).not.toHaveBeenCalled();
   });
 
-  it.each([UserRole.coordinator, UserRole.advisor])(
-    'allows an assigned %s to edit project details',
-    async (role) => {
-      const findAssignment = jest.fn().mockResolvedValue({ id: 3 });
-      const service = new AuthorizationService({
-        projectActorAssignment: { findFirst: findAssignment },
-      } as never);
+  it('allows an assigned teacher to edit project details', async () => {
+    const findAssignment = jest.fn().mockResolvedValue({ id: 3 });
+    const service = new AuthorizationService({
+      projectActorAssignment: { findFirst: findAssignment },
+    } as never);
 
-      await expect(
-        service.assertCanEditProjectDetails(user([role]), editableProject()),
-      ).resolves.toBeUndefined();
-      expect(findAssignment).toHaveBeenCalledWith({
-        where: { projectId: 10, userId: 7, role: { in: [role] } },
-        select: { id: true },
-      });
-    },
-  );
+    await expect(
+      service.assertCanEditProjectDetails(
+        user([UserRole.teacher]),
+        editableProject(),
+      ),
+    ).resolves.toBeUndefined();
+    expect(findAssignment).toHaveBeenCalledWith({
+      where: {
+        projectId: 10,
+        userId: 7,
+        role: { in: [ActorRole.teacher, ActorRole.evaluator] },
+      },
+      select: { id: true },
+    });
+  });
 
-  it.each([UserRole.coordinator, UserRole.advisor])(
-    'rejects an unassigned %s',
-    async (role) => {
-      const findAssignment = jest.fn().mockResolvedValue(null);
-      const service = new AuthorizationService({
-        projectActorAssignment: { findFirst: findAssignment },
-      } as never);
+  it('allows a teacher assigned as evaluator to edit project details', async () => {
+    const findAssignment = jest.fn().mockResolvedValue({ id: 3 });
+    const service = new AuthorizationService({
+      projectActorAssignment: { findFirst: findAssignment },
+    } as never);
 
-      await expect(
-        service.assertCanEditProjectDetails(user([role]), editableProject()),
-      ).rejects.toBeInstanceOf(ForbiddenException);
-    },
-  );
+    await expect(
+      service.assertCanEditProjectDetails(
+        user([UserRole.teacher]),
+        editableProject(),
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it('rejects an unassigned teacher', async () => {
+    const findAssignment = jest.fn().mockResolvedValue(null);
+    const service = new AuthorizationService({
+      projectActorAssignment: { findFirst: findAssignment },
+    } as never);
+
+    await expect(
+      service.assertCanEditProjectDetails(
+        user([UserRole.teacher]),
+        editableProject(),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
 
   it('rejects a student who is not the proposer', async () => {
-    const service = new AuthorizationService({} as never);
+    const service = new AuthorizationService({
+      projectActorAssignment: { findFirst: jest.fn().mockResolvedValue(null) },
+    } as never);
 
     await expect(
       service.assertCanEditProjectDetails(
@@ -227,7 +375,11 @@ describe('AuthorizationService', () => {
   it.each([ProjectStatus.proposed, ProjectStatus.under_review])(
     'allows the proposer to edit while the project is %s',
     async (status) => {
-      const service = new AuthorizationService({} as never);
+      const service = new AuthorizationService({
+        projectActorAssignment: {
+          findFirst: jest.fn().mockResolvedValue(null),
+        },
+      } as never);
 
       await expect(
         service.assertCanEditProjectDetails(
@@ -239,7 +391,9 @@ describe('AuthorizationService', () => {
   );
 
   it('rejects the proposer once the project leaves the review window', async () => {
-    const service = new AuthorizationService({} as never);
+    const service = new AuthorizationService({
+      projectActorAssignment: { findFirst: jest.fn().mockResolvedValue(null) },
+    } as never);
 
     await expect(
       service.assertCanEditProjectDetails(
@@ -301,6 +455,20 @@ describe('AuthorizationService', () => {
       await expect(
         service.assertProjectMember(user([UserRole.evaluator]), 10),
       ).resolves.toBeUndefined();
+    });
+
+    it('keeps teachers scoped to their own or assigned projects', async () => {
+      const prisma = visibilityPrisma({
+        proposerUserId: 999,
+        actorAssignments: [],
+        status: ProjectStatus.in_progress,
+        isPrivate: true,
+      });
+      const service = new AuthorizationService(prisma as never);
+
+      await expect(
+        service.assertProjectMember(user([UserRole.teacher]), 10),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
     it('grants the proposer access to their own project', async () => {
@@ -386,6 +554,18 @@ describe('AuthorizationService', () => {
       );
     });
 
+    it('scopes teacher listings to public, proposed and assigned projects', () => {
+      const service = new AuthorizationService({} as never);
+
+      expect(service.projectVisibilityWhere(user([UserRole.teacher]))).toEqual({
+        OR: [
+          { isPrivate: false, status: ProjectStatus.closed },
+          { proposerUserId: 7 },
+          { actorAssignments: { some: { userId: 7 } } },
+        ],
+      });
+    });
+
     it('scopes listings to public, proposed and assigned projects', () => {
       const service = new AuthorizationService({} as never);
 
@@ -396,6 +576,27 @@ describe('AuthorizationService', () => {
           { actorAssignments: { some: { userId: 7 } } },
         ],
       });
+    });
+
+    it('exposes the pure membership check for loaded projects', () => {
+      const service = new AuthorizationService({} as never);
+      const project = {
+        proposerUserId: 999,
+        actorAssignments: [{ userId: 7 }],
+      };
+
+      expect(
+        service.canViewProjectData(user([UserRole.teacher]), project),
+      ).toBe(true);
+      expect(
+        service.canViewProjectData(user([UserRole.student]), project),
+      ).toBe(true);
+      expect(
+        service.canViewProjectData(user([UserRole.student]), {
+          proposerUserId: 999,
+          actorAssignments: [],
+        }),
+      ).toBe(false);
     });
   });
 

@@ -17,6 +17,7 @@ import {
   formatPhase,
   toDateTimeLocal,
 } from "../../services/utils";
+import { canManageMilestones } from "../../services/project-permissions";
 import { useAuth } from "../../components/auth-provider";
 import AccessNotice from "../../components/access-notice";
 import FormActions from "@/app/components/form-actions";
@@ -190,24 +191,11 @@ export default function ProjectMilestonesPanel({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const canManage = useMemo(() => {
-    if (!session) {
-      return false;
-    }
-
-    const roles = session.user.roles;
-    if (roles.includes("admin")) {
-      return true;
-    }
-
-    return actorAssignments.some(
-      (assignment) =>
-        assignment.userId === session.user.id &&
-        ((roles.includes("coordinator") && assignment.role === "coordinator") ||
-          (roles.includes("evaluator") && assignment.role === "evaluator") ||
-          (roles.includes("advisor") && assignment.role === "advisor")),
-    );
-  }, [session, actorAssignments]);
+  const canManage = useMemo(
+    () =>
+      session ? canManageMilestones(session.user, actorAssignments) : false,
+    [session, actorAssignments],
+  );
 
   const sortedMilestones = useMemo(
     () =>

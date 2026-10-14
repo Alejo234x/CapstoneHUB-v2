@@ -24,10 +24,9 @@ enum ProjectStatus {
 enum UserRole {
   admin
   evaluator
-  coordinator
-  advisor
-  student
+  teacher
   proposer
+  student
 }
 
 /**
@@ -39,10 +38,9 @@ enum AuthProvider {
 }
 
 enum ActorRole {
-  advisor
-  coordinator
-  student
+  teacher
   evaluator
+  student
 }
 
 enum ReportStatus {

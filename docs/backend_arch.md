@@ -61,7 +61,7 @@ respuesta, con `timestamp`, `level`, `requestId`, `method`, `path`, `status`,
 | **Controller** | Define rutas, valida DTOs y recibe al usuario autenticado. Delgado por diseño. |
 | **Guard** | `AuthGuard` valida el token Bearer; `AdminGuard` exige el rol `admin`. |
 | **Service** | Lógica de negocio, reglas de estado y mapeo de respuestas. Un service por dominio. |
-| **AuthorizationService** | Centraliza las reglas de permisos (rol global + rol en el proyecto). |
+| **AuthorizationService** | Centraliza las reglas de permisos (rol asignado en el proyecto, admin y evaluador global). |
 | **PrismaService** | Acceso a datos (cliente Prisma con adaptador `pg`). |
 | **StorageService** | Abstracción de archivos; la implementación concreta es `S3StorageService`. |
 
@@ -100,46 +100,59 @@ re-loguear. Las ventanas se ajustan con `AUTH_TOKEN_TTL_SECONDS` y
 con scrypt, exige mínimo 8 caracteres y que la nueva sea distinta. Si la actual
 no coincide responde `400` (no `401`, para no cerrar la sesión global).
 
-Roles globales (`UserRole`): `admin`, `evaluator`, `coordinator`, `advisor`,
-`student`, `proposer`. Roles dentro de un proyecto (`ActorRole`): `advisor`,
-`coordinator`, `student`, `evaluator`.
+Roles globales (`UserRole`): `admin`, `evaluator`, `teacher`, `proposer`,
+`student`. Roles dentro de un proyecto (`ActorRole`): `teacher`, `evaluator`,
+`student`.
+
+`teacher` unifica a los antiguos `coordinator` y `advisor`: agrupa al personal
+docente que supervisa proyectos.
 
 `proposer` identifica a los proponentes externos que se registran solos desde
 `/register`. No es un `ActorRole`, así que no se les asigna como actores;
 proponen proyectos y, como proponentes del proyecto, pueden editarlo mientras
 siga en `proposed` o `under_review`.
 
+La asignación a un proyecto **licencia** el rol global una sola vez: un
+`teacher` puede ser asignado como `teacher` o como `evaluator`; un `evaluator`
+global solo como `evaluator`; un `student`, solo como `student`. Después de la
+asignación, los permisos dependen del rol en el proyecto, no del rol global.
+
 `AuthorizationService` responde preguntas como "¿puede este usuario crear un
 proyecto?", "¿puede gestionar este proyecto?" o "¿puede asignar actores?",
-combinando el rol global con la asignación en el proyecto. El `admin` siempre
-pasa.
+combinando la asignación en el proyecto con el `admin` (que siempre pasa) y el
+`evaluator` global, que revisa cualquier proyecto sin asignarse.
 
 ### Matriz de permisos
 
-Leyenda: **público** = no requiere token, **miembro** = asignado al proyecto,
-**rol** = requiere el rol global más la asignación correspondiente en el
-proyecto. El `admin` siempre pasa.
+Leyenda: **público** = no requiere token, **miembro** = asignado al proyecto
+con cualquier rol, **rol** = requiere al menos un rol global. El `admin` siempre
+pasa.
 
-| Acción | Público | admin | coordinator | evaluator | advisor | student |
+| Acción | Público | admin | evaluator (global) | teacher (asignado) | evaluator (asignado) | student (asignado) |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: |
-| Listar / ver proyectos | sí | sí | sí | sí | sí | sí |
+| Listar / ver proyectos | sí* | sí | sí | miembro | miembro | miembro |
 | Crear proyecto | no | rol | rol | rol | rol | rol |
-| Editar datos del proyecto | no | sí | miembro | sí | miembro | no† |
-| Gestionar proyecto / asignar actores | no | sí | miembro | no | no | no |
-| Gestionar hitos | no | sí | miembro | miembro | miembro | no |
-| Avanzar fase (semestre) | no | sí | miembro | no | no | no |
-| Cambiar estado | no | sí | miembro | miembro* | no | no |
-| Ver observaciones / hitos / anexos | no | sí | miembro | miembro | miembro | miembro |
+| Editar datos del proyecto | no | sí | sí | miembro | miembro | no† |
+| Gestionar proyecto / asignar actores | no | sí | no | miembro | no | no |
+| Gestionar hitos y entregas | no | sí | miembro | miembro | miembro | no |
+| Avanzar fase (semestre) | no | sí | no | miembro | no | no |
+| Cambiar estado | no | sí | miembro* | miembro (ejecución) | miembro (propuesta) | no |
+| Ver observaciones / hitos / anexos | no | sí | sí | miembro | miembro | miembro |
 | Comentar un proyecto | no | sí | miembro | miembro | miembro | miembro |
 
+- \* Un `evaluator` global puede gestionar las transiciones de la fase de
+  propuesta solo si está asignado como `evaluator`; el resto de transiciones
+  requieren estar asignado como `teacher`.
 - `Crear proyecto` solo requiere que el usuario tenga al menos un rol global.
 - `Editar datos del proyecto`: lo permiten `admin` y cualquier `evaluator`
-  global (sin asignarse); un `coordinator` o `advisor` solo si está asignado al
-  proyecto con su rol correspondiente. Un proyecto `closed` o `rejected` es de
-  solo lectura (responde `409`). Cada campo modificado se registra en
-  `ProjectChangeHistory`.
-- \* Los evaluadores gestionan la fase de propuesta (`proposed`/`under_review` y
-  `approved → rejected`); el resto de transiciones son acciones de coordinador
+  global (sin asignarse); un `teacher` o `evaluator` asignado al proyecto con su
+  rol correspondiente. Un proyecto `closed` o `rejected` es de solo lectura
+  (responde `409`). Cada campo modificado se registra en `ProjectChangeHistory`.
+- El `evaluator` global ve todos los proyectos, pero no puede escribir en
+  proyectos ajenos sin asignación (solo editar sus datos). Para comentar,
+  gestionar hitos o cambiar estado necesita la asignación.
+- Los evaluadores asignados gestionan la fase de propuesta (`proposed`/
+  `under_review` y `approved → rejected`); los docentes asignados, el resto
   (`approved → in_progress`, `in_progress → {paused, closed, cancelled}`,
   `paused → {in_progress, cancelled}`).
 - † El `student` no edita los datos por su rol, pero el **proponente** (de
@@ -175,10 +188,10 @@ registra en `ProjectStatusHistory` dentro de una transacción, exige un motivo
 | `paused` | `in_progress`, `cancelled` |
 | `closed` / `cancelled` / `rejected` | — (terminal) |
 
-Los evaluadores gestionan las transiciones de la fase de propuesta
-(`proposed`/`under_review`, y `approved → rejected`); los coordinadores
-asignados gestionan el resto (`approved → in_progress`, `in_progress → {paused,
-closed, cancelled}`, `paused → {in_progress, cancelled}`).
+Los evaluadores asignados gestionan las transiciones de la fase de propuesta
+(`proposed`/`under_review`, y `approved → rejected`); los docentes asignados
+gestionan el resto (`approved → in_progress`, `in_progress → {paused, closed,
+cancelled}`, `paused → {in_progress, cancelled}`).
 
 ### Fases (semestres) e hitos mínimos
 
@@ -273,7 +286,7 @@ listado de Anexos y se sirven desde la pestaña Entregas.
 ## Entregas
 
 Una entrega (`ProjectReport`) tiene un **tipo** fijo (`type`: `text`, `link` o
-`file`) definido por el asesor/evaluador/coordinador al crearla; solo se puede
+`file`) definido por el docente/evaluador al crearla; solo se puede
 cambiar mientras esté `pending` y no tenga contenido. Para el tipo Archivo
 (`file`) también se eligen los MIME permitidos (`allowedMimeTypes`) y el máximo
 de archivos (`maxFiles`), obligatorios al crear. El estudiante agrega
@@ -380,8 +393,8 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 | `GET` | `/projects/mine` | Proyectos propuestos y asignados al usuario. |
 | `GET` | `/projects/:id` | Detalle (404 si el proyecto es privado y el solicitante no es miembro). |
 | `POST` | `/projects` | Crear un proyecto; `isPrivate` lo define el proponente. |
-| `PUT` | `/projects/:id` | Editar los datos (admin, evaluador, coordinador/asesor asignado o proponente en revisión; `409` si está finalizado/rechazado). Registra historial por campo. |
-| `DELETE` | `/projects/:id` | Borrar (admin o coordinador asignado). |
+| `PUT` | `/projects/:id` | Editar los datos (admin, evaluador global o docente/evaluador asignado; proponente en revisión; `409` si está finalizado/rechazado). Registra historial por campo. |
+| `DELETE` | `/projects/:id` | Borrar (admin o docente asignado). |
 | `PATCH` | `/projects/:id/status` | Cambiar estado (registra historial). |
 | `POST` | `/projects/:id/phase/advance` | Avanzar de fase (semestre) si los hitos mínimos están completos y el proponente y los evaluadores dieron su visto bueno (`409` si no). |
 | `POST` | `/projects/:id/phase/approvals` | Dar el visto bueno de fase (proponente o evaluador asignado). |
@@ -411,8 +424,7 @@ mostrados, y si es inválido se responde `401` en lugar de degradar a anónimo.
 
 - `projectVisibilityWhere(viewer)` construye el `where` de Prisma usado por el
   listado: público (`isPrivate = false` y estado `closed`) más `proposerUserId`
-  y asignaciones del solicitante; los roles `admin`, `evaluator` y `coordinator`
-  ven todo.
+  y asignaciones del solicitante; los roles `admin` y `evaluator` ven todo.
 - `assertProjectMember` (usado por observaciones, hitos, anexos y entregas)
   permite el acceso al proponente, a los actores asignados y a los roles
   revisores, o cuando el proyecto es público.

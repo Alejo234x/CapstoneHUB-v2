@@ -11,7 +11,7 @@ describe('ReportsService', () => {
     id: 7,
     fullName: 'Coordinator',
     email: 'coordinator@example.com',
-    roles: ['coordinator'],
+    roles: ['teacher'],
   } as never;
 
   const dueDate = new Date('2026-10-01');

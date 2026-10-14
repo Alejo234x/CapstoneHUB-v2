@@ -320,7 +320,7 @@ export class ProjectsService {
   }
   /**
    * Los miembros pueden leer los datos sensibles del proyecto: admins,
-   * evaluators, coordinators, el proponente y los actores asignados.
+   * evaluadores globales, el proponente y los actores asignados.
    */
   private canViewSensitiveData(
     project: ProjectWithRelations,
@@ -329,19 +329,8 @@ export class ProjectsService {
     if (!viewer) {
       return false;
     }
-    if (
-      viewer.roles.includes(UserRole.admin) ||
-      viewer.roles.includes(UserRole.evaluator) ||
-      viewer.roles.includes(UserRole.coordinator)
-    ) {
-      return true;
-    }
-    if (project.proposerUserId === viewer.id) {
-      return true;
-    }
-    return project.actorAssignments.some(
-      (assignment) => assignment.userId === viewer.id,
-    );
+
+    return this.authorization.canViewProjectData(viewer, project);
   }
   /**
    * Proyectos que el usuario puede seguir desde su perfil: los que propuso y

@@ -9,6 +9,7 @@ import {
   uploadProjectAttachment,
 } from "../../services/attachments";
 import { ProjectAttachmentItem } from "../../services/schemas";
+import { canDeleteAttachment } from "../../services/project-permissions";
 import { useAuth } from "../../components/auth-provider";
 import AccessNotice from "../../components/access-notice";
 import {
@@ -563,21 +564,10 @@ export default function ProjectAttachmentsPanel({
       return false;
     }
 
-    if (attachment.uploadedBy?.id === currentUser.id) {
-      return true;
-    }
-
-    if (isAdmin) {
-      return true;
-    }
-
-    return (
-      currentUser.roles.includes("coordinator") &&
-      assignments.some(
-        (assignment) =>
-          assignment.userId === currentUser.id &&
-          assignment.role === "coordinator",
-      )
+    return canDeleteAttachment(
+      currentUser,
+      assignments,
+      attachment.uploadedBy?.id,
     );
   }
 

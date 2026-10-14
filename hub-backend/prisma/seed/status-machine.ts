@@ -38,12 +38,12 @@ export function statusPathFor(target: ProjectStatus): ProjectStatus[] {
 
 /**
  * Mirrors AuthorizationService.assertCanTransitionProject: evaluators handle
- * review transitions and rejections, coordinators handle the rest.
+ * review transitions and rejections, teachers handle the rest.
  */
 export function authorRoleForTransition(
   previous: ProjectStatus,
   next: ProjectStatus,
-): 'evaluator' | 'coordinator' {
+): 'evaluator' | 'teacher' {
   if (
     previous === 'proposed' ||
     previous === 'under_review' ||
@@ -52,5 +52,5 @@ export function authorRoleForTransition(
     return 'evaluator';
   }
 
-  return 'coordinator';
+  return 'teacher';
 }

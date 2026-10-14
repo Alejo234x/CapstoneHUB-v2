@@ -5,6 +5,7 @@ import {
   requireProjectId,
   requireUserId,
 } from './common';
+import { hasActorRoleLicense } from '../../src/auth/actor-role-license';
 import { loadProjects } from './fixtures';
 
 export async function seedActors({
@@ -26,14 +27,13 @@ export async function seedActors({
         where: { id: userId },
         select: { roleAssignments: { select: { role: true } } },
       });
-      const hasGlobalRole =
-        user?.roleAssignments.some(
-          (assignment) => assignment.role === actor.role,
-        ) ?? false;
+      const globalRoles =
+        user?.roleAssignments.map(({ role }) => role) ?? [];
+      const hasLicense = hasActorRoleLicense(globalRoles, actor.role);
 
-      if (!hasGlobalRole) {
+      if (!hasLicense) {
         throw new Error(
-          `User ${normalizeEmail(actor.email)} lacks the global role "${actor.role}" required to be assigned to ${project.name}.`,
+          `User ${normalizeEmail(actor.email)} lacks a global role required to be assigned as "${actor.role}" in ${project.name}.`,
         );
       }
 

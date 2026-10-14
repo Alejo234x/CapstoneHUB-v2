@@ -19,6 +19,10 @@ import {
 } from "../../services/reports";
 import { downloadProjectAttachment } from "../../services/attachments";
 import {
+  canManageMilestones,
+  canSubmitReports,
+} from "../../services/project-permissions";
+import {
   ProjectAttachmentItem,
   ProjectReportContentItem,
   ProjectReportContentKind,
@@ -306,39 +310,16 @@ export default function ProjectReportsPanel({
 
   const currentUserId = session?.user.id ?? null;
 
-  const canManage = useMemo(() => {
-    if (!session) {
-      return false;
-    }
+  const canManage = useMemo(
+    () =>
+      session ? canManageMilestones(session.user, actorAssignments) : false,
+    [session, actorAssignments],
+  );
 
-    const roles = session.user.roles;
-    if (roles.includes("admin")) {
-      return true;
-    }
-
-    return actorAssignments.some(
-      (assignment) =>
-        assignment.userId === session.user.id &&
-        ((roles.includes("coordinator") && assignment.role === "coordinator") ||
-          (roles.includes("evaluator") && assignment.role === "evaluator") ||
-          (roles.includes("advisor") && assignment.role === "advisor")),
-    );
-  }, [session, actorAssignments]);
-
-  const canSubmit = useMemo(() => {
-    if (!session) {
-      return false;
-    }
-
-    const roles = session.user.roles;
-    if (roles.includes("admin")) {
-      return true;
-    }
-
-    return actorAssignments.some(
-      (assignment) => assignment.userId === session.user.id,
-    );
-  }, [session, actorAssignments]);
+  const canSubmit = useMemo(
+    () => (session ? canSubmitReports(session.user, actorAssignments) : false),
+    [session, actorAssignments],
+  );
 
   const sortedReports = useMemo(
     () =>

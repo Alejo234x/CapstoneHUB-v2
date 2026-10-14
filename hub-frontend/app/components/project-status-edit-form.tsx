@@ -3,6 +3,11 @@
 import { useState, useTransition } from "react";
 import { updateProjectStatus } from "../services/projects";
 import { ProjectMilestoneItem } from "../services/schemas";
+import {
+  canManageStatus,
+  getAvailableStatuses,
+  PROJECT_STATUS_OPTIONS,
+} from "../services/project-permissions";
 import { formatDate } from "../services/utils";
 import { useAuth } from "./auth-provider";
 import AccessNotice from "./access-notice";
@@ -19,17 +24,6 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 
-const projectStatuses = [
-  { value: "proposed", label: "Propuesto" },
-  { value: "under_review", label: "En revisión" },
-  { value: "approved", label: "Aprobado" },
-  { value: "in_progress", label: "En progreso" },
-  { value: "paused", label: "En pausa" },
-  { value: "closed", label: "Finalizado" },
-  { value: "cancelled", label: "Cancelado" },
-  { value: "rejected", label: "Rechazado" },
-] as const;
-
 type ProjectAssignment = {
   userId: number;
   role: string;
@@ -42,96 +36,6 @@ type ProjectStatusEditFormProps = {
   milestones?: ProjectMilestoneItem[];
   onProjectChange?: () => Promise<void>;
 };
-
-export function canManageStatus(
-  userId: number,
-  roles: string[],
-  currentStatus: string,
-  assignments: ProjectAssignment[],
-): boolean {
-  if (roles.includes("admin")) {
-    return true;
-  }
-
-  const isAssignedEvaluator = assignments.some(
-    (assignment) =>
-      assignment.userId === userId && assignment.role === "evaluator",
-  );
-  const canEvaluate =
-    roles.includes("evaluator") &&
-    isAssignedEvaluator &&
-    (currentStatus === "proposed" ||
-      currentStatus === "under_review" ||
-      currentStatus === "approved");
-
-  const isAssignedCoordinator = assignments.some(
-    (assignment) =>
-      assignment.userId === userId && assignment.role === "coordinator",
-  );
-  const canCoordinate =
-    roles.includes("coordinator") &&
-    isAssignedCoordinator &&
-    (currentStatus === "approved" ||
-      currentStatus === "in_progress" ||
-      currentStatus === "paused");
-
-  return canEvaluate || canCoordinate;
-}
-
-function getAvailableStatuses(
-  roles: string[],
-  currentStatus: string,
-): ReadonlyArray<(typeof projectStatuses)[number]> {
-  if (roles.includes("admin")) {
-    return projectStatuses;
-  }
-
-  const isEvaluator = roles.includes("evaluator");
-  const isCoordinator = roles.includes("coordinator");
-  const allowed = new Set<string>();
-
-  switch (currentStatus) {
-    case "proposed":
-      if (isEvaluator) {
-        allowed.add("under_review");
-        allowed.add("rejected");
-      }
-      break;
-    case "under_review":
-      if (isEvaluator) {
-        allowed.add("approved");
-        allowed.add("rejected");
-      }
-      break;
-    case "approved":
-      if (isEvaluator) {
-        allowed.add("rejected");
-      }
-      if (isCoordinator) {
-        allowed.add("in_progress");
-      }
-      break;
-    case "in_progress":
-      if (isCoordinator) {
-        allowed.add("paused");
-        allowed.add("closed");
-        allowed.add("cancelled");
-      }
-      break;
-    case "paused":
-      if (isCoordinator) {
-        allowed.add("in_progress");
-        allowed.add("cancelled");
-      }
-      break;
-    default:
-      break;
-  }
-
-  return projectStatuses.filter((projectStatus) =>
-    allowed.has(projectStatus.value),
-  );
-}
 
 export default function ProjectStatusEditForm({
   projectId,
@@ -162,10 +66,9 @@ export default function ProjectStatusEditForm({
   }
 
   const canManage = canManageStatus(
-    session.user.id,
-    session.user.roles,
-    currentStatus,
+    session.user,
     assignments,
+    currentStatus,
   );
 
   if (!canManage) {
@@ -173,7 +76,8 @@ export default function ProjectStatusEditForm({
   }
 
   const availableStatuses = getAvailableStatuses(
-    session.user.roles,
+    session.user,
+    assignments,
     currentStatus,
   );
 
@@ -233,7 +137,7 @@ export default function ProjectStatusEditForm({
               >
                 <SelectTrigger id="status" className="w-full">
                   <SelectValue>
-                    {projectStatuses.find(
+                    {PROJECT_STATUS_OPTIONS.find(
                       (projectStatus) => projectStatus.value === status,
                     )?.label ?? "Selecciona un estado"}
                   </SelectValue>

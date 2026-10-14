@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { ProjectDetails } from "../../services/schemas";
+import { canAdvancePhase } from "../../services/project-permissions";
 import { formatPhase } from "../../services/utils";
 import { advanceProjectPhase } from "../../services/projects";
 import { useAuth } from "../../components/auth-provider";
@@ -28,8 +29,8 @@ type ProjectPhaseActionsProps = {
 
 /**
  * Control compacto para avanzar el proyecto al siguiente semestre. Solo se
- * muestra a administradores y coordinadores asignados mientras el proyecto está
- * en progreso; exige que los hitos mínimos de la fase actual estén completos.
+ * muestra a administradores y docentes asignados mientras el proyecto está en
+ * progreso; exige que los hitos mínimos de la fase actual estén completos.
  */
 export default function ProjectPhaseActions({
   project,
@@ -41,24 +42,10 @@ export default function ProjectPhaseActions({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const canManage = useMemo(() => {
-    if (!session) {
-      return false;
-    }
-
-    if (session.user.roles.includes("admin")) {
-      return true;
-    }
-
-    return (
-      session.user.roles.includes("coordinator") &&
-      assignments.some(
-        (assignment) =>
-          assignment.userId === session.user.id &&
-          assignment.role === "coordinator",
-      )
-    );
-  }, [session, assignments]);
+  const canManage = useMemo(
+    () => (session ? canAdvancePhase(session.user, assignments) : false),
+    [session, assignments],
+  );
 
   const currentPhase = project.phase ?? null;
 

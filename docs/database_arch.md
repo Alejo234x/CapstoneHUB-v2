@@ -10,8 +10,8 @@ Ver también: [Arquitectura del backend](./backend_arch.md).
 
 - `ProjectStatus`: `proposed`, `under_review`, `approved`, `in_progress`,
   `paused`, `closed`, `cancelled`, `rejected`.
-- `UserRole`: `admin`, `evaluator`, `coordinator`, `advisor`, `student`, `proposer`.
-- `ActorRole`: `advisor`, `coordinator`, `student`, `evaluator`.
+- `UserRole`: `admin`, `evaluator`, `teacher`, `proposer`, `student`.
+- `ActorRole`: `teacher`, `evaluator`, `student`.
 - `ProjectSource`: `external_entity`, `research`, `internal_need`,
   `social_impact`.
 - `ProjectPhase`: `semester_1`, `semester_2`.
@@ -64,8 +64,8 @@ listando quién falta; el bloqueo también aplica al `admin`.
   - `closed` y `isPrivate = false` → **público**: cualquier visitante (incluso
     sin sesión) puede verlo en el listado y el detalle.
   - `rejected` → **siempre privado**, nunca se publica.
-  - Cualquier otro estado → privado: visible solo para `admin`, `evaluator` y
-    `coordinator`, el proponente y los usuarios con `ProjectActorAssignment`.
+  - Cualquier otro estado → privado: visible solo para `admin`, `evaluator`, el
+    proponente y los usuarios con `ProjectActorAssignment`.
 - A los visitantes que solo pueden ver la información pública se les ocultan las
   secciones sensibles (equipo, observaciones, hitos, entregas, anexos e
   historial) tanto en la API como en la interfaz.
@@ -90,8 +90,11 @@ iniciativa de impacto social; el formulario de propuesta es único y flexible.
 
 ### ProjectActorAssignment
 
-Vincula un `User` con un `Project` mediante un `ActorRole`. Único por
-`(projectId, userId)`.
+Vincula un `User` con un `Project` mediante un `ActorRole` (`teacher`,
+`evaluator` o `student`). Único por `(projectId, userId)`. Para asignarlo, el
+usuario debe tener el rol global que licencia ese rol de proyecto: `student`
+para `student`; `teacher` para `teacher` o `evaluator`; `evaluator` para
+`evaluator`.
 
 ### ProjectObservation
 
@@ -136,7 +139,7 @@ archivo pertenece a una entrega y se muestra en su pestaña, no en Anexos.
 
 ### ProjectReport
 
-Entrega creada por un asesor, evaluador o coordinador: `title`, `description`
+Entrega creada por un docente o evaluador asignado: `title`, `description`
 opcional, `dueDate`, `type` (el tipo de contenido que debe aportar el estudiante:
 `text`, `link` o `file`), `allowedMimeTypes` y
 `maxFiles` (MIME permitidos y máximo de archivos, obligatorios para el tipo
@@ -356,18 +359,16 @@ classDiagram
         <<enumeration>>
         admin
         evaluator
-        coordinator
-        advisor
-        student
+        teacher
         proposer
+        student
     }
 
     class ActorRole {
         <<enumeration>>
-        advisor
-        coordinator
-        student
+        teacher
         evaluator
+        student
     }
 
     class ReportStatus {

@@ -9,12 +9,12 @@
     {
       "fullName": "Ana Torres",
       "email": "coord.ana@capstonehub.test",
-      "roles": ["coordinator"]
+      "roles": ["teacher"]
     },
     {
       "fullName": "Luis Mendoza",
       "email": "coord.luis@capstonehub.test",
-      "roles": ["coordinator"]
+      "roles": ["teacher"]
     },
     {
       "fullName": "María Fernanda Ruiz",
@@ -29,12 +29,12 @@
     {
       "fullName": "Sofía Herrera",
       "email": "advisor.sofia@capstonehub.test",
-      "roles": ["advisor"]
+      "roles": ["teacher"]
     },
     {
       "fullName": "Diego Paredes",
       "email": "advisor.diego@capstonehub.test",
-      "roles": ["advisor"]
+      "roles": ["teacher"]
     },
     {
       "fullName": "Juan Pérez",
@@ -119,22 +119,22 @@
     {
       "fullName": "Patricia Villacrés",
       "email": "advisor.patricia@capstonehub.test",
-      "roles": ["advisor"]
+      "roles": ["teacher"]
     },
     {
       "fullName": "Ricardo Bonilla",
       "email": "advisor.ricardo@capstonehub.test",
-      "roles": ["advisor"]
+      "roles": ["teacher"]
     },
     {
       "fullName": "Mercedes Jaramillo",
       "email": "advisor.mercedes@capstonehub.test",
-      "roles": ["advisor"]
+      "roles": ["teacher"]
     },
     {
       "fullName": "Jorge Espinoza",
       "email": "advisor.jorge@capstonehub.test",
-      "roles": ["advisor"]
+      "roles": ["teacher"]
     },
     {
       "fullName": "Paola Ordóñez",
