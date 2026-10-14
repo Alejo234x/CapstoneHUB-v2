@@ -1,4 +1,6 @@
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { App } from 'supertest/types';
 import { useTestApp } from './helpers/e2e';
 import {
   adminSession,
@@ -7,37 +9,52 @@ import {
   uniqueEmail,
   userWithRole,
 } from './helpers/auth';
-import { createProject, futureIsoDate } from './helpers/projects';
-import { ActorRole, UserRole } from '../src/generated/prisma/client';
+import {
+  assignProjectActor,
+  createProjectWithProposer,
+  futureIsoDate,
+  transitionProjectStatus,
+} from './helpers/projects';
+import {
+  ActorRole,
+  ProjectStatus,
+  UserRole,
+} from '../src/generated/prisma/client';
 
 describe('Reports (e2e)', () => {
   const getApp = useTestApp();
 
-  it('un evaluador global gestiona y revisa entregas y un estudiante asignado las envía', async () => {
-    const app = getApp();
-    const { accessToken: proposerToken } = await registerUser(
-      app,
-      uniqueEmail('prop'),
-    );
-    const evaluator = await userWithRole(app, UserRole.evaluator);
-    const student = await userWithRole(app, UserRole.student);
-    const { id: projectId } = await createProject(app, proposerToken);
-
-    // El evaluador global crea la entrega y asigna al estudiante sin estar
-    // asignado al proyecto.
+  /** Crea una entrega de tipo texto y devuelve su id. */
+  async function createReport(
+    app: INestApplication<App>,
+    projectId: number,
+    token: string,
+  ): Promise<number> {
     const created = await request(app.getHttpServer())
       .post(`/projects/${projectId}/reports`)
-      .set(bearer(evaluator.accessToken))
+      .set(bearer(token))
       .send({ title: 'Informe final', dueDate: futureIsoDate(), type: 'text' })
       .expect(201);
 
-    const reportId = (created.body as { id: number }).id;
+    return (created.body as { id: number }).id;
+  }
 
-    await request(app.getHttpServer())
-      .post(`/projects/${projectId}/actors`)
-      .set(bearer(evaluator.accessToken))
-      .send({ userId: student.user.id, role: ActorRole.student })
-      .expect(201);
+  it('un evaluador global gestiona y revisa entregas y un estudiante asignado las envía', async () => {
+    const app = getApp();
+    const evaluator = await userWithRole(app, UserRole.evaluator);
+    const student = await userWithRole(app, UserRole.student);
+    const { projectId } = await createProjectWithProposer(app);
+
+    // El evaluador global crea la entrega y asigna al estudiante sin estar
+    // asignado al proyecto.
+    const reportId = await createReport(app, projectId, evaluator.accessToken);
+    await assignProjectActor(
+      app,
+      projectId,
+      evaluator.accessToken,
+      student.user.id,
+      ActorRole.student,
+    );
 
     // El estudiante asignado prepara el contenido y envía la entrega.
     await request(app.getHttpServer())
@@ -58,35 +75,23 @@ describe('Reports (e2e)', () => {
       .send({ decision: 'accepted', comment: 'Cumple con lo solicitado' })
       .expect(201);
 
-    expect(reviewed.body).toMatchObject({
-      id: reportId,
-      status: 'accepted',
-    });
+    expect(reviewed.body).toMatchObject({ id: reportId, status: 'accepted' });
   });
 
   it('rechaza preparar o enviar entregas a proponentes y docentes', async () => {
     const app = getApp();
     const admin = await adminSession(app);
-    const { accessToken: proposerToken } = await registerUser(
-      app,
-      uniqueEmail('prop'),
-    );
+    const { proposerToken, projectId } = await createProjectWithProposer(app);
     const teacher = await userWithRole(app, UserRole.teacher);
-    const { id: projectId } = await createProject(app, proposerToken);
 
-    const created = await request(app.getHttpServer())
-      .post(`/projects/${projectId}/reports`)
-      .set(bearer(admin.accessToken))
-      .send({ title: 'Informe final', dueDate: futureIsoDate(), type: 'text' })
-      .expect(201);
-
-    const reportId = (created.body as { id: number }).id;
-
-    await request(app.getHttpServer())
-      .post(`/projects/${projectId}/actors`)
-      .set(bearer(admin.accessToken))
-      .send({ userId: teacher.user.id, role: ActorRole.teacher })
-      .expect(201);
+    const reportId = await createReport(app, projectId, admin.accessToken);
+    await assignProjectActor(
+      app,
+      projectId,
+      admin.accessToken,
+      teacher.user.id,
+      ActorRole.teacher,
+    );
 
     for (const token of [proposerToken, teacher.accessToken]) {
       await request(app.getHttpServer())
@@ -104,11 +109,7 @@ describe('Reports (e2e)', () => {
 
   it('rechaza entregas de un usuario ajeno al proyecto', async () => {
     const app = getApp();
-    const { accessToken: proposerToken } = await registerUser(
-      app,
-      uniqueEmail('prop'),
-    );
-    const { id: projectId } = await createProject(app, proposerToken);
+    const { projectId } = await createProjectWithProposer(app);
     const { accessToken: strangerToken } = await registerUser(
       app,
       uniqueEmail('ajeno'),
@@ -124,23 +125,18 @@ describe('Reports (e2e)', () => {
   it('no expone las entregas de un proyecto público a terceros', async () => {
     const app = getApp();
     const admin = await adminSession(app);
-    const { accessToken: proposerToken } = await registerUser(
-      app,
-      uniqueEmail('prop'),
-    );
+    const { projectId } = await createProjectWithProposer(app, false);
     const { accessToken: strangerToken } = await registerUser(
       app,
       uniqueEmail('ajeno'),
     );
-    const { id: projectId } = await createProject(app, proposerToken, {
-      isPrivate: false,
-    });
 
-    await request(app.getHttpServer())
-      .patch(`/projects/${projectId}/status`)
-      .set(bearer(admin.accessToken))
-      .send({ status: 'approved' })
-      .expect(200);
+    await transitionProjectStatus(
+      app,
+      projectId,
+      admin.accessToken,
+      ProjectStatus.approved,
+    );
 
     await request(app.getHttpServer())
       .get(`/projects/${projectId}/reports`)

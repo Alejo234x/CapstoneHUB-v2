@@ -7,8 +7,16 @@ import {
   uniqueEmail,
   userWithRole,
 } from './helpers/auth';
-import { createProject } from './helpers/projects';
-import { ActorRole, UserRole } from '../src/generated/prisma/client';
+import {
+  createProject,
+  createProjectWithProposer,
+  transitionProjectStatus,
+} from './helpers/projects';
+import {
+  ActorRole,
+  ProjectStatus,
+  UserRole,
+} from '../src/generated/prisma/client';
 
 describe('Projects (e2e)', () => {
   const getApp = useTestApp();
@@ -72,17 +80,13 @@ describe('Projects (e2e)', () => {
   it('publica los proyectos no privados aprobados para usuarios con sesión', async () => {
     const app = getApp();
     const admin = await adminSession(app);
-    const { accessToken: proposerToken } = await registerUser(
-      app,
-      uniqueEmail('owner'),
-    );
     const student = await userWithRole(app, UserRole.student);
-    const { id } = await createProject(app, proposerToken, {
-      isPrivate: false,
-    });
+    const { projectId } = await createProjectWithProposer(app, false);
 
     // Mientras siga en propuesta no es público para nadie.
-    await request(app.getHttpServer()).get(`/projects/${id}`).expect(404);
+    await request(app.getHttpServer())
+      .get(`/projects/${projectId}`)
+      .expect(404);
 
     const pendingList = await request(app.getHttpServer())
       .get('/projects')
@@ -90,18 +94,21 @@ describe('Projects (e2e)', () => {
       .expect(200);
     expect(
       (pendingList.body as { id: number }[]).some(
-        (project) => project.id === id,
+        (project) => project.id === projectId,
       ),
     ).toBe(false);
 
-    await request(app.getHttpServer())
-      .patch(`/projects/${id}/status`)
-      .set(bearer(admin.accessToken))
-      .send({ status: 'approved' })
-      .expect(200);
+    await transitionProjectStatus(
+      app,
+      projectId,
+      admin.accessToken,
+      ProjectStatus.approved,
+    );
 
     // Sin sesión solo se publican los finalizados.
-    await request(app.getHttpServer()).get(`/projects/${id}`).expect(404);
+    await request(app.getHttpServer())
+      .get(`/projects/${projectId}`)
+      .expect(404);
 
     // Con sesión aparece en el listado y el detalle va sin datos sensibles.
     const list = await request(app.getHttpServer())
@@ -109,42 +116,46 @@ describe('Projects (e2e)', () => {
       .set(bearer(student.accessToken))
       .expect(200);
     expect(
-      (list.body as { id: number }[]).some((project) => project.id === id),
+      (list.body as { id: number }[]).some(
+        (project) => project.id === projectId,
+      ),
     ).toBe(true);
 
     const detail = await request(app.getHttpServer())
-      .get(`/projects/${id}`)
+      .get(`/projects/${projectId}`)
       .set(bearer(student.accessToken))
       .expect(200);
-    expect(detail.body).toMatchObject({ id, canViewSensitiveData: false });
+    expect(detail.body).toMatchObject({
+      id: projectId,
+      canViewSensitiveData: false,
+    });
   });
 
   it('nunca publica los proyectos rechazados aunque no sean privados', async () => {
     const app = getApp();
     const admin = await adminSession(app);
-    const { accessToken: proposerToken } = await registerUser(
-      app,
-      uniqueEmail('owner'),
-    );
     const student = await userWithRole(app, UserRole.student);
-    const { id } = await createProject(app, proposerToken, {
-      isPrivate: false,
-    });
+    const { projectId } = await createProjectWithProposer(app, false);
+
+    await transitionProjectStatus(
+      app,
+      projectId,
+      admin.accessToken,
+      ProjectStatus.rejected,
+    );
 
     await request(app.getHttpServer())
-      .patch(`/projects/${id}/status`)
-      .set(bearer(admin.accessToken))
-      .send({ status: 'rejected' })
-      .expect(200);
-
-    await request(app.getHttpServer()).get(`/projects/${id}`).expect(404);
+      .get(`/projects/${projectId}`)
+      .expect(404);
 
     const list = await request(app.getHttpServer())
       .get('/projects')
       .set(bearer(student.accessToken))
       .expect(200);
     expect(
-      (list.body as { id: number }[]).some((project) => project.id === id),
+      (list.body as { id: number }[]).some(
+        (project) => project.id === projectId,
+      ),
     ).toBe(false);
   });
 });

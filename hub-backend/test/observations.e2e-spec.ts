@@ -7,8 +7,12 @@ import {
   uniqueEmail,
   userWithRole,
 } from './helpers/auth';
-import { createProject } from './helpers/projects';
-import { UserRole } from '../src/generated/prisma/client';
+import {
+  createProject,
+  createProjectWithProposer,
+  transitionProjectStatus,
+} from './helpers/projects';
+import { ProjectStatus, UserRole } from '../src/generated/prisma/client';
 
 describe('Observations (e2e)', () => {
   const getApp = useTestApp();
@@ -96,23 +100,18 @@ describe('Observations (e2e)', () => {
   it('no expone las observaciones de un proyecto público a terceros', async () => {
     const app = getApp();
     const admin = await adminSession(app);
-    const { accessToken: proposerToken } = await registerUser(
-      app,
-      uniqueEmail('prop'),
-    );
+    const { projectId } = await createProjectWithProposer(app, false);
     const { accessToken: strangerToken } = await registerUser(
       app,
       uniqueEmail('ajeno'),
     );
-    const { id: projectId } = await createProject(app, proposerToken, {
-      isPrivate: false,
-    });
 
-    await request(app.getHttpServer())
-      .patch(`/projects/${projectId}/status`)
-      .set(bearer(admin.accessToken))
-      .send({ status: 'approved' })
-      .expect(200);
+    await transitionProjectStatus(
+      app,
+      projectId,
+      admin.accessToken,
+      ProjectStatus.approved,
+    );
 
     // El detalle es público para usuarios con sesión, pero las secciones
     // sensibles siguen reservadas a los miembros.
