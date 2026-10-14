@@ -122,6 +122,12 @@ export default function ProjectsTable({
       (status) => status.value === statusFilterValue,
     )?.label ?? "Estado";
 
+  const pageCount = Math.max(1, table.getPageCount());
+  const currentPage = Math.min(
+    table.state.pagination.pageIndex + 1,
+    pageCount,
+  );
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-card p-3 shadow-sm ring-1 ring-utb-blue/10">
@@ -230,24 +236,33 @@ export default function ProjectsTable({
         </Table>
       </div>
 
-      <div className="flex items-center justify-end gap-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
+      <div className="flex flex-wrap items-center justify-between gap-2 py-4">
+        <p
+          className="text-sm text-muted-foreground"
+          aria-live="polite"
         >
-          Anterior
-        </Button>
+          Página {currentPage} de {pageCount}
+        </p>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Siguiente
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Anterior
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Siguiente
+          </Button>
+        </div>
       </div>
     </div>
   );
