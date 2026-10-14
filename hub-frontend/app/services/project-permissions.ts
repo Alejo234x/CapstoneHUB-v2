@@ -3,8 +3,9 @@ import type { ProjectDetails } from "./schemas";
 /**
  * Reglas de permisos del proyecto en el cliente. Reflejan
  * `AuthorizationService` en el backend: el rol asignado al proyecto decide lo
- * que se puede hacer; los roles globales solo habilitan la asignación (más el
- * caso especial del evaluador global, que revisa cualquier proyecto).
+ * que se puede hacer; los roles globales solo habilitan la asignación, salvo el
+ * evaluador global (y el admin), que además asigna actores, comenta y gestiona
+ * o revisa entregas en cualquier proyecto sin asignarse.
  */
 
 export type ProjectViewer = {
@@ -116,20 +117,28 @@ export function canEditProjectDetails(
   );
 }
 
-/** Gestionar el proyecto: asignar actores, borrarlo. */
-export function canManageProject(
+/** Asignar actores: admin, evaluador global o docente asignado. */
+export function canAssignActors(
   viewer: ProjectViewer,
   assignments: readonly ProjectAssignment[],
 ): boolean {
-  return isAdmin(viewer) || isAssignedTeacher(viewer, assignments);
+  return reviewsAnyProject(viewer) || isAssignedTeacher(viewer, assignments);
 }
 
-/** Gestionar hitos y entregas. */
+/** Gestionar hitos. */
 export function canManageMilestones(
   viewer: ProjectViewer,
   assignments: readonly ProjectAssignment[],
 ): boolean {
   return isAdmin(viewer) || isAssignedWith(viewer, assignments, MANAGEMENT_ROLES);
+}
+
+/** Gestionar y revisar entregas: admin, evaluador global o docentes/evaluadores asignados. */
+export function canManageReports(
+  viewer: ProjectViewer,
+  assignments: readonly ProjectAssignment[],
+): boolean {
+  return reviewsAnyProject(viewer) || isAssignedWith(viewer, assignments, MANAGEMENT_ROLES);
 }
 
 /** Avanzar de fase (semestre). */
@@ -148,12 +157,12 @@ export function canSubmitReports(
   return isAdmin(viewer) || isAssignedMember(viewer, assignments);
 }
 
-/** Comentar/observar el proyecto: cualquier miembro asignado. */
+/** Comentar/observar el proyecto: admin, evaluador global o miembro asignado. */
 export function canComment(
   viewer: ProjectViewer,
   assignments: readonly ProjectAssignment[],
 ): boolean {
-  return isAssignedMember(viewer, assignments);
+  return reviewsAnyProject(viewer) || isAssignedMember(viewer, assignments);
 }
 
 export function canDeleteAttachment(

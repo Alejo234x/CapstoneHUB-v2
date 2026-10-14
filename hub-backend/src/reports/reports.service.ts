@@ -730,7 +730,7 @@ export class ReportsService {
     user: AuthenticatedUser,
   ): Promise<void> {
     await assertProjectExists(this.prisma, projectId);
-    await this.authorization.assertCanManageMilestone(user, projectId);
+    await this.authorization.assertCanManageReports(user, projectId);
   }
 
   private async assertManageableReport(

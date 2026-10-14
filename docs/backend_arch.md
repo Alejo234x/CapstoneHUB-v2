@@ -120,7 +120,8 @@ asignación, los permisos dependen del rol en el proyecto, no del rol global.
 `AuthorizationService` responde preguntas como "¿puede este usuario crear un
 proyecto?", "¿puede gestionar este proyecto?" o "¿puede asignar actores?",
 combinando la asignación en el proyecto con el `admin` (que siempre pasa) y el
-`evaluator` global, que revisa cualquier proyecto sin asignarse.
+`evaluator` global, que revisa cualquier proyecto sin asignarse y, además, puede
+asignar actores, comentar y gestionar o revisar entregas sin estar asignado.
 
 ### Matriz de permisos
 
@@ -133,12 +134,14 @@ pasa.
 | Listar / ver proyectos | sí* | sí | sí | miembro | miembro | miembro |
 | Crear proyecto | no | rol | rol | rol | rol | rol |
 | Editar datos del proyecto | no | sí | sí | miembro | miembro | no† |
-| Gestionar proyecto / asignar actores | no | sí | no | miembro | no | no |
-| Gestionar hitos y entregas | no | sí | miembro | miembro | miembro | no |
+| Gestionar / borrar proyecto | no | sí | no | miembro | no | no |
+| Asignar actores | no | sí | sí | miembro | no | no |
+| Gestionar hitos | no | sí | no | miembro | miembro | no |
+| Gestionar y revisar entregas | no | sí | sí | miembro | miembro | no |
 | Avanzar fase (semestre) | no | sí | no | miembro | no | no |
 | Cambiar estado | no | sí | miembro* | miembro (ejecución) | miembro (propuesta) | no |
 | Ver observaciones / hitos / anexos | no | sí | sí | miembro | miembro | miembro |
-| Comentar un proyecto | no | sí | miembro | miembro | miembro | miembro |
+| Comentar un proyecto | no | sí | sí | miembro | miembro | miembro |
 
 - \* Un `evaluator` global puede gestionar las transiciones de la fase de
   propuesta solo si está asignado como `evaluator`; el resto de transiciones
@@ -148,9 +151,9 @@ pasa.
   global (sin asignarse); un `teacher` o `evaluator` asignado al proyecto con su
   rol correspondiente. Un proyecto `closed` o `rejected` es de solo lectura
   (responde `409`). Cada campo modificado se registra en `ProjectChangeHistory`.
-- El `evaluator` global ve todos los proyectos, pero no puede escribir en
-  proyectos ajenos sin asignación (solo editar sus datos). Para comentar,
-  gestionar hitos o cambiar estado necesita la asignación.
+- El `evaluator` global ve todos los proyectos y, sin asignarse, puede editar
+  sus datos, asignar actores, comentar y gestionar o revisar entregas. Para
+  gestionar hitos, avanzar de fase o cambiar estado necesita la asignación.
 - Los evaluadores asignados gestionan la fase de propuesta (`proposed`/
   `under_review` y `approved → rejected`); los docentes asignados, el resto
   (`approved → in_progress`, `in_progress → {paused, closed, cancelled}`,

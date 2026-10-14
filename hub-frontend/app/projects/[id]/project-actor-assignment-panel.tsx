@@ -12,7 +12,7 @@ import {
   assignableActorRoles,
   isActorRole,
 } from "../../services/roles";
-import { canManageProject } from "../../services/project-permissions";
+import { canAssignActors } from "../../services/project-permissions";
 import { formatRole, getInitials } from "../../services/utils";
 import { useAuth } from "../../components/auth-provider";
 import AccessNotice from "../../components/access-notice";
@@ -524,7 +524,7 @@ export default function ProjectActorAssignmentPanel({
   const currentUser = session?.user;
 
   const canAssign = currentUser
-    ? canManageProject(currentUser, assignments)
+    ? canAssignActors(currentUser, assignments)
     : false;
 
   const { users, errorMessage, setErrorMessage } = useProjectUsers(

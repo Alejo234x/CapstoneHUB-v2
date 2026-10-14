@@ -17,7 +17,7 @@ import {
 } from "../../services/reports";
 import { downloadProjectAttachment } from "../../services/attachments";
 import {
-  canManageMilestones,
+  canManageReports,
   canSubmitReports,
 } from "../../services/project-permissions";
 import {
@@ -310,7 +310,7 @@ export default function ProjectReportsPanel({
 
   const canManage = useMemo(
     () =>
-      session ? canManageMilestones(session.user, actorAssignments) : false,
+      session ? canManageReports(session.user, actorAssignments) : false,
     [session, actorAssignments],
   );
 
