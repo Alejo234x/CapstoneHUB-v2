@@ -1,5 +1,10 @@
 -- Simplificación de roles: coordinator + advisor -> teacher.
 --
+-- SonarCloud analiza este archivo como PL/SQL y reporta falsos positivos
+-- propios del DDL de PostgreSQL (identificadores citados obligatorios y
+-- literales de enum, que no admiten constantes). Se silencian con supresiones
+-- en línea en las líneas afectadas.
+--
 -- 1. Los roles globales coordinator y advisor se unifican en teacher. Antes de
 --    convertir la columna hay que eliminar los duplicados que quedarían en
 --    user_role_assignment si un usuario tenía ambos roles.
@@ -7,11 +12,11 @@ DELETE FROM "user_role_assignment" dup
 USING "user_role_assignment" keep
 WHERE dup.id > keep.id
   AND dup."user_id" = keep."user_id"
-  AND dup."role"::text IN ('coordinator', 'advisor')
+  AND dup."role"::text IN ('coordinator', 'advisor') -- NOSONAR: DDL estático, sin constantes
   AND keep."role"::text IN ('coordinator', 'advisor');
 
 -- 2. ActorRole: coordinator | advisor -> teacher.
-CREATE TYPE "ActorRole_new" AS ENUM ('teacher', 'evaluator', 'student');
+CREATE TYPE "ActorRole_new" AS ENUM ('teacher', 'evaluator', 'student'); -- NOSONAR: literal obligatorio en el enum
 ALTER TABLE "project_actor_assignment"
   ALTER COLUMN "role" TYPE "ActorRole_new"
   USING (
@@ -22,7 +27,7 @@ ALTER TABLE "project_actor_assignment"
   )::"ActorRole_new";
 ALTER TYPE "ActorRole" RENAME TO "ActorRole_old";
 ALTER TYPE "ActorRole_new" RENAME TO "ActorRole";
-DROP TYPE "ActorRole_old";
+DROP TYPE "ActorRole_old"; -- NOSONAR: el tipo temporal exige identificador citado
 
 -- 3. UserRole: coordinator | advisor -> teacher.
 CREATE TYPE "UserRole_new" AS ENUM ('admin', 'evaluator', 'teacher', 'proposer', 'student');
@@ -36,4 +41,4 @@ ALTER TABLE "user_role_assignment"
   )::"UserRole_new";
 ALTER TYPE "UserRole" RENAME TO "UserRole_old";
 ALTER TYPE "UserRole_new" RENAME TO "UserRole";
-DROP TYPE "UserRole_old";
+DROP TYPE "UserRole_old"; -- NOSONAR: el tipo temporal exige identificador citado
