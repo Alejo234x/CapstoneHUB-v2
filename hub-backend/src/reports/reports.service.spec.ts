@@ -113,7 +113,7 @@ describe('ReportsService', () => {
     );
     const authorization = {
       assertProjectMember: jest.fn(),
-      assertCanWriteProjectData: jest.fn(),
+      assertCanSubmitReports: jest.fn(),
       assertCanManageReports: jest.fn(),
     };
     const storage = {
@@ -284,10 +284,7 @@ describe('ReportsService', () => {
     });
 
     expect(result.status).toBe('submitted');
-    expect(authorization.assertCanWriteProjectData).toHaveBeenCalledWith(
-      user,
-      10,
-    );
+    expect(authorization.assertCanSubmitReports).toHaveBeenCalledWith(user, 10);
     expect(prisma.projectReport.update).toHaveBeenCalledWith({
       where: { id: 3 },
       data: {
@@ -354,10 +351,7 @@ describe('ReportsService', () => {
     });
 
     expect(result.textContent).toBe('Hola mundo');
-    expect(authorization.assertCanWriteProjectData).toHaveBeenCalledWith(
-      user,
-      10,
-    );
+    expect(authorization.assertCanSubmitReports).toHaveBeenCalledWith(user, 10);
     expect(prisma.projectReportContent.create).toHaveBeenCalledWith({
       data: {
         reportId: 3,

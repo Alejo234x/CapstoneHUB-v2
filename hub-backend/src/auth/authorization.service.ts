@@ -215,6 +215,31 @@ export class AuthorizationService {
     }
   }
 
+  /**
+   * Enviar entregas (y preparar su contenido) está reservado a
+   * administradores y estudiantes asignados al proyecto. Docentes,
+   * evaluadores y proponentes solo configuran y revisan la entrega.
+   */
+  async assertCanSubmitReports(
+    user: AuthenticatedUser,
+    projectId: number,
+  ): Promise<void> {
+    if (user.roles.includes(UserRole.admin)) {
+      return;
+    }
+
+    const assignment = await this.prisma.projectActorAssignment.findFirst({
+      where: { projectId, userId: user.id, role: ActorRole.student },
+      select: { id: true },
+    });
+
+    if (!assignment) {
+      throw new ForbiddenException(
+        'A project student assignment is required to submit reports',
+      );
+    }
+  }
+
   assertCanCreateProject(user: AuthenticatedUser): void {
     if (user.roles.length === 0) {
       throw new ForbiddenException('A role is required to create projects');

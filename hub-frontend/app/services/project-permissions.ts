@@ -41,6 +41,9 @@ const TEACHER_ROLES = ["teacher"] as const;
 /** Roles de proyecto que gestionan hitos, entregas y datos. */
 const MANAGEMENT_ROLES = ["teacher", "evaluator"] as const;
 
+/** Roles de proyecto que preparan y envían entregas. */
+const SUBMITTER_ROLES = ["student"] as const;
+
 export function isAdmin(viewer: ProjectViewer): boolean {
   return viewer.roles.includes("admin");
 }
@@ -149,12 +152,12 @@ export function canAdvancePhase(
   return isAdmin(viewer) || isAssignedTeacher(viewer, assignments);
 }
 
-/** Enviar entregas: cualquier miembro asignado (o un admin). */
+/** Preparar y enviar entregas: admin o estudiante asignado. */
 export function canSubmitReports(
   viewer: ProjectViewer,
   assignments: readonly ProjectAssignment[],
 ): boolean {
-  return isAdmin(viewer) || isAssignedMember(viewer, assignments);
+  return isAdmin(viewer) || isAssignedWith(viewer, assignments, SUBMITTER_ROLES);
 }
 
 /** Comentar/observar el proyecto: admin, evaluador global o miembro asignado. */

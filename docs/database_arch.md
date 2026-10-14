@@ -139,7 +139,7 @@ archivo pertenece a una entrega y se muestra en su pestaña, no en Anexos.
 
 ### ProjectReport
 
-Entrega creada por un docente o evaluador asignado: `title`, `description`
+Entrega creada por un docente, evaluador o administrador: `title`, `description`
 opcional, `dueDate`, `type` (el tipo de contenido que debe aportar el estudiante:
 `text`, `link` o `file`), `allowedMimeTypes` y
 `maxFiles` (MIME permitidos y máximo de archivos, obligatorios para el tipo
@@ -155,7 +155,8 @@ valores `image`/`video` del enum quedan como legacy tras unificar los tipos) y
 debe coincidir con el `type` de su entrega. Los tipos de texto y enlace usan
 `textContent`/`url`/`label`; los de archivo referencian un `ProjectAttachment`
 (`attachmentId`, único) y el binario vive en S3/RustFS. Cada fila guarda su autor
-y su fecha de creación.
+y su fecha de creación. Solo el estudiante asignado al proyecto (o un
+administrador) puede aportar contenido y enviar la entrega.
 
 ### MilestoneReportLink
 

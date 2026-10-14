@@ -588,6 +588,51 @@ describe('AuthorizationService', () => {
     });
   });
 
+  it('allows admins to submit reports without a project assignment', async () => {
+    const findAssignment = jest.fn();
+    const prisma = {
+      projectActorAssignment: { findFirst: findAssignment },
+    };
+    const service = new AuthorizationService(prisma as never);
+
+    await expect(
+      service.assertCanSubmitReports(user([UserRole.admin]), 10),
+    ).resolves.toBeUndefined();
+    expect(findAssignment).not.toHaveBeenCalled();
+  });
+
+  it('allows assigned students to submit reports', async () => {
+    const findAssignment = jest.fn().mockResolvedValue({ id: 5 });
+    const prisma = {
+      projectActorAssignment: { findFirst: findAssignment },
+    };
+    const service = new AuthorizationService(prisma as never);
+
+    await expect(
+      service.assertCanSubmitReports(user([UserRole.student]), 10),
+    ).resolves.toBeUndefined();
+    expect(findAssignment).toHaveBeenCalledWith({
+      where: { projectId: 10, userId: 7, role: ActorRole.student },
+      select: { id: true },
+    });
+  });
+
+  it('rejects reports from users without a student assignment', async () => {
+    const findAssignment = jest.fn().mockResolvedValue(null);
+    const prisma = {
+      projectActorAssignment: { findFirst: findAssignment },
+    };
+    const service = new AuthorizationService(prisma as never);
+
+    await expect(
+      service.assertCanSubmitReports(user([UserRole.teacher]), 10),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(findAssignment).toHaveBeenCalledWith({
+      where: { projectId: 10, userId: 7, role: ActorRole.student },
+      select: { id: true },
+    });
+  });
+
   describe('project visibility', () => {
     function visibilityPrisma(project: unknown) {
       return {

@@ -138,6 +138,7 @@ pasa.
 | Asignar actores | no | sí | sí | miembro | no | no |
 | Gestionar hitos | no | sí | no | miembro | miembro | no |
 | Gestionar y revisar entregas | no | sí | sí | miembro | miembro | no |
+| Preparar y enviar entregas | no | sí | no | no | no | miembro |
 | Avanzar fase (semestre) | no | sí | no | miembro | no | no |
 | Cambiar estado | no | sí | miembro* | miembro (ejecución) | miembro (propuesta) | no |
 | Ver observaciones / hitos / anexos | no | sí | sí | miembro | miembro | miembro |
@@ -154,6 +155,9 @@ pasa.
 - El `evaluator` global ve todos los proyectos y, sin asignarse, puede editar
   sus datos, asignar actores, comentar y gestionar o revisar entregas. Para
   gestionar hitos, avanzar de fase o cambiar estado necesita la asignación.
+- `Preparar y enviar entregas` (contenido y envío) queda reservado al `student`
+  asignado o a un `admin`. Docentes, evaluadores y proponentes solo configuran y
+  revisan la entrega, aunque estén asignados al proyecto.
 - Los evaluadores asignados gestionan la fase de propuesta (`proposed`/
   `under_review` y `approved → rejected`); los docentes asignados, el resto
   (`approved → in_progress`, `in_progress → {paused, closed, cancelled}`,
