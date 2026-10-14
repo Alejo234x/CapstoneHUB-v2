@@ -7,8 +7,13 @@ import {
   uniqueEmail,
   userWithRole,
 } from './helpers/auth';
-import { ActorRole, UserRole } from '../src/generated/prisma/client';
+import {
+  ActorRole,
+  ProjectStatus,
+  UserRole,
+} from '../src/generated/prisma/client';
 import { createProject } from './helpers/projects';
+import { PrismaService } from '../src/prisma.service';
 
 describe('Projects workflow (e2e)', () => {
   const getApp = useTestApp();
@@ -24,16 +29,7 @@ describe('Projects workflow (e2e)', () => {
     const { id: projectId } = await createProject(app, proposerToken);
 
     // El admin impulsa el ciclo de forma secuencial (cada transición depende
-    // de la anterior): proposed -> under_review -> approved -> in_progress.
-    const toUnderReview = await request(app.getHttpServer())
-      .patch(`/projects/${projectId}/status`)
-      .set(bearer(admin.accessToken))
-      .send({ status: 'under_review' })
-      .expect(200);
-    expect((toUnderReview.body as { status: string }).status).toBe(
-      'under_review',
-    );
-
+    // de la anterior): proposed -> approved -> in_progress.
     const toApproved = await request(app.getHttpServer())
       .patch(`/projects/${projectId}/status`)
       .set(bearer(admin.accessToken))
@@ -88,6 +84,66 @@ describe('Projects workflow (e2e)', () => {
     expect((detail.body as { phase: string }).phase).toBe('semester_2');
   });
 
+  it('un evaluador global aprueba la propuesta sin estar asignado', async () => {
+    const app = getApp();
+    const { accessToken: proposerToken } = await registerUser(
+      app,
+      uniqueEmail('propietario'),
+    );
+    const evaluator = await userWithRole(app, UserRole.evaluator);
+    const { id: projectId } = await createProject(app, proposerToken);
+
+    const approved = await request(app.getHttpServer())
+      .patch(`/projects/${projectId}/status`)
+      .set(bearer(evaluator.accessToken))
+      .send({ status: 'approved', description: 'Propuesta viable' })
+      .expect(200);
+
+    expect((approved.body as { status: string }).status).toBe('approved');
+  });
+
+  it('deja salir a los proyectos legados que quedaron en under_review', async () => {
+    const app = getApp();
+    const prisma = app.get(PrismaService);
+    const { accessToken: proposerToken } = await registerUser(
+      app,
+      uniqueEmail('propietario'),
+    );
+    const evaluator = await userWithRole(app, UserRole.evaluator);
+    const { id: projectId } = await createProject(app, proposerToken);
+
+    // Los datos antiguos conservan el estado legado; se fuerza aquí porque la
+    // API ya no permite entrar a `under_review`.
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { status: ProjectStatus.under_review },
+    });
+
+    const approved = await request(app.getHttpServer())
+      .patch(`/projects/${projectId}/status`)
+      .set(bearer(evaluator.accessToken))
+      .send({ status: 'approved', description: 'Revisión de proyecto legado' })
+      .expect(200);
+
+    expect((approved.body as { status: string }).status).toBe('approved');
+  });
+
+  it('ya no permite entrar al estado under_review', async () => {
+    const app = getApp();
+    const admin = await adminSession(app);
+    const { accessToken: proposerToken } = await registerUser(
+      app,
+      uniqueEmail('propietario'),
+    );
+    const { id: projectId } = await createProject(app, proposerToken);
+
+    await request(app.getHttpServer())
+      .patch(`/projects/${projectId}/status`)
+      .set(bearer(admin.accessToken))
+      .send({ status: 'under_review' })
+      .expect(400);
+  });
+
   it('rechaza cambiar el estado a un usuario no autorizado', async () => {
     const app = getApp();
     const { accessToken: proposerToken } = await registerUser(
@@ -96,12 +152,12 @@ describe('Projects workflow (e2e)', () => {
     );
     const { id: projectId } = await createProject(app, proposerToken);
 
-    // Un proponente no puede mover el proyecto a revisión (esa transición es
-    // de evaluador/admin).
+    // Un proponente no puede aprobar su propia propuesta (esa transición es de
+    // evaluador/admin).
     await request(app.getHttpServer())
       .patch(`/projects/${projectId}/status`)
       .set(bearer(proposerToken))
-      .send({ status: 'under_review' })
+      .send({ status: 'approved' })
       .expect(403);
   });
 });

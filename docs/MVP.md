@@ -51,13 +51,15 @@ El MVP debe validar el siguiente flujo:
 Se adopta el flujo de estados actualmente definido en backend:
 
 1. proposed
-2. under_review
-3. approved
-4. in_progress
-5. paused
-6. closed
-7. cancelled
-8. rejected
+2. approved
+3. in_progress
+4. paused
+5. closed
+6. cancelled
+7. rejected
+
+`under_review` se conserva únicamente como estado legado de proyectos antiguos:
+no se entra en él, pero pueden salir hacia `approved` o `rejected`.
 
 ## Criterios de Aceptacion
 

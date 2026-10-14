@@ -411,6 +411,12 @@ export class AuthorizationService {
     }
   }
 
+  /**
+   * Las transiciones de propuesta (`proposed → approved/rejected`, el legado
+   * `under_review` y `approved → rejected`) las resuelve un evaluador global
+   * sin asignación o un evaluador asignado al proyecto. El resto de
+   * transiciones exigen una asignación docente.
+   */
   async assertCanTransitionProject(
     user: AuthenticatedUser,
     projectId: number,
@@ -428,6 +434,10 @@ export class AuthorizationService {
         nextStatus === ProjectStatus.rejected);
 
     if (evaluatorTransitions) {
+      if (user.roles.includes(UserRole.evaluator)) {
+        return;
+      }
+
       await this.assertProjectAssignment(user, projectId, ActorRole.evaluator);
       return;
     }

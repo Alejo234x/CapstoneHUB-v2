@@ -45,10 +45,9 @@ export function isValidProjectStatusTransition(
   nextStatus: ProjectStatus,
 ): boolean {
   const transitions: Record<ProjectStatus, ProjectStatus[]> = {
-    [ProjectStatus.proposed]: [
-      ProjectStatus.under_review,
-      ProjectStatus.rejected,
-    ],
+    [ProjectStatus.proposed]: [ProjectStatus.approved, ProjectStatus.rejected],
+    // `under_review` es legado: los proyectos que quedaron ahí pueden salir,
+    // pero ya no se entra en él.
     [ProjectStatus.under_review]: [
       ProjectStatus.approved,
       ProjectStatus.rejected,

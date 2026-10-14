@@ -3,7 +3,6 @@ import { ProjectStatus } from '../../src/generated/prisma/client';
 /** Camino lineal del "happy path" (sin los estados laterales paused/cancelled). */
 export const STATUS_SEQUENCE: ProjectStatus[] = [
   'proposed',
-  'under_review',
   'approved',
   'in_progress',
   'closed',
@@ -12,14 +11,8 @@ export const STATUS_SEQUENCE: ProjectStatus[] = [
 /** Caminos laterales hasta un estado que no está en la secuencia lineal. */
 const SIDE_PATHS: Partial<Record<ProjectStatus, ProjectStatus[]>> = {
   rejected: ['proposed', 'rejected'],
-  paused: ['proposed', 'under_review', 'approved', 'in_progress', 'paused'],
-  cancelled: [
-    'proposed',
-    'under_review',
-    'approved',
-    'in_progress',
-    'cancelled',
-  ],
+  paused: ['proposed', 'approved', 'in_progress', 'paused'],
+  cancelled: ['proposed', 'approved', 'in_progress', 'cancelled'],
 };
 
 export function statusPathFor(target: ProjectStatus): ProjectStatus[] {
@@ -38,7 +31,8 @@ export function statusPathFor(target: ProjectStatus): ProjectStatus[] {
 
 /**
  * Mirrors AuthorizationService.assertCanTransitionProject: evaluators handle
- * review transitions and rejections, teachers handle the rest.
+ * review transitions and rejections, teachers handle the rest. `under_review`
+ * se conserva por los datos legados.
  */
 export function authorRoleForTransition(
   previous: ProjectStatus,

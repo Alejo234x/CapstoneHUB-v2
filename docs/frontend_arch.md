@@ -74,7 +74,8 @@ asignados ven el control compacto **Fase** con el botón para
 avanzar de semestre; se habilita cuando los hitos mínimos de la fase actual
 están completos (al pulsarlo con pendientes, avisa cuáles faltan). A la derecha,
 quienes pueden editar (administradores, evaluadores globales, docentes y
-evaluadores asignados al proyecto y el proponente mientras esté en revisión) ven
+evaluadores asignados al proyecto y el proponente mientras la propuesta siga en
+revisión) ven
 el botón **Editar proyecto** que abre la pantalla dedicada `/projects/[id]/edit`
 (los mismos campos de la propuesta, salvo el proponente). Los cambios se envían
 por `PUT` y la pestaña **Historial** muestra, junto al historial de estados, una

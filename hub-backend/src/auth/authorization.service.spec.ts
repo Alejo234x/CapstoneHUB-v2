@@ -49,7 +49,7 @@ describe('AuthorizationService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  it('only requires a project assignment for evaluator transitions', async () => {
+  it('requires an evaluator assignment for proposal transitions without a global evaluator role', async () => {
     const findAssignment = jest.fn().mockResolvedValue({ id: 3 });
     const prisma = {
       projectActorAssignment: { findFirst: findAssignment },
@@ -61,7 +61,7 @@ describe('AuthorizationService', () => {
         user([UserRole.teacher]),
         10,
         'proposed',
-        'under_review',
+        'approved',
       ),
     ).resolves.toBeUndefined();
     expect(findAssignment).toHaveBeenCalledWith({
@@ -70,8 +70,26 @@ describe('AuthorizationService', () => {
     });
   });
 
-  it('rejects evaluator transitions without an evaluator assignment', async () => {
-    const findAssignment = jest.fn().mockResolvedValue(null);
+  it('lets a global evaluator approve a proposal without a project assignment', async () => {
+    const findAssignment = jest.fn();
+    const prisma = {
+      projectActorAssignment: { findFirst: findAssignment },
+    };
+    const service = new AuthorizationService(prisma as never);
+
+    await expect(
+      service.assertCanTransitionProject(
+        user([UserRole.evaluator]),
+        10,
+        'proposed',
+        'approved',
+      ),
+    ).resolves.toBeUndefined();
+    expect(findAssignment).not.toHaveBeenCalled();
+  });
+
+  it('lets a global evaluator move a legacy under_review project forward', async () => {
+    const findAssignment = jest.fn();
     const prisma = {
       projectActorAssignment: { findFirst: findAssignment },
     };
@@ -82,6 +100,24 @@ describe('AuthorizationService', () => {
         user([UserRole.evaluator]),
         10,
         'under_review',
+        'approved',
+      ),
+    ).resolves.toBeUndefined();
+    expect(findAssignment).not.toHaveBeenCalled();
+  });
+
+  it('rejects proposal transitions without an evaluator assignment', async () => {
+    const findAssignment = jest.fn().mockResolvedValue(null);
+    const prisma = {
+      projectActorAssignment: { findFirst: findAssignment },
+    };
+    const service = new AuthorizationService(prisma as never);
+
+    await expect(
+      service.assertCanTransitionProject(
+        user([UserRole.teacher]),
+        10,
+        'proposed',
         'approved',
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);

@@ -35,6 +35,14 @@ const READ_ONLY_STATUSES = new Set(["closed", "rejected"]);
 /** Estados en los que el proponente todavía puede corregir su propuesta. */
 const PROPOSER_EDITABLE_STATUSES = new Set(["proposed", "under_review"]);
 
+/**
+ * Estados destino: `under_review` quedó como legado y ya no se puede elegir;
+ * solo se conserva en `PROJECT_STATUS_OPTIONS` para mostrarlo y filtrarlo.
+ */
+const SELECTABLE_STATUS_OPTIONS = PROJECT_STATUS_OPTIONS.filter(
+  (status) => status.value !== "under_review",
+);
+
 /** Roles de proyecto que supervisan la ejecución. */
 const TEACHER_ROLES = ["teacher"] as const;
 
@@ -186,20 +194,24 @@ function getManagedStatuses(
   currentStatus: string,
 ): ReadonlyArray<(typeof PROJECT_STATUS_OPTIONS)[number]> {
   if (isAdmin(viewer)) {
-    return PROJECT_STATUS_OPTIONS;
+    return SELECTABLE_STATUS_OPTIONS;
   }
 
-  const isEvaluator = isAssignedWith(viewer, assignments, ["evaluator"]);
+  // Un evaluador global resuelve la fase de propuesta sin asignarse.
+  const isEvaluator =
+    viewer.roles.includes("evaluator") ||
+    isAssignedWith(viewer, assignments, ["evaluator"]);
   const isTeacher = isAssignedTeacher(viewer, assignments);
   const allowed = new Set<string>();
 
   switch (currentStatus) {
     case "proposed":
       if (isEvaluator) {
-        allowed.add("under_review");
+        allowed.add("approved");
         allowed.add("rejected");
       }
       break;
+    // `under_review` es legado: los proyectos que quedaron ahí pueden salir.
     case "under_review":
       if (isEvaluator) {
         allowed.add("approved");

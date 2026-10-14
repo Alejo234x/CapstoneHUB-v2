@@ -110,7 +110,7 @@ docente que supervisa proyectos.
 `proposer` identifica a los proponentes externos que se registran solos desde
 `/register`. No es un `ActorRole`, así que no se les asigna como actores;
 proponen proyectos y, como proponentes del proyecto, pueden editarlo mientras
-siga en `proposed` o `under_review`.
+siga en `proposed` (o en el legado `under_review`).
 
 La asignación a un proyecto **licencia** el rol global una sola vez: un
 `teacher` puede ser asignado como `teacher` o como `evaluator`; un `evaluator`
@@ -121,7 +121,8 @@ asignación, los permisos dependen del rol en el proyecto, no del rol global.
 proyecto?", "¿puede gestionar este proyecto?" o "¿puede asignar actores?",
 combinando la asignación en el proyecto con el `admin` (que siempre pasa) y el
 `evaluator` global, que revisa cualquier proyecto sin asignarse y, además, puede
-asignar actores, comentar y gestionar o revisar entregas sin estar asignado.
+asignar actores, comentar, gestionar o revisar entregas y resolver las
+transiciones de la fase de propuesta sin estar asignado.
 
 ### Matriz de permisos
 
@@ -140,31 +141,34 @@ pasa.
 | Gestionar y revisar entregas | no | sí | sí | miembro | miembro | no |
 | Preparar y enviar entregas | no | sí | no | no | no | miembro |
 | Avanzar fase (semestre) | no | sí | no | miembro | no | no |
-| Cambiar estado | no | sí | miembro* | miembro (ejecución) | miembro (propuesta) | no |
+| Cambiar estado | no | sí | sí (propuesta)* | miembro (ejecución) | miembro (propuesta) | no |
 | Ver observaciones / hitos / anexos | no | sí | sí | miembro | miembro | miembro |
 | Comentar un proyecto | no | sí | sí | miembro | miembro | miembro |
 
-- \* Un `evaluator` global puede gestionar las transiciones de la fase de
-  propuesta solo si está asignado como `evaluator`; el resto de transiciones
-  requieren estar asignado como `teacher`.
+- \* Un `evaluator` global resuelve las transiciones de la fase de propuesta
+  (`proposed → approved`/`rejected`, el legado `under_review → approved`/
+  `rejected` y `approved → rejected`) sin asignarse; las transiciones de
+  ejecución requieren estar asignado como `teacher`.
 - `Crear proyecto` solo requiere que el usuario tenga al menos un rol global.
 - `Editar datos del proyecto`: lo permiten `admin` y cualquier `evaluator`
   global (sin asignarse); un `teacher` o `evaluator` asignado al proyecto con su
   rol correspondiente. Un proyecto `closed` o `rejected` es de solo lectura
   (responde `409`). Cada campo modificado se registra en `ProjectChangeHistory`.
 - El `evaluator` global ve todos los proyectos y, sin asignarse, puede editar
-  sus datos, asignar actores, comentar y gestionar o revisar entregas. Para
-  gestionar hitos, avanzar de fase o cambiar estado necesita la asignación.
+  sus datos, asignar actores, comentar, gestionar o revisar entregas y resolver
+  la fase de propuesta. Para gestionar hitos, avanzar de fase o hacer las
+  transiciones de ejecución necesita la asignación.
 - `Preparar y enviar entregas` (contenido y envío) queda reservado al `student`
   asignado o a un `admin`. Docentes, evaluadores y proponentes solo configuran y
   revisan la entrega, aunque estén asignados al proyecto.
-- Los evaluadores asignados gestionan la fase de propuesta (`proposed`/
-  `under_review` y `approved → rejected`); los docentes asignados, el resto
+- Los evaluadores (globales o asignados) gestionan la fase de propuesta
+  (`proposed → approved`/`rejected`, el legado `under_review` y
+  `approved → rejected`); los docentes asignados, el resto
   (`approved → in_progress`, `in_progress → {paused, closed, cancelled}`,
   `paused → {in_progress, cancelled}`).
 - † El `student` no edita los datos por su rol, pero el **proponente** (de
   cualquier rol global, incluido `student`) puede editar mientras el proyecto
-  esté en `proposed` o `under_review`.
+  esté en `proposed` (o en el legado `under_review`).
 
 Al arrancar, `AuthService` crea un admin inicial si la base de datos está vacía
 y existen `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD` y
@@ -175,30 +179,34 @@ y existen `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD` y
 El camino feliz es:
 
 ```
-proposed → under_review → approved → in_progress → closed
+proposed → approved → in_progress → closed
 ```
 
-`rejected` es terminal y se alcanza desde la fase de propuesta
-(`proposed`/`under_review`/`approved`). `cancelled` también es terminal y
-representa un proyecto que se canceló **después de haber empezado** (desde
-`in_progress` o `paused`); `paused` suspende la ejecución y permite reanudarla o
-cancelarla. Las transiciones se validan en `ProjectsService`; cada cambio se
-registra en `ProjectStatusHistory` dentro de una transacción, exige un motivo
-(salvo para `admin`) y respeta los permisos del rol que realiza la transición.
+`under_review` quedó como **legado**: se conserva en el enum y en los proyectos
+antiguos, que pueden salir del estado hacia `approved` o `rejected`, pero ya no
+es un destino alcanzable. `rejected` es terminal y se alcanza desde la fase de
+propuesta (`proposed`, el legado `under_review` o `approved`). `cancelled`
+también es terminal y representa un proyecto que se canceló **después de haber
+empezado** (desde `in_progress` o `paused`); `paused` suspende la ejecución y
+permite reanudarla o cancelarla. Las transiciones se validan en
+`ProjectsService`; cada cambio se registra en `ProjectStatusHistory` dentro de
+una transacción, exige un motivo (salvo para `admin`) y respeta los permisos del
+rol que realiza la transición.
 
 | Desde | Siguientes estados permitidos |
 | --- | --- |
-| `proposed` | `under_review`, `rejected` |
-| `under_review` | `approved`, `rejected` |
+| `proposed` | `approved`, `rejected` |
+| `under_review` (legado) | `approved`, `rejected` |
 | `approved` | `in_progress`, `rejected` |
 | `in_progress` | `paused`, `closed`, `cancelled` |
 | `paused` | `in_progress`, `cancelled` |
 | `closed` / `cancelled` / `rejected` | — (terminal) |
 
-Los evaluadores asignados gestionan las transiciones de la fase de propuesta
-(`proposed`/`under_review`, y `approved → rejected`); los docentes asignados
-gestionan el resto (`approved → in_progress`, `in_progress → {paused, closed,
-cancelled}`, `paused → {in_progress, cancelled}`).
+Los evaluadores (globales o asignados) gestionan las transiciones de la fase de
+propuesta (`proposed → approved`/`rejected`, el legado `under_review`, y
+`approved → rejected`); los docentes asignados gestionan el resto
+(`approved → in_progress`, `in_progress → {paused, closed, cancelled}`,
+`paused → {in_progress, cancelled}`).
 
 ### Fases (semestres) e hitos mínimos
 
@@ -243,23 +251,25 @@ proyecto; el hito y la entrega se pueden editar o eliminar como cualquier otro.
 stateDiagram-v2
     direction LR
     [*] --> proposed
-    proposed --> under_review
+    proposed --> approved
+    proposed --> rejected
     under_review --> approved
+    under_review --> rejected
     approved --> in_progress
     in_progress --> paused
     paused --> in_progress
     in_progress --> closed
     in_progress --> cancelled
     paused --> cancelled
-    proposed --> rejected
-    under_review --> rejected
     approved --> rejected
 
     classDef active fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef done fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef stopped fill:#fef3c7,stroke:#d97706,color:#92400e
     classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
-    class proposed,under_review,approved,in_progress active
+    classDef legacy fill:#f3f4f6,stroke:#9ca3af,color:#4b5563
+    class proposed,approved,in_progress active
+    class under_review legacy
     class paused stopped
     class closed done
     class cancelled,rejected bad
@@ -397,9 +407,9 @@ Comandos: `npx prisma migrate dev`, `npm run seed` (y variantes como
 | `GET` | `/projects/mine` | Proyectos propuestos y asignados al usuario. |
 | `GET` | `/projects/:id` | Detalle (404 si el proyecto es privado y el solicitante no es miembro). |
 | `POST` | `/projects` | Crear un proyecto; `isPrivate` lo define el proponente. |
-| `PUT` | `/projects/:id` | Editar los datos (admin, evaluador global o docente/evaluador asignado; proponente en revisión; `409` si está finalizado/rechazado). Registra historial por campo. |
+| `PUT` | `/projects/:id` | Editar los datos (admin, evaluador global o docente/evaluador asignado; proponente mientras siga en propuesta; `409` si está finalizado/rechazado). Registra historial por campo. |
 | `DELETE` | `/projects/:id` | Borrar (admin o docente asignado). |
-| `PATCH` | `/projects/:id/status` | Cambiar estado (registra historial). |
+| `PATCH` | `/projects/:id/status` | Cambiar estado (registra historial; `under_review` solo como legado). |
 | `POST` | `/projects/:id/phase/advance` | Avanzar de fase (semestre) si los hitos mínimos están completos y el proponente y los evaluadores dieron su visto bueno (`409` si no). |
 | `POST` | `/projects/:id/phase/approvals` | Dar el visto bueno de fase (proponente o evaluador asignado). |
 | `DELETE` | `/projects/:id/phase/approvals` | Retirar el visto bueno de fase propio. |
