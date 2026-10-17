@@ -795,4 +795,23 @@ describe('AuthorizationService', () => {
       );
     });
   });
+
+  describe('assertCanViewKpis', () => {
+    it.each([UserRole.admin, UserRole.teacher, UserRole.evaluator])(
+      'allows %s users',
+      (role) => {
+        const service = new AuthorizationService({} as never);
+
+        expect(() => service.assertCanViewKpis(user([role]))).not.toThrow();
+      },
+    );
+
+    it('rejects users without an authorized role', () => {
+      const service = new AuthorizationService({} as never);
+
+      expect(() => service.assertCanViewKpis(user([UserRole.student]))).toThrow(
+        ForbiddenException,
+      );
+    });
+  });
 });

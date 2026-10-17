@@ -1,14 +1,24 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../components/auth-provider";
 import ModuleHeader from "../components/module-header";
 import AssignedProjects from "./assigned-projects";
 import ChangePasswordForm from "./change-password-form";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { formatRole, getInitials } from "../services/utils";
+import { canViewKpis } from "../services/stats";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -33,6 +43,8 @@ export default function ProfilePage() {
   }
 
   const { user } = session;
+
+  const showKpis = canViewKpis(user.roles);
 
   return (
     <main className="flex-1 text-foreground">
@@ -83,6 +95,25 @@ export default function ProfilePage() {
             </div>
           </CardContent>
         </Card>
+
+        {showKpis ? (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Panel de indicadores</CardTitle>
+              <CardDescription>
+                Consulta pendientes, la distribución de tus proyectos y tu
+                actividad de revisión.
+              </CardDescription>
+
+              <CardAction>
+                <Button
+                  nativeButton={false}
+                  render={<Link href="/profile/kpis">Ver panel</Link>}
+                />
+              </CardAction>
+            </CardHeader>
+          </Card>
+        ) : null}
 
         <ChangePasswordForm />
 
