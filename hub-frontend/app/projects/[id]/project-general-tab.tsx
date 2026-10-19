@@ -51,30 +51,11 @@ function ProposerCard({ project }: { readonly project: ProjectDetails }) {
       </CardHeader>
       <CardContent>
         {project.proposer ? (
-          <Table>
-            <TableBody>
-              <TableRow>
-                <TableCell className="text-muted-foreground">
-                  Nombre completo
-                </TableCell>
-                <TableCell className="text-right">
-                  {project.proposer.fullName}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="text-muted-foreground">Cédula</TableCell>
-                <TableCell className="text-right">
-                  {project.proposer.idNumber ?? "Sin información"}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="text-muted-foreground">Correo</TableCell>
-                <TableCell className="text-right">
-                  {project.proposer.email ?? "Sin información"}
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+          <p className="text-muted-foreground">
+            <b> Nombre:</b> {project.proposer.fullName} <br />
+            <b> Cédula:</b> {project.proposer.idNumber ?? "Sin información"} <br />
+            <b> Correo:</b> {project.proposer.email ?? "Sin información"}
+          </p>
         ) : (
           <p className="text-muted-foreground">
             Sin información del proponente.
@@ -113,40 +94,12 @@ function DatesAndCostCard({ project }: { readonly project: ProjectDetails }) {
         <CardTitle>Fechas, ubicación y costos</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableBody>
-            <TableRow>
-              <TableCell className="text-muted-foreground">Inicio</TableCell>
-              <TableCell className="text-right">
-                {formatDate(project.startDate)}
-              </TableCell>
-            </TableRow>
-            {project.endDate ? (
-              <TableRow>
-                <TableCell className="text-muted-foreground">Fin</TableCell>
-                <TableCell className="text-right">
-                  {formatDate(project.endDate)}
-                </TableCell>
-              </TableRow>
-            ) : null}
-            {project.location ? (
-              <TableRow>
-                <TableCell className="text-muted-foreground">
-                  Ubicación
-                </TableCell>
-                <TableCell className="text-right">{project.location}</TableCell>
-              </TableRow>
-            ) : null}
-            <TableRow>
-              <TableCell className="text-muted-foreground">
-                Costo estimado
-              </TableCell>
-              <TableCell className="text-right">
-                {formatCurrency(project.estimatedCost)}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+        <p className="text-muted-foreground">
+          <b>Inicio:</b> {project.startDate ? formatDate(project.startDate) : "Sin información"} <br />
+          <b>Fin:</b> {project.endDate ? formatDate(project.endDate) : "Sin información"} <br />
+          <b>Ubicación:</b> {project.location ?? "Sin información"} <br />
+          <b>Costo estimado:</b> {formatCurrency(project.estimatedCost) ?? "Sin información"}
+        </p>
       </CardContent>
     </Card>
   );
