@@ -33,10 +33,7 @@ import { CreateProjectActorAssignmentDTO } from './dto/create-project-actor-assi
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDTO } from './dto/update-project.dto';
 import { TransitionProjectStatusDTO } from './dto/transition-project-status.dto';
-import {
-  PaginationQueryDto,
-  paginationToSkipTake,
-} from '../common/pagination.dto';
+import { ProjectListQueryDto } from './dto/project-list-query.dto';
 
 function parseProjectDate(value: string | null): Date | null {
   if (value === null || value.trim().length === 0) {
@@ -90,10 +87,10 @@ export class ProjectsController {
   @Public()
   @Get()
   async getProjects(
-    @OptionalCurrentUser() user?: AuthenticatedUser,
-    @Query() pagination: PaginationQueryDto = {},
+    @OptionalCurrentUser() user: AuthenticatedUser | undefined,
+    @Query() query: ProjectListQueryDto,
   ): Promise<ProjectListResponse[]> {
-    return this.projectService.projects(paginationToSkipTake(pagination), user);
+    return this.projectService.listProjects(query, user);
   }
 
   @Post()

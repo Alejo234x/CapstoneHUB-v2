@@ -31,6 +31,13 @@ const EVALUATOR_USER = {
   roles: [UserRole.evaluator],
 };
 
+type ProjectFindManyArgs = {
+  skip?: number;
+  take?: number;
+  orderBy?: unknown;
+  where?: { AND: unknown[] };
+};
+
 function createProjectDetail() {
   return {
     id: 10,
@@ -829,9 +836,108 @@ describe('ProjectsService', () => {
     );
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { status: ProjectStatus.closed, isPrivate: false },
+        where: {
+          AND: [{ status: ProjectStatus.closed }, { isPrivate: false }],
+        },
       }),
     );
+  });
+
+  it('combines list filters with the viewer visibility filter', async () => {
+    const findMany = jest.fn<Promise<unknown[]>, [ProjectFindManyArgs]>();
+    findMany.mockResolvedValue([]);
+    const visibilityWhere = { isPrivate: false };
+    const authorization = {
+      ...createAuthorizationMock(),
+      projectVisibilityWhere: jest.fn().mockReturnValue(visibilityWhere),
+    };
+    const service = createService({ project: { findMany } }, authorization);
+
+    await service.listProjects(
+      {
+        search: '  laboratorio ',
+        status: [ProjectStatus.approved, ProjectStatus.in_progress],
+        proposer: ['María Rodríguez'],
+        source: [ProjectSource.internal_need],
+        requiresLegalization: true,
+        year: [2026],
+        withoutYear: true,
+        sort: 'name-asc',
+        page: 2,
+        limit: 10,
+      },
+      ADMIN_USER,
+    );
+
+    const call = findMany.mock.calls[0][0];
+    expect(call.skip).toBe(10);
+    expect(call.take).toBe(10);
+    expect(call.orderBy).toEqual([{ name: 'asc' }, { id: 'asc' }]);
+    expect(call.where?.AND[1]).toEqual(visibilityWhere);
+
+    const filters = call.where?.AND[0] as { AND?: unknown[] };
+    expect(filters.AND).toEqual(
+      expect.arrayContaining([
+        {
+          OR: expect.arrayContaining([
+            {
+              name: {
+                contains: 'laboratorio',
+                mode: 'insensitive',
+              },
+            },
+          ]) as unknown,
+        },
+        {
+          status: {
+            in: [ProjectStatus.approved, ProjectStatus.in_progress],
+          },
+        },
+        {
+          OR: [
+            { naturalProposer: { is: { fullName: 'María Rodríguez' } } },
+            { proposer: { is: { fullName: 'María Rodríguez' } } },
+          ],
+        },
+        { source: { in: [ProjectSource.internal_need] } },
+        { requiresLegalization: true },
+        {
+          OR: [
+            {
+              startDate: {
+                gte: new Date(Date.UTC(2026, 0, 1)),
+                lt: new Date(Date.UTC(2027, 0, 1)),
+              },
+            },
+            { startDate: null },
+          ],
+        },
+      ]),
+    );
+  });
+
+  it('orders by year with nulls last and defaults to recent projects', async () => {
+    const findMany = jest.fn<Promise<unknown[]>, [ProjectFindManyArgs]>();
+    findMany.mockResolvedValue([]);
+    const service = createService(
+      { project: { findMany } },
+      createAuthorizationMock(),
+    );
+
+    await service.listProjects({ sort: 'year-desc' });
+    expect(findMany.mock.calls[0][0].orderBy).toEqual([
+      { startDate: { sort: 'desc', nulls: 'last' } },
+      { id: 'desc' },
+    ]);
+
+    await service.listProjects({});
+    expect(findMany.mock.calls[1][0].orderBy).toEqual([
+      { createdAt: 'desc' },
+      { id: 'desc' },
+    ]);
+    expect(findMany.mock.calls[1][0].where).toEqual({
+      AND: [{}],
+    });
   });
 
   it('redacts sensitive relations for anonymous viewers of a public project', async () => {

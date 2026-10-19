@@ -34,13 +34,65 @@ export type CreateProjectPayload = {
   submissionConsentAt: string;
 };
 
-export async function getProjects(): Promise<{
+export type ProjectListQuery = {
+  search?: string;
+  status?: string[];
+  proposer?: string[];
+  source?: string[];
+  requiresLegalization?: boolean;
+  year?: number[];
+  withoutYear?: boolean;
+  sort?: string;
+  page?: number;
+  limit?: number;
+};
+
+function buildProjectsQuery(query: ProjectListQuery): string {
+  const params = new URLSearchParams();
+
+  if (query.search) {
+    params.set("search", query.search);
+  }
+
+  query.status?.forEach((value) => params.append("status", value));
+  query.proposer?.forEach((value) => params.append("proposer", value));
+  query.source?.forEach((value) => params.append("source", value));
+  query.year?.forEach((value) => params.append("year", String(value)));
+
+  if (query.requiresLegalization !== undefined) {
+    params.set("requiresLegalization", String(query.requiresLegalization));
+  }
+
+  if (query.withoutYear) {
+    params.set("withoutYear", "true");
+  }
+
+  if (query.sort && query.sort !== "relevance") {
+    params.set("sort", query.sort);
+  }
+
+  if (query.page !== undefined) {
+    params.set("page", String(query.page));
+  }
+
+  if (query.limit !== undefined) {
+    params.set("limit", String(query.limit));
+  }
+
+  return params.toString();
+}
+
+export async function getProjects(
+  query: ProjectListQuery = {},
+): Promise<{
   projects: ProjectItem[];
   status?: number;
   error?: string;
 }> {
   try {
-    const response = await fetch(getApiUrl("/api/projects"), {
+    const queryString = buildProjectsQuery(query);
+    const path = `/api/projects${queryString ? `?${queryString}` : ""}`;
+    const response = await fetch(getApiUrl(path), {
       cache: "no-store",
     });
 

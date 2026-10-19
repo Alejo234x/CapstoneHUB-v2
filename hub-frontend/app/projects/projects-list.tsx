@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -11,23 +12,36 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import AccessNotice from "../components/access-notice";
+import ServiceUnavailable from "../components/service-unavailable";
+import { isServiceUnavailableStatus } from "@/lib/http";
+import {
+  getProjects,
+  type ProjectListQuery,
+} from "../services/projects";
 import { type ProjectItem } from "../services/schemas";
 import ProjectListRow from "./project-list-row";
 import ProjectListToolbar from "./project-list-toolbar";
 import {
   createDefaultFilters,
-  getProjectYear,
   isLegalizationValue,
   isProjectSort,
   isProjectSource,
   isProjectStatus,
   type ProjectDensity,
   type ProjectListFilters,
-  type ProjectSort,
 } from "./project-list-config";
 
 type ProjectsListProps = {
   readonly projects: ProjectItem[];
+};
+
+type RemoteProjects = {
+  queryKey: string;
+  projects: ProjectItem[];
+  status?: number;
+  error: string | null;
 };
 
 const PAGE_SIZE = 10;
@@ -99,114 +113,50 @@ function filtersToSearchParams(
   return params;
 }
 
-function projectMatchesSearch(
-  project: ProjectItem,
-  searchValue: string,
-): boolean {
-  if (!searchValue) {
-    return true;
-  }
-
-  const searchableValues = [
-    project.name,
-    project.location ?? "",
-    project.context ?? "",
-    project.proposer?.fullName ?? "",
-  ];
-
-  return searchableValues.some((value) =>
-    value.toLowerCase().includes(searchValue),
-  );
-}
-
-function projectMatchesFilters(
-  project: ProjectItem,
+function filtersToApiQuery(
   filters: ProjectListFilters,
-): boolean {
-  if (
-    filters.status.length > 0 &&
-    !filters.status.includes(project.status)
-  ) {
-    return false;
+): ProjectListQuery {
+  const query: ProjectListQuery = { limit: 100 };
+  const search = filters.search.trim();
+
+  if (search) {
+    query.search = search;
   }
 
-  if (
-    filters.proposer.length > 0 &&
-    !filters.proposer.includes(project.proposer?.fullName ?? "")
-  ) {
-    return false;
+  if (filters.status.length > 0) {
+    query.status = filters.status;
   }
 
-  if (
-    filters.source.length > 0 &&
-    (!project.source || !filters.source.includes(project.source))
-  ) {
-    return false;
+  if (filters.proposer.length > 0) {
+    query.proposer = filters.proposer;
   }
 
-  if (filters.legalization.length > 0) {
-    const legalizationValue = project.requiresLegalization ? "si" : "no";
-
-    if (!filters.legalization.includes(legalizationValue)) {
-      return false;
-    }
+  if (filters.source.length > 0) {
+    query.source = filters.source;
   }
 
-  if (filters.year.length > 0) {
-    const year = getProjectYear(project) ?? "sin-anio";
-
-    if (!filters.year.includes(year)) {
-      return false;
-    }
+  if (filters.legalization.length === 1) {
+    query.requiresLegalization = filters.legalization[0] === "si";
   }
 
-  return true;
-}
+  const years = filters.year
+    .filter((year) => year !== "sin-anio")
+    .map(Number)
+    .filter((year) => Number.isInteger(year));
 
-function compareText(left: string, right: string): number {
-  return left.localeCompare(right, "es", { sensitivity: "base" });
-}
-
-function sortProjects(
-  projects: ProjectItem[],
-  sort: ProjectSort,
-): ProjectItem[] {
-  if (sort === "relevance") {
-    return projects;
+  if (years.length > 0) {
+    query.year = years;
   }
 
-  const sortedProjects = [...projects];
+  if (filters.year.includes("sin-anio")) {
+    query.withoutYear = true;
+  }
 
-  sortedProjects.sort((left, right) => {
-    if (sort === "name-asc") {
-      return compareText(left.name, right.name);
-    }
+  if (filters.sort !== "relevance") {
+    query.sort = filters.sort;
+  }
 
-    if (sort === "name-desc") {
-      return compareText(right.name, left.name);
-    }
-
-    const leftYear = getProjectYear(left);
-    const rightYear = getProjectYear(right);
-
-    if (!leftYear && !rightYear) {
-      return 0;
-    }
-
-    if (!leftYear) {
-      return 1;
-    }
-
-    if (!rightYear) {
-      return -1;
-    }
-
-    return sort === "year-desc"
-      ? Number(rightYear) - Number(leftYear)
-      : Number(leftYear) - Number(rightYear);
-  });
-
-  return sortedProjects;
+  return query;
 }
 
 function hasActiveFilters(filters: ProjectListFilters): boolean {
@@ -216,7 +166,8 @@ function hasActiveFilters(filters: ProjectListFilters): boolean {
     filters.proposer.length > 0 ||
     filters.source.length > 0 ||
     filters.legalization.length > 0 ||
-    filters.year.length > 0
+    filters.year.length > 0 ||
+    filters.sort !== "relevance"
   );
 }
 
@@ -299,6 +250,48 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
   );
   const [density, setDensity] = useState<ProjectDensity>("comfortable");
   const [pageIndex, setPageIndex] = useState(0);
+  const [remoteProjects, setRemoteProjects] =
+    useState<RemoteProjects | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const apiQuery = useMemo(() => filtersToApiQuery(filters), [filters]);
+  const queryKey = useMemo(() => JSON.stringify(apiQuery), [apiQuery]);
+  const serverQuery = hasActiveFilters(filters);
+  const isRemoteCurrent = remoteProjects?.queryKey === queryKey;
+  const currentRemote = isRemoteCurrent ? remoteProjects : null;
+  const displayProjects = serverQuery
+    ? (remoteProjects?.projects ?? [])
+    : projects;
+  const remoteLoading = serverQuery && remoteProjects === null;
+  const remoteError = serverQuery ? (currentRemote?.error ?? null) : null;
+  const remoteStatus = serverQuery ? currentRemote?.status : undefined;
+
+  useEffect(() => {
+    if (!serverQuery) {
+      return;
+    }
+
+    let active = true;
+    const timer = setTimeout(async () => {
+      const result = await getProjects(apiQuery);
+
+      if (!active) {
+        return;
+      }
+
+      setRemoteProjects({
+        queryKey,
+        projects: result.projects,
+        status: result.status,
+        error: result.error ?? null,
+      });
+    }, 250);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [apiQuery, queryKey, reloadKey, serverQuery]);
 
   useEffect(() => {
     function handlePopState() {
@@ -331,27 +324,12 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
     window.history.replaceState(null, "", nextUrl);
   }, [filters]);
 
-  const visibleProjects = useMemo(() => {
-    const normalizedSearch = filters.search.trim().toLowerCase();
-
-    return projects.filter(
-      (project) =>
-        projectMatchesSearch(project, normalizedSearch) &&
-        projectMatchesFilters(project, filters),
-    );
-  }, [projects, filters]);
-
-  const sortedProjects = useMemo(
-    () => sortProjects(visibleProjects, filters.sort),
-    [visibleProjects, filters.sort],
-  );
-
   const pageCount = Math.max(
     1,
-    Math.ceil(sortedProjects.length / PAGE_SIZE),
+    Math.ceil(displayProjects.length / PAGE_SIZE),
   );
   const safePageIndex = Math.min(pageIndex, pageCount - 1);
-  const paginatedProjects = sortedProjects.slice(
+  const paginatedProjects = displayProjects.slice(
     safePageIndex * PAGE_SIZE,
     (safePageIndex + 1) * PAGE_SIZE,
   );
@@ -377,11 +355,29 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
         onClearFilters={clearFilters}
       />
 
-      {sortedProjects.length > 0 ? (
+      {remoteLoading ? (
+        <Skeleton className="h-64 w-full rounded-2xl" />
+      ) : remoteStatus === 401 ? (
+        <AccessNotice
+          className="rounded-2xl"
+          title="Inicia sesión para ver los proyectos"
+          message="Solo los proyectos finalizados y públicos se pueden consultar sin cuenta. Inicia sesión para ver tus proyectos propuestos y asignados."
+        />
+      ) : isServiceUnavailableStatus(remoteStatus) ? (
+        <ServiceUnavailable
+          className="mb-6"
+          message={remoteError}
+          onRetry={() => setReloadKey((key) => key + 1)}
+        />
+      ) : remoteError ? (
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>{remoteError}</AlertDescription>
+        </Alert>
+      ) : displayProjects.length > 0 ? (
         <>
           <p className="px-1 pb-2 text-xs text-muted-foreground">
-            {sortedProjects.length}{" "}
-            {sortedProjects.length === 1 ? "proyecto" : "proyectos"}
+            {displayProjects.length}{" "}
+            {displayProjects.length === 1 ? "proyecto" : "proyectos"}
           </p>
 
           <div className="overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-utb-blue/10">
