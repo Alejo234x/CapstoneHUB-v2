@@ -52,7 +52,6 @@ export default function ProfilePage() {
         <ModuleHeader
           eyebrow="Mi cuenta"
           title="Mi perfil"
-          subtitle="Consulta tu información y los proyectos en los que participas."
           accentColor="rgba(16,185,129,0.28)"
         />
 

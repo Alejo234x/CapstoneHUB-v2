@@ -91,7 +91,6 @@ export default function AdminUsersPage() {
         <ModuleHeader
           eyebrow="Administración"
           title="Panel del administrador"
-          subtitle="Gestión de usuarios y roles del sistema."
           accentColor="rgba(129,140,248,0.38)"
         />
 

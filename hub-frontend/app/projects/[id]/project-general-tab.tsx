@@ -167,6 +167,10 @@ export default function ProjectGeneralTab({
 
   return (
     <div className="flex flex-col gap-6">
+      <p className="text-right text-xs text-muted-foreground">
+        Creado el {formatDate(project.createdAt)}
+      </p>
+
       <ProposerCard project={project} />
 
       <TextCard title="Descripción" preserveLineBreaks>
