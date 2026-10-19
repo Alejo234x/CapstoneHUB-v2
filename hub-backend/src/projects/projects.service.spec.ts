@@ -862,6 +862,10 @@ describe('ProjectsService', () => {
         requiresLegalization: true,
         year: [2026],
         withoutYear: true,
+        assignedToMe: true,
+        proposedByMe: true,
+        hasTeam: true,
+        isPrivate: true,
         sort: 'name-asc',
         page: 2,
         limit: 10,
@@ -888,6 +892,14 @@ describe('ProjectsService', () => {
             },
           ]) as unknown,
         },
+        {
+          OR: [
+            { actorAssignments: { some: { userId: ADMIN_USER.id } } },
+            { proposerUserId: ADMIN_USER.id },
+          ],
+        },
+        { actorAssignments: { some: {} } },
+        { isPrivate: true },
         {
           status: {
             in: [ProjectStatus.approved, ProjectStatus.in_progress],

@@ -8,6 +8,7 @@ import {
   userWithRole,
 } from './helpers/auth';
 import {
+  assignProjectActor,
   createProject,
   createProjectWithProposer,
   transitionProjectStatus,
@@ -161,8 +162,17 @@ describe('Projects (e2e)', () => {
       source: 'external_entity',
       sourceDetails: `${marker} detalle externo`,
       requiresLegalization: false,
-      isPrivate: false,
+      isPrivate: true,
     });
+
+    const student = await userWithRole(app, UserRole.student);
+    await assignProjectActor(
+      app,
+      projectB.id,
+      admin.accessToken,
+      student.user.id,
+      ActorRole.student,
+    );
 
     await transitionProjectStatus(
       app,
@@ -229,6 +239,25 @@ describe('Projects (e2e)', () => {
 
     const withoutYear = await list(`search=${marker}&withoutYear=true`);
     expect(withoutYear.map((project) => project.id)).toEqual([projectC.id]);
+
+    const proposedByMe = await list(`search=${marker}&proposedByMe=true`);
+    expect(proposedByMe.map((project) => project.id)).toEqual(
+      expect.arrayContaining([projectA.id, projectB.id, projectC.id]),
+    );
+
+    const hasTeam = await list(`search=${marker}&hasTeam=true`);
+    expect(hasTeam.map((project) => project.id)).toEqual([projectB.id]);
+
+    const privateOnly = await list(`search=${marker}&isPrivate=true`);
+    expect(privateOnly.map((project) => project.id)).toEqual([projectC.id]);
+
+    const assignedToStudent = await request(app.getHttpServer())
+      .get(`/projects?search=${marker}&assignedToMe=true`)
+      .set(bearer(student.accessToken))
+      .expect(200);
+    expect(
+      (assignedToStudent.body as { id: number }[]).map((project) => project.id),
+    ).toEqual([projectB.id]);
 
     const sorted = await list(`search=${marker}&sort=name-asc`);
     expect(sorted.map((project) => project.name)).toEqual([

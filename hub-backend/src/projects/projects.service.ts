@@ -328,7 +328,7 @@ export class ProjectsService {
     viewer?: AuthenticatedUser,
   ): Promise<ProjectListResponse[]> {
     const { skip, take } = paginationToSkipTake(query);
-    const where = this.buildProjectFiltersWhere(query);
+    const where = this.buildProjectFiltersWhere(query, viewer);
 
     return this.projects(
       {
@@ -343,9 +343,22 @@ export class ProjectsService {
 
   private buildProjectFiltersWhere(
     query: ProjectListQueryDto,
+    viewer?: AuthenticatedUser,
   ): Prisma.ProjectWhereInput | undefined {
     const conditions: Prisma.ProjectWhereInput[] = [];
     const search = query.search?.trim();
+
+    conditions.push(...this.buildParticipationWhere(query, viewer));
+
+    if (query.hasTeam !== undefined) {
+      conditions.push({
+        actorAssignments: query.hasTeam ? { some: {} } : { none: {} },
+      });
+    }
+
+    if (query.isPrivate !== undefined) {
+      conditions.push({ isPrivate: query.isPrivate });
+    }
 
     if (search) {
       conditions.push({
@@ -393,6 +406,41 @@ export class ProjectsService {
       });
     }
 
+    conditions.push(...this.buildYearWhere(query));
+
+    return conditions.length > 0 ? { AND: conditions } : undefined;
+  }
+
+  private buildParticipationWhere(
+    query: ProjectListQueryDto,
+    viewer?: AuthenticatedUser,
+  ): Prisma.ProjectWhereInput[] {
+    if (!query.assignedToMe && !query.proposedByMe) {
+      return [];
+    }
+
+    if (!viewer) {
+      return [{ id: -1 }];
+    }
+
+    const participationConditions: Prisma.ProjectWhereInput[] = [];
+
+    if (query.assignedToMe) {
+      participationConditions.push({
+        actorAssignments: { some: { userId: viewer.id } },
+      });
+    }
+
+    if (query.proposedByMe) {
+      participationConditions.push({ proposerUserId: viewer.id });
+    }
+
+    return [{ OR: participationConditions }];
+  }
+
+  private buildYearWhere(
+    query: ProjectListQueryDto,
+  ): Prisma.ProjectWhereInput[] {
     const yearConditions: Prisma.ProjectWhereInput[] = [];
 
     for (const year of query.year ?? []) {
@@ -408,11 +456,7 @@ export class ProjectsService {
       yearConditions.push({ startDate: null });
     }
 
-    if (yearConditions.length > 0) {
-      conditions.push({ OR: yearConditions });
-    }
-
-    return conditions.length > 0 ? { AND: conditions } : undefined;
+    return yearConditions.length > 0 ? [{ OR: yearConditions }] : [];
   }
 
   private buildProjectOrderBy(

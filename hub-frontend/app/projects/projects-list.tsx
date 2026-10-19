@@ -22,6 +22,7 @@ import {
 } from "../services/projects";
 import { type ProjectItem } from "../services/schemas";
 import ProjectListRow from "./project-list-row";
+import ProjectListSidebar from "./project-list-sidebar";
 import ProjectListToolbar from "./project-list-toolbar";
 import {
   createDefaultFilters,
@@ -53,8 +54,16 @@ const FILTER_PARAMS = {
   source: "fuente",
   legalization: "legalizacion",
   year: "anio",
+  assignedToMe: "asignados",
+  proposedByMe: "propuestos",
+  hasTeam: "equipo",
+  privateOnly: "privados",
   sort: "orden",
 } as const;
+
+function isTruthyParam(value: string | null): boolean {
+  return value === "1" || value === "true";
+}
 
 function filtersFromSearchParams(
   searchParams: URLSearchParams,
@@ -76,6 +85,16 @@ function filtersFromSearchParams(
       .getAll(FILTER_PARAMS.legalization)
       .filter(isLegalizationValue),
     year: searchParams.getAll(FILTER_PARAMS.year).filter(Boolean),
+    assignedToMe: isTruthyParam(
+      searchParams.get(FILTER_PARAMS.assignedToMe),
+    ),
+    proposedByMe: isTruthyParam(
+      searchParams.get(FILTER_PARAMS.proposedByMe),
+    ),
+    hasTeam: isTruthyParam(searchParams.get(FILTER_PARAMS.hasTeam)),
+    privateOnly: isTruthyParam(
+      searchParams.get(FILTER_PARAMS.privateOnly),
+    ),
     sort: isProjectSort(sortParam) ? sortParam : "relevance",
   };
 }
@@ -105,6 +124,22 @@ function filtersToSearchParams(
   filters.year.forEach((value) =>
     params.append(FILTER_PARAMS.year, value),
   );
+
+  if (filters.assignedToMe) {
+    params.set(FILTER_PARAMS.assignedToMe, "1");
+  }
+
+  if (filters.proposedByMe) {
+    params.set(FILTER_PARAMS.proposedByMe, "1");
+  }
+
+  if (filters.hasTeam) {
+    params.set(FILTER_PARAMS.hasTeam, "1");
+  }
+
+  if (filters.privateOnly) {
+    params.set(FILTER_PARAMS.privateOnly, "1");
+  }
 
   if (filters.sort !== "relevance") {
     params.set(FILTER_PARAMS.sort, filters.sort);
@@ -152,6 +187,22 @@ function filtersToApiQuery(
     query.withoutYear = true;
   }
 
+  if (filters.assignedToMe) {
+    query.assignedToMe = true;
+  }
+
+  if (filters.proposedByMe) {
+    query.proposedByMe = true;
+  }
+
+  if (filters.hasTeam) {
+    query.hasTeam = true;
+  }
+
+  if (filters.privateOnly) {
+    query.isPrivate = true;
+  }
+
   if (filters.sort !== "relevance") {
     query.sort = filters.sort;
   }
@@ -167,6 +218,10 @@ function hasActiveFilters(filters: ProjectListFilters): boolean {
     filters.source.length > 0 ||
     filters.legalization.length > 0 ||
     filters.year.length > 0 ||
+    filters.assignedToMe ||
+    filters.proposedByMe ||
+    filters.hasTeam ||
+    filters.privateOnly ||
     filters.sort !== "relevance"
   );
 }
@@ -469,27 +524,34 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
   }
 
   return (
-    <div>
-      <ProjectListToolbar
-        projects={projects}
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+      <div className="min-w-0 flex-1">
+        <ProjectListToolbar
+          projects={projects}
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          density={density}
+          onDensityChange={setDensity}
+          onClearFilters={clearFilters}
+        />
+
+        <ProjectsResults
+          projects={displayProjects}
+          loading={remoteLoading}
+          status={remoteStatus}
+          error={remoteError}
+          density={density}
+          filters={filters}
+          pageIndex={pageIndex}
+          onPageChange={setPageIndex}
+          onClearFilters={clearFilters}
+          onRetry={() => setReloadKey((key) => key + 1)}
+        />
+      </div>
+
+      <ProjectListSidebar
         filters={filters}
         onFiltersChange={handleFiltersChange}
-        density={density}
-        onDensityChange={setDensity}
-        onClearFilters={clearFilters}
-      />
-
-      <ProjectsResults
-        projects={displayProjects}
-        loading={remoteLoading}
-        status={remoteStatus}
-        error={remoteError}
-        density={density}
-        filters={filters}
-        pageIndex={pageIndex}
-        onPageChange={setPageIndex}
-        onClearFilters={clearFilters}
-        onRetry={() => setReloadKey((key) => key + 1)}
       />
     </div>
   );

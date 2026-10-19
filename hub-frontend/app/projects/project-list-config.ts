@@ -17,6 +17,10 @@ export type ProjectListFilters = {
   legalization: string[];
   year: string[];
   sort: ProjectSort;
+  assignedToMe: boolean;
+  proposedByMe: boolean;
+  hasTeam: boolean;
+  privateOnly: boolean;
 };
 
 export type FilterOption = {
@@ -72,6 +76,10 @@ export function createDefaultFilters(): ProjectListFilters {
     legalization: [],
     year: [],
     sort: "relevance",
+    assignedToMe: false,
+    proposedByMe: false,
+    hasTeam: false,
+    privateOnly: false,
   };
 }
 

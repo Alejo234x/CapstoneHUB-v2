@@ -143,6 +143,34 @@ export class ProjectListQueryDto extends PaginationQueryDto {
   withoutYear?: boolean;
 
   @ApiPropertyOptional({
+    description: 'Solo proyectos asignados al usuario actual',
+  })
+  @Transform(({ value }) => toOptionalBoolean(value))
+  @IsBoolean()
+  @IsOptional()
+  assignedToMe?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Solo proyectos propuestos por el usuario actual',
+  })
+  @Transform(({ value }) => toOptionalBoolean(value))
+  @IsBoolean()
+  @IsOptional()
+  proposedByMe?: boolean;
+
+  @ApiPropertyOptional({ description: 'Solo proyectos con equipo asignado' })
+  @Transform(({ value }) => toOptionalBoolean(value))
+  @IsBoolean()
+  @IsOptional()
+  hasTeam?: boolean;
+
+  @ApiPropertyOptional({ description: 'Solo proyectos privados' })
+  @Transform(({ value }) => toOptionalBoolean(value))
+  @IsBoolean()
+  @IsOptional()
+  isPrivate?: boolean;
+
+  @ApiPropertyOptional({
     description: 'Orden del listado',
     enum: PROJECT_SORT_VALUES,
   })

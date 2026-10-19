@@ -42,6 +42,10 @@ export type ProjectListQuery = {
   requiresLegalization?: boolean;
   year?: number[];
   withoutYear?: boolean;
+  assignedToMe?: boolean;
+  proposedByMe?: boolean;
+  hasTeam?: boolean;
+  isPrivate?: boolean;
   sort?: string;
   page?: number;
   limit?: number;
@@ -65,6 +69,22 @@ function buildProjectsQuery(query: ProjectListQuery): string {
 
   if (query.withoutYear) {
     params.set("withoutYear", "true");
+  }
+
+  if (query.assignedToMe) {
+    params.set("assignedToMe", "true");
+  }
+
+  if (query.proposedByMe) {
+    params.set("proposedByMe", "true");
+  }
+
+  if (query.hasTeam) {
+    params.set("hasTeam", "true");
+  }
+
+  if (query.isPrivate) {
+    params.set("isPrivate", "true");
   }
 
   if (query.sort && query.sort !== "relevance") {

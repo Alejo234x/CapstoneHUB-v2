@@ -278,6 +278,10 @@ export default function ProjectListToolbar({
     filters.source.length > 0 ||
     filters.legalization.length > 0 ||
     filters.year.length > 0 ||
+    filters.assignedToMe ||
+    filters.proposedByMe ||
+    filters.hasTeam ||
+    filters.privateOnly ||
     filters.sort !== "relevance";
 
   function updateFilters(partial: Partial<ProjectListFilters>) {
