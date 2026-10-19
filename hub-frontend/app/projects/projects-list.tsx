@@ -243,37 +243,28 @@ function ListPagination({
   );
 }
 
-export default function ProjectsList({ projects }: ProjectsListProps) {
-  const searchParams = useSearchParams();
-  const [filters, setFilters] = useState<ProjectListFilters>(() =>
-    filtersFromSearchParams(searchParams),
-  );
-  const [density, setDensity] = useState<ProjectDensity>("comfortable");
-  const [pageIndex, setPageIndex] = useState(0);
+function useRemoteProjects({
+  enabled,
+  query,
+  queryKey,
+  reloadKey,
+}: {
+  readonly enabled: boolean;
+  readonly query: ProjectListQuery;
+  readonly queryKey: string;
+  readonly reloadKey: number;
+}): RemoteProjects | null {
   const [remoteProjects, setRemoteProjects] =
     useState<RemoteProjects | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-
-  const apiQuery = useMemo(() => filtersToApiQuery(filters), [filters]);
-  const queryKey = useMemo(() => JSON.stringify(apiQuery), [apiQuery]);
-  const serverQuery = hasActiveFilters(filters);
-  const isRemoteCurrent = remoteProjects?.queryKey === queryKey;
-  const currentRemote = isRemoteCurrent ? remoteProjects : null;
-  const displayProjects = serverQuery
-    ? (remoteProjects?.projects ?? [])
-    : projects;
-  const remoteLoading = serverQuery && remoteProjects === null;
-  const remoteError = serverQuery ? (currentRemote?.error ?? null) : null;
-  const remoteStatus = serverQuery ? currentRemote?.status : undefined;
 
   useEffect(() => {
-    if (!serverQuery) {
+    if (!enabled) {
       return;
     }
 
     let active = true;
     const timer = setTimeout(async () => {
-      const result = await getProjects(apiQuery);
+      const result = await getProjects(query);
 
       if (!active) {
         return;
@@ -291,7 +282,150 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
       active = false;
       clearTimeout(timer);
     };
-  }, [apiQuery, queryKey, reloadKey, serverQuery]);
+  }, [enabled, query, queryKey, reloadKey]);
+
+  return remoteProjects;
+}
+
+type ProjectsResultsProps = {
+  readonly projects: ProjectItem[];
+  readonly loading: boolean;
+  readonly status?: number;
+  readonly error: string | null;
+  readonly density: ProjectDensity;
+  readonly filters: ProjectListFilters;
+  readonly pageIndex: number;
+  readonly onPageChange: (pageIndex: number) => void;
+  readonly onClearFilters: () => void;
+  readonly onRetry: () => void;
+};
+
+function ProjectsResults({
+  projects,
+  loading,
+  status,
+  error,
+  density,
+  filters,
+  pageIndex,
+  onPageChange,
+  onClearFilters,
+  onRetry,
+}: ProjectsResultsProps) {
+  if (loading) {
+    return <Skeleton className="h-64 w-full rounded-2xl" />;
+  }
+
+  if (status === 401) {
+    return (
+      <AccessNotice
+        className="rounded-2xl"
+        title="Inicia sesión para ver los proyectos"
+        message="Solo los proyectos finalizados y públicos se pueden consultar sin cuenta. Inicia sesión para ver tus proyectos propuestos y asignados."
+      />
+    );
+  }
+
+  if (isServiceUnavailableStatus(status)) {
+    return (
+      <ServiceUnavailable
+        className="mb-6"
+        message={error}
+        onRetry={onRetry}
+      />
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (projects.length === 0) {
+    return (
+      <Empty className="rounded-2xl bg-card shadow-sm ring-1 ring-utb-blue/10">
+        <EmptyHeader>
+          <EmptyTitle>No hay proyectos con esos filtros</EmptyTitle>
+          <EmptyDescription>
+            Prueba a cambiar la búsqueda o a limpiar los filtros
+            seleccionados.
+          </EmptyDescription>
+        </EmptyHeader>
+
+        {hasActiveFilters(filters) ? (
+          <EmptyContent>
+            <Button variant="outline" onClick={onClearFilters}>
+              Limpiar filtros
+            </Button>
+          </EmptyContent>
+        ) : null}
+      </Empty>
+    );
+  }
+
+  const pageCount = Math.max(1, Math.ceil(projects.length / PAGE_SIZE));
+  const safePageIndex = Math.min(pageIndex, pageCount - 1);
+  const paginatedProjects = projects.slice(
+    safePageIndex * PAGE_SIZE,
+    (safePageIndex + 1) * PAGE_SIZE,
+  );
+
+  return (
+    <>
+      <p className="px-1 pb-2 text-xs text-muted-foreground">
+        {projects.length} {projects.length === 1 ? "proyecto" : "proyectos"}
+      </p>
+
+      <div className="overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-utb-blue/10">
+        <ul className="divide-y divide-border">
+          {paginatedProjects.map((project) => (
+            <ProjectListRow
+              key={project.id}
+              project={project}
+              density={density}
+            />
+          ))}
+        </ul>
+      </div>
+
+      <ListPagination
+        pageIndex={safePageIndex}
+        pageCount={pageCount}
+        onPageChange={onPageChange}
+      />
+    </>
+  );
+}
+
+export default function ProjectsList({ projects }: ProjectsListProps) {
+  const searchParams = useSearchParams();
+  const [filters, setFilters] = useState<ProjectListFilters>(() =>
+    filtersFromSearchParams(searchParams),
+  );
+  const [density, setDensity] = useState<ProjectDensity>("comfortable");
+  const [pageIndex, setPageIndex] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const apiQuery = useMemo(() => filtersToApiQuery(filters), [filters]);
+  const queryKey = useMemo(() => JSON.stringify(apiQuery), [apiQuery]);
+  const serverQuery = hasActiveFilters(filters);
+  const remoteProjects = useRemoteProjects({
+    enabled: serverQuery,
+    query: apiQuery,
+    queryKey,
+    reloadKey,
+  });
+  const isRemoteCurrent = remoteProjects?.queryKey === queryKey;
+  const currentRemote = isRemoteCurrent ? remoteProjects : null;
+  const displayProjects = serverQuery
+    ? (remoteProjects?.projects ?? [])
+    : projects;
+  const remoteLoading = serverQuery && remoteProjects === null;
+  const remoteError = serverQuery ? (currentRemote?.error ?? null) : null;
+  const remoteStatus = serverQuery ? currentRemote?.status : undefined;
 
   useEffect(() => {
     function handlePopState() {
@@ -324,16 +458,6 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
     window.history.replaceState(null, "", nextUrl);
   }, [filters]);
 
-  const pageCount = Math.max(
-    1,
-    Math.ceil(displayProjects.length / PAGE_SIZE),
-  );
-  const safePageIndex = Math.min(pageIndex, pageCount - 1);
-  const paginatedProjects = displayProjects.slice(
-    safePageIndex * PAGE_SIZE,
-    (safePageIndex + 1) * PAGE_SIZE,
-  );
-
   function handleFiltersChange(nextFilters: ProjectListFilters) {
     setFilters(nextFilters);
     setPageIndex(0);
@@ -355,68 +479,18 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
         onClearFilters={clearFilters}
       />
 
-      {remoteLoading ? (
-        <Skeleton className="h-64 w-full rounded-2xl" />
-      ) : remoteStatus === 401 ? (
-        <AccessNotice
-          className="rounded-2xl"
-          title="Inicia sesión para ver los proyectos"
-          message="Solo los proyectos finalizados y públicos se pueden consultar sin cuenta. Inicia sesión para ver tus proyectos propuestos y asignados."
-        />
-      ) : isServiceUnavailableStatus(remoteStatus) ? (
-        <ServiceUnavailable
-          className="mb-6"
-          message={remoteError}
-          onRetry={() => setReloadKey((key) => key + 1)}
-        />
-      ) : remoteError ? (
-        <Alert variant="destructive" className="mb-6">
-          <AlertDescription>{remoteError}</AlertDescription>
-        </Alert>
-      ) : displayProjects.length > 0 ? (
-        <>
-          <p className="px-1 pb-2 text-xs text-muted-foreground">
-            {displayProjects.length}{" "}
-            {displayProjects.length === 1 ? "proyecto" : "proyectos"}
-          </p>
-
-          <div className="overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-utb-blue/10">
-            <ul className="divide-y divide-border">
-              {paginatedProjects.map((project) => (
-                <ProjectListRow
-                  key={project.id}
-                  project={project}
-                  density={density}
-                />
-              ))}
-            </ul>
-          </div>
-
-          <ListPagination
-            pageIndex={safePageIndex}
-            pageCount={pageCount}
-            onPageChange={setPageIndex}
-          />
-        </>
-      ) : (
-        <Empty className="rounded-2xl bg-card shadow-sm ring-1 ring-utb-blue/10">
-          <EmptyHeader>
-            <EmptyTitle>No hay proyectos con esos filtros</EmptyTitle>
-            <EmptyDescription>
-              Prueba a cambiar la búsqueda o a limpiar los filtros
-              seleccionados.
-            </EmptyDescription>
-          </EmptyHeader>
-
-          {hasActiveFilters(filters) ? (
-            <EmptyContent>
-              <Button variant="outline" onClick={clearFilters}>
-                Limpiar filtros
-              </Button>
-            </EmptyContent>
-          ) : null}
-        </Empty>
-      )}
+      <ProjectsResults
+        projects={displayProjects}
+        loading={remoteLoading}
+        status={remoteStatus}
+        error={remoteError}
+        density={density}
+        filters={filters}
+        pageIndex={pageIndex}
+        onPageChange={setPageIndex}
+        onClearFilters={clearFilters}
+        onRetry={() => setReloadKey((key) => key + 1)}
+      />
     </div>
   );
 }

@@ -91,7 +91,9 @@ export async function getProjects(
 }> {
   try {
     const queryString = buildProjectsQuery(query);
-    const path = `/api/projects${queryString ? `?${queryString}` : ""}`;
+    const path = queryString
+      ? `/api/projects?${queryString}`
+      : "/api/projects";
     const response = await fetch(getApiUrl(path), {
       cache: "no-store",
     });

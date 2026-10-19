@@ -56,7 +56,7 @@ function toOptionalBoolean(value: unknown): unknown {
 }
 
 function toYearArray(value: unknown): number[] | undefined {
-  return toArray(value)?.map((year) => Number(year));
+  return toArray(value)?.map(Number);
 }
 
 function toStringArray(value: unknown): string[] | undefined {
