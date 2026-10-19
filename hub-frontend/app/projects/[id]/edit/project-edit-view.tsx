@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../components/auth-provider";
 import ModuleHeader from "../../../components/module-header";
@@ -39,16 +38,8 @@ export default function ProjectEditView({ id }: { readonly id: string }) {
         <ModuleHeader
           eyebrow={`Proyecto #${project.id}`}
           title="Editar proyecto"
-          subtitle="Actualiza los datos del proyecto. Cada cambio queda registrado en el historial."
           accentColor="rgba(16,185,129,0.32)"
-          actions={
-            <Link
-              href={backHref}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-white px-4 text-[13px] font-semibold text-utb-deep-blue shadow-lg shadow-utb-deep-blue/20 transition-colors hover:bg-utb-blue-pale focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
-            >
-              Volver al proyecto
-            </Link>
-          }
+          teamSize={project.actorAssignments?.length ?? 0}
         />
 
         {canEdit ? (

@@ -1,5 +1,4 @@
 import ModuleHeader from "../../components/module-header";
-import { formatDate } from "./project-formatters";
 import { ProjectDetails } from "../../services/schemas";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -13,12 +12,14 @@ export default function ProjectDetailsHeader({
   project,
   isMember,
 }: ProjectDetailsHeaderProps) {
+  const teamSize = isMember ? (project.actorAssignments?.length ?? 0) : undefined;
+
   return (
     <>
       <ModuleHeader
         eyebrow={`Proyecto #${project.id}`}
         title={project.name}
-        subtitle={`Creado el ${formatDate(project.createdAt)}`}
+        teamSize={teamSize}
       />
 
       {!isMember ? (

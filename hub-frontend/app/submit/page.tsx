@@ -8,7 +8,6 @@ export default function SubmitPage() {
         <ModuleHeader
           eyebrow="Nueva propuesta"
           title="Proponer un proyecto"
-          subtitle="Describe la iniciativa y el contexto en el que se desarrollará. La propuesta quedará registrada para revisión del comité."
           accentColor="rgba(56,189,248,0.34)"
         />
 

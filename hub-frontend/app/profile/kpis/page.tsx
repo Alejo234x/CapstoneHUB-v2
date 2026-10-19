@@ -81,7 +81,6 @@ export default function KpisPage() {
         <ModuleHeader
           eyebrow="Mi cuenta"
           title="Indicadores"
-          subtitle="Pendientes, distribución y actividad de los proyectos que gestionas."
           accentColor="rgba(34,211,238,0.28)"
         />
 
