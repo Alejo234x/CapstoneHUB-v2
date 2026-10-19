@@ -70,61 +70,40 @@ export default function Navbar() {
   const closeMobile = () => setMobileOpen(false);
 
   return (
-    <>
-      {/* Banda institucional: el logo a tamaño grande. Se va con el scroll para
-          devolverle la altura al contenido; lo que queda fijo es la fila de
-          navegación de abajo. */}
-      <header className="noise-overlay relative overflow-hidden bg-utb-deep-blue">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-utb-deep-blue">
+      <div className="noise-overlay relative">
         <div className="grid-lines-dark pointer-events-none absolute inset-0 opacity-60" />
-        <div className="utb-orb pointer-events-none absolute -top-28 right-10 h-64 w-64 rounded-full bg-utb-blue/20 blur-3xl" />
 
-        <div className="relative z-10 mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 sm:py-8 lg:px-8">
+        {/* Una sola fila: marca a la izquierda, enlaces, sesión a la derecha. */}
+        <div className="relative z-10 mx-auto flex w-full max-w-6xl items-center gap-2 px-4 py-2.5 sm:px-6 lg:px-8">
           <Link
             href="/"
             onClick={closeMobile}
-            className="inline-flex items-center gap-4 rounded-2xl transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-utb-blue-pale/60 focus-visible:outline-none sm:gap-5"
+            className="flex shrink-0 items-center gap-2.5 rounded-xl transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-utb-blue-pale/60 focus-visible:outline-none"
           >
-            <UtbLogo className="h-11 w-auto text-white sm:h-16" />
+            <UtbLogo className="h-7 w-auto text-white sm:h-8" />
 
             <span
-              className="h-11 w-px shrink-0 bg-white/20 sm:h-16"
+              className="h-6 w-px shrink-0 bg-white/20 sm:h-7"
               aria-hidden="true"
             />
 
-            <span className="min-w-0">
-              <span className="block text-[9px] font-bold tracking-[0.16em] text-utb-blue-pale/70 uppercase sm:text-[11px] sm:tracking-[0.22em]">
-                Universidad Tecnológica de Bolívar
-              </span>
-              <span className="block text-xl font-bold tracking-tight text-white sm:text-4xl">
-                Capstone<span className="text-utb-blue-pale">HUB</span>
-              </span>
+            <span className="text-base font-bold tracking-tight text-white sm:text-lg">
+              Capstone<span className="text-utb-blue-pale">HUB</span>
             </span>
-          </Link>
-        </div>
-      </header>
-
-      {/* Fila de navegación: se queda pegada arriba al hacer scroll. */}
-      <nav className="sticky top-0 z-50 border-y border-white/10 bg-utb-deep-blue">
-        <div className="mx-auto flex w-full max-w-6xl items-center gap-2 px-4 py-2.5 sm:px-6 lg:px-8">
-          {/* En móvil la banda de arriba ya se fue con el scroll, así que la
-              barra fija necesita recordar dónde está uno. */}
-          <Link
-            href="/"
-            onClick={closeMobile}
-            aria-label="Ir al inicio"
-            className="mr-1 shrink-0 rounded-lg transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-utb-blue-pale/60 focus-visible:outline-none md:hidden"
-          >
-            <UtbLogo className="h-5 w-auto text-white" />
           </Link>
 
           {/* Menú de escritorio: se oculta antes de que le falte espacio */}
-          <div className="hidden min-w-0 items-center gap-1 md:flex">
+          <nav
+            aria-label="Navegación principal"
+            className="ml-3 hidden min-w-0 items-center gap-1 lg:flex"
+          >
             {links.map((link) => (
               <NavItem key={link.href} {...link} pathname={pathname} />
             ))}
-          </div>
+          </nav>
 
-          <div className="ml-auto hidden md:flex">
+          <div className="ml-auto hidden lg:flex">
             <AuthNav />
           </div>
 
@@ -135,7 +114,7 @@ export default function Navbar() {
             aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={mobileOpen}
             aria-controls="mobile-menu"
-            className="ml-auto flex size-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-utb-blue-pale/60 focus-visible:outline-none md:hidden"
+            className="ml-auto flex size-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-utb-blue-pale/60 focus-visible:outline-none lg:hidden"
           >
             {mobileOpen ? (
               <X className="size-[18px]" aria-hidden="true" />
@@ -149,9 +128,9 @@ export default function Navbar() {
         {mobileOpen && (
           <div
             id="mobile-menu"
-            className="border-t border-white/10 bg-utb-deep-blue px-4 py-3 sm:px-6 md:hidden"
+            className="relative z-10 border-t border-white/10 px-4 py-3 sm:px-6 lg:hidden"
           >
-            <div className="flex flex-col gap-1">
+            <nav aria-label="Navegación móvil" className="flex flex-col gap-1">
               {links.map((link) => (
                 <NavItem
                   key={link.href}
@@ -161,7 +140,7 @@ export default function Navbar() {
                   className="justify-start"
                 />
               ))}
-            </div>
+            </nav>
 
             <div className="mt-3 flex flex-col gap-3 border-t border-white/10 pt-3">
               {session ? (
@@ -189,7 +168,7 @@ export default function Navbar() {
             </div>
           </div>
         )}
-      </nav>
-    </>
+      </div>
+    </header>
   );
 }
