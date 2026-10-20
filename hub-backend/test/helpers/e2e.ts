@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
@@ -30,6 +30,12 @@ export async function createTestApp(): Promise<INestApplication<App>> {
   }).compile();
 
   const app = moduleFixture.createNestApplication<INestApplication<App>>();
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+    }),
+  );
   await app.init();
 
   return app;

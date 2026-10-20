@@ -19,6 +19,8 @@ import {
 import { PrismaService } from '../prisma.service';
 import { AuthorizationService } from '../auth/authorization.service';
 import { AuthenticatedUser } from '../auth/auth.types';
+import { paginationToSkipTake } from '../common/pagination.dto';
+import { ProjectListQueryDto, ProjectSort } from './dto/project-list-query.dto';
 import {
   AssignableUserResponse,
   MyProjectResponse,
@@ -294,18 +296,20 @@ export class ProjectsService {
       take?: number;
       cursor?: Prisma.ProjectWhereUniqueInput;
       where?: Prisma.ProjectWhereInput;
-      orderBy?: Prisma.ProjectOrderByWithRelationInput;
+      orderBy?:
+        | Prisma.ProjectOrderByWithRelationInput
+        | Prisma.ProjectOrderByWithRelationInput[];
     },
     viewer?: AuthenticatedUser,
   ): Promise<ProjectListResponse[]> {
     const { skip, take, cursor, where, orderBy } = params;
+    const visibilityWhere = this.authorization.projectVisibilityWhere(viewer);
     const projects = await this.prisma.project.findMany({
       skip,
       take,
       cursor,
       where: {
-        ...where,
-        ...this.authorization.projectVisibilityWhere(viewer),
+        AND: where ? [where, visibilityWhere] : [visibilityWhere],
       },
       orderBy,
       include: projectInclude,
@@ -316,6 +320,160 @@ export class ProjectsService {
         this.canViewSensitiveData(project, viewer),
       ),
     );
+  }
+
+  /** Listado paginado con los filtros y el orden que llegan por query string. */
+  async listProjects(
+    query: ProjectListQueryDto,
+    viewer?: AuthenticatedUser,
+  ): Promise<ProjectListResponse[]> {
+    const { skip, take } = paginationToSkipTake(query);
+    const where = this.buildProjectFiltersWhere(query, viewer);
+
+    return this.projects(
+      {
+        skip,
+        take,
+        where,
+        orderBy: this.buildProjectOrderBy(query.sort),
+      },
+      viewer,
+    );
+  }
+
+  private buildProjectFiltersWhere(
+    query: ProjectListQueryDto,
+    viewer?: AuthenticatedUser,
+  ): Prisma.ProjectWhereInput | undefined {
+    const conditions: Prisma.ProjectWhereInput[] = [];
+    const search = query.search?.trim();
+
+    conditions.push(...this.buildParticipationWhere(query, viewer));
+
+    if (query.hasTeam !== undefined) {
+      conditions.push({
+        actorAssignments: query.hasTeam ? { some: {} } : { none: {} },
+      });
+    }
+
+    if (query.isPrivate !== undefined) {
+      conditions.push({ isPrivate: query.isPrivate });
+    }
+
+    if (search) {
+      conditions.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+          { context: { contains: search, mode: 'insensitive' } },
+          { location: { contains: search, mode: 'insensitive' } },
+          {
+            naturalProposer: {
+              is: {
+                fullName: { contains: search, mode: 'insensitive' },
+              },
+            },
+          },
+          {
+            proposer: {
+              is: { fullName: { contains: search, mode: 'insensitive' } },
+            },
+          },
+        ],
+      });
+    }
+
+    if (query.status?.length) {
+      conditions.push({ status: { in: query.status } });
+    }
+
+    if (query.proposer?.length) {
+      conditions.push({
+        OR: query.proposer.flatMap((fullName) => [
+          { naturalProposer: { is: { fullName } } },
+          { proposer: { is: { fullName } } },
+        ]),
+      });
+    }
+
+    if (query.source?.length) {
+      conditions.push({ source: { in: query.source } });
+    }
+
+    if (query.requiresLegalization !== undefined) {
+      conditions.push({
+        requiresLegalization: query.requiresLegalization,
+      });
+    }
+
+    conditions.push(...this.buildYearWhere(query));
+
+    return conditions.length > 0 ? { AND: conditions } : undefined;
+  }
+
+  private buildParticipationWhere(
+    query: ProjectListQueryDto,
+    viewer?: AuthenticatedUser,
+  ): Prisma.ProjectWhereInput[] {
+    if (!query.assignedToMe && !query.proposedByMe) {
+      return [];
+    }
+
+    if (!viewer) {
+      return [{ id: -1 }];
+    }
+
+    const participationConditions: Prisma.ProjectWhereInput[] = [];
+
+    if (query.assignedToMe) {
+      participationConditions.push({
+        actorAssignments: { some: { userId: viewer.id } },
+      });
+    }
+
+    if (query.proposedByMe) {
+      participationConditions.push({ proposerUserId: viewer.id });
+    }
+
+    return [{ OR: participationConditions }];
+  }
+
+  private buildYearWhere(
+    query: ProjectListQueryDto,
+  ): Prisma.ProjectWhereInput[] {
+    const yearConditions: Prisma.ProjectWhereInput[] = [];
+
+    for (const year of query.year ?? []) {
+      yearConditions.push({
+        startDate: {
+          gte: new Date(Date.UTC(year, 0, 1)),
+          lt: new Date(Date.UTC(year + 1, 0, 1)),
+        },
+      });
+    }
+
+    if (query.withoutYear) {
+      yearConditions.push({ startDate: null });
+    }
+
+    return yearConditions.length > 0 ? [{ OR: yearConditions }] : [];
+  }
+
+  private buildProjectOrderBy(
+    sort: ProjectSort = 'relevance',
+  ): Prisma.ProjectOrderByWithRelationInput[] {
+    switch (sort) {
+      case 'name-asc':
+        return [{ name: 'asc' }, { id: 'asc' }];
+      case 'name-desc':
+        return [{ name: 'desc' }, { id: 'desc' }];
+      case 'year-desc':
+        return [{ startDate: { sort: 'desc', nulls: 'last' } }, { id: 'desc' }];
+      case 'year-asc':
+        return [{ startDate: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }];
+      default:
+        return [{ createdAt: 'desc' }, { id: 'desc' }];
+    }
   }
   /**
    * Los miembros pueden leer los datos sensibles del proyecto: admins,

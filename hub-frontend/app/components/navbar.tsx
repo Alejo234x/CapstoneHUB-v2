@@ -75,7 +75,7 @@ export default function Navbar() {
         <div className="grid-lines-dark pointer-events-none absolute inset-0 opacity-60" />
 
         {/* Una sola fila: marca a la izquierda, enlaces, sesión a la derecha. */}
-        <div className="relative z-10 mx-auto flex w-full max-w-6xl items-center gap-2 px-4 py-2.5 sm:px-6 lg:px-8">
+        <div className="relative z-10 mx-auto flex w-full max-w-[96rem] items-center gap-2 px-4 py-2.5 sm:px-6 lg:px-8">
           <Link
             href="/"
             onClick={closeMobile}

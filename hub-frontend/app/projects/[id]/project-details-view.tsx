@@ -50,7 +50,7 @@ export default function ProjectDetailsView({ id }: { readonly id: string }) {
     if (isServiceUnavailableStatus(status)) {
       return (
         <main className="flex-1 text-foreground">
-          <section className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <section className="mx-auto w-full max-w-[96rem] px-4 py-8 sm:px-6 lg:px-8">
             <ServiceUnavailable message={error} onRetry={reload} />
           </section>
         </main>
@@ -64,7 +64,7 @@ export default function ProjectDetailsView({ id }: { readonly id: string }) {
 
   return (
     <main className="flex-1 text-foreground">
-      <section className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <section className="mx-auto w-full max-w-[96rem] px-4 py-8 sm:px-6 lg:px-8">
         <ProjectDetailsHeader project={project} isMember={isMember} />
 
         <Card>

@@ -2,7 +2,7 @@
 
 import { getProjects } from "../services/projects";
 import { ProjectItem } from "../services/schemas";
-import ProjectsTable from "./projects-table";
+import ProjectsList from "./projects-list";
 import ServiceUnavailable from "../components/service-unavailable";
 import AccessNotice from "../components/access-notice";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -79,5 +79,5 @@ export default function ProjectsExplorer() {
     );
   }
 
-  return <ProjectsTable projects={projects} />;
+  return <ProjectsList projects={projects} />;
 }

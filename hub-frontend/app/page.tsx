@@ -36,7 +36,7 @@ export default function Home() {
         <div className="utb-orb pointer-events-none absolute -top-32 right-0 h-96 w-96 rounded-full bg-utb-blue/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-32 left-0 h-72 w-72 rounded-full bg-utb-blue-light/10 blur-3xl" />
 
-        <div className="relative z-10 mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+        <div className="relative z-10 mx-auto w-full max-w-[96rem] px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
           <div className="flex max-w-3xl flex-col gap-6">
             <p
               className="utb-rise flex items-center gap-2 text-[10px] font-bold tracking-[0.18em] text-utb-blue-pale/70 uppercase sm:text-[11px] sm:tracking-[0.22em]"
@@ -103,7 +103,7 @@ export default function Home() {
       </section>
 
       {/* Qué resuelve la plataforma */}
-      <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+      <section className="mx-auto w-full max-w-[96rem] px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-4 sm:grid-cols-3">
           {FEATURES.map(({ icon: Icon, title, description }, index) => (
             <article

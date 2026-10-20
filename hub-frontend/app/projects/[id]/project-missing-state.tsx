@@ -15,7 +15,7 @@ export default function ProjectMissingState({
   status,
 }: ProjectMissingStateProps) {
   return (
-    <section className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <section className="mx-auto w-full max-w-[96rem] px-4 py-8 sm:px-6 lg:px-8">
       <Empty className="rounded-2xl bg-card shadow-sm ring-1 ring-utb-blue/10">
         <EmptyHeader>
           <EmptyTitle>Proyecto no disponible</EmptyTitle>
