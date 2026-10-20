@@ -32,7 +32,7 @@ export default function ProfilePage() {
 
   if (!ready) {
     return (
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-[96rem] px-4 py-8 sm:px-6 lg:px-8">
         <div className="utb-skeleton h-44 w-full rounded-3xl" />
       </main>
     );
@@ -48,7 +48,7 @@ export default function ProfilePage() {
 
   return (
     <main className="flex-1 text-foreground">
-      <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <section className="mx-auto w-full max-w-[96rem] px-4 py-8 sm:px-6 lg:px-8">
         <ModuleHeader
           eyebrow="Mi cuenta"
           title="Mi perfil"
