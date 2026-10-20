@@ -12,6 +12,21 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { isValidEmail } from "@/lib/validation";
 
+const INVALID_CREDENTIALS_MESSAGES = new Set([
+  "invalid credentials",
+  "credenciales inválidas",
+]);
+
+function getLoginErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+
+  if (INVALID_CREDENTIALS_MESSAGES.has(message.trim().toLowerCase())) {
+    return "Correo o contraseña incorrectos.";
+  }
+
+  return message || "No se pudo iniciar sesión";
+}
+
 /** Ruta interna a la que volver tras el login (`?next=`), si es segura. */
 function getPostLoginPath(): string {
   const next = new URLSearchParams(window.location.search).get("next");
@@ -67,9 +82,7 @@ export default function LoginForm() {
       router.push(getPostLoginPath());
       router.refresh();
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "No se pudo iniciar sesión",
-      );
+      setErrorMessage(getLoginErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }

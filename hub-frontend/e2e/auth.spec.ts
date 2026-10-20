@@ -28,5 +28,7 @@ test("muestra un error con credenciales inválidas", async ({ page }) => {
   await page.getByLabel("Contraseña", { exact: true }).fill("mala-password");
   await page.getByRole("button", { name: "Iniciar sesión" }).click();
 
-  await expect(page.getByText("Invalid credentials")).toBeVisible();
+  await expect(
+    page.getByText("Correo o contraseña incorrectos."),
+  ).toBeVisible();
 });
